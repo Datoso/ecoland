@@ -71,6 +71,9 @@
     if (k === 't') { openPanel('lands'); return; }
     if (k === 'm') { toggleSound(); return; }
     if (k === 'k') { openPanel('dev'); return; }
+    if (!UI.isOpen() && (k === '+' || k === '=')) { zoomBy(1.2); return; }
+    if (!UI.isOpen() && (k === '-' || k === '_')) { zoomBy(1 / 1.2); return; }
+    if (!UI.isOpen() && k === 'z') { toggleOverview(); return; }
     if (UI.isOpen()) return;
     keys.add(k);
     if (k >= '1' && k <= '8') { S.tool = +k - 1; UI.hud(true); }
@@ -104,7 +107,7 @@
   });
   function drawDrag() {
     if (!drag) return;
-    const ctx = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1), TS = R.TS;
+    const ctx = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1), TS = R.tileSize ? R.tileSize() : R.TS;
     const ax = Math.min(drag.start.x, drag.end.x), bx = Math.max(drag.start.x, drag.end.x);
     const ay = Math.min(drag.start.y, drag.end.y), by = Math.max(drag.start.y, drag.end.y);
     const p0 = R.worldToScreen(ax, ay);
@@ -122,8 +125,25 @@
     ctx.fillStyle = '#ffe9a8'; ctx.fillText(txt, q.x + 11, q.y + 21);
   }
   cv.addEventListener('contextmenu', e => e.preventDefault());
-  cv.addEventListener('wheel', e => { if (!running || UI.isOpen()) return; S.tool = (S.tool + (e.deltaY > 0 ? 1 : -1) + D.tools.length) % D.tools.length; UI.hud(true); }, { passive: true });
+  // rodinha = zoom (Shift + rodinha troca ferramenta)
+  cv.addEventListener('wheel', e => {
+    if (!running || UI.isOpen()) return;
+    e.preventDefault();
+    if (e.shiftKey) { S.tool = (S.tool + (e.deltaY > 0 ? 1 : -1) + D.tools.length) % D.tools.length; UI.hud(true); return; }
+    zoomBy(e.deltaY > 0 ? 1 / 1.15 : 1.15, e.clientX, e.clientY);
+  }, { passive: false });
+  function zoomBy(f, x, y) { if (R.zoomBy) R.zoomBy(f, x, y); }
+  let lastZoom = 1;
+  function toggleOverview() {
+    if (!R.setZoom) return;
+    const z = R.getZoom();
+    if (z > 0.45) { lastZoom = z; R.setZoom(0.01); UI.toast('🗺️ Visão da fazenda inteira (Z volta)'); }
+    else R.setZoom(lastZoom || 1);
+  }
   document.querySelectorAll('#menu-btns button').forEach(b => b.addEventListener('click', () => { audioInit(); b.dataset.open === 'sound' ? toggleSound() : openPanel(b.dataset.open); }));
+  document.getElementById('zoom-in').onclick = () => zoomBy(1.25);
+  document.getElementById('zoom-out').onclick = () => zoomBy(1 / 1.25);
+  document.getElementById('zoom-all').onclick = () => toggleOverview();
   document.getElementById('quest').addEventListener('click', () => openPanel('manual'));
 
   // ---------- movimento ----------

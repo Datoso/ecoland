@@ -354,7 +354,7 @@ const G = window.G = {
       if (a.tx == null || (a.wait <= 0 && Math.hypot(a.tx - a.x, a.ty - a.y) < 0.2)) {
         if (a.wait <= 0 && S.time < NIGHT_HOME) {
           for (let k = 0; k < 8; k++) {
-            const tx = Math.floor(door.x) + rnd(-6, 6), ty = Math.floor(door.y) + rnd(-5, 6);
+            const r = def.roam || 6, tx = Math.floor(door.x) + rnd(-r, r), ty = Math.floor(door.y) + rnd(-r, r);
             if (!this.solid(tx, ty, true)) { a.tx = tx + 0.5; a.ty = ty + 0.5; break; }
           }
           a.wait = 2 + Math.random() * 5;
@@ -484,7 +484,9 @@ const G = window.G = {
         }
         if (t.o && t.o.t === 'fruit') {
           UI.confirm(`Cortar esta ${D.fruits[t.o.k].n.toLowerCase()}? Ela vira madeira.`, () => {
-            t.o = null; sfx('treefall'); this.add('madeira', 6);
+            const trellis = t.o.trellis;
+            t.o = null; sfx('treefall'); this.add('madeira', trellis ? 2 : 6);
+            if (trellis) this.add('espaldeira', 1, true);
           });
           return;
         }
@@ -514,7 +516,7 @@ const G = window.G = {
   },
 
   // cercas em área: contorno do retângulo, com porteira no meio do lado de baixo
-  fenceRect(x0, y0, x1, y1) {
+  fenceRect(x0, y0, x1, y1, quiet) {
     const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
     const cells = [];
     if (ax === bx || ay === by) { for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) cells.push([x, y, 'cerca']); }
@@ -535,6 +537,7 @@ const G = window.G = {
       if (!S.creative) this.take(type);
       this.addBuilding(type, x, y); placed++;
     }
+    if (quiet) return placed;
     if (placed) { sfx('place'); toast(`🚧 ${placed} peça(s) de cerca colocadas.${missing ? ` Faltaram ${missing} — crie mais cercas (C).` : ''}`); }
     else toast(missing ? 'Sem cercas na mochila. Crie mais no menu de criação (C).' : 'Não há espaço livre nessa área.');
     return placed;
@@ -716,6 +719,15 @@ const G = window.G = {
       return;
     }
     if (it.sapling) {
+      const f = D.fruits[it.sapling];
+      if (f.climber) {
+        // trepadeira: precisa de uma espaldeira vazia
+        if (!b || b.type !== 'espaldeira') { toast(`${f.n} é trepadeira: plante numa espaldeira (crie no menu C → Construção).`); sfx('error'); return; }
+        this.removeBuilding(b);
+        this.take(id); t.o = { t: 'fruit', k: it.sapling, age: 0, timer: 0, ready: false, trellis: true };
+        sfx('plant'); this.stat('trees');
+        return;
+      }
       if (t.g !== 'grass' || t.o || t.c) { toast('Plante mudas em grama livre.'); return; }
       this.take(id); t.o = { t: 'fruit', k: it.sapling, age: 0, timer: 0, ready: false };
       sfx('plant'); this.stat('trees');

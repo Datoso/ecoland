@@ -65,6 +65,7 @@ D.crops = {
   morango:  { n: 'Morango',  i: '🍓', days: 7,  seasons: [0, 3],       yield: [1, 2], seedPrice: 70, regrow: 3, color: '#4e9a36' },
   pimenta:  { n: 'Pimenta',  i: '🌶️', days: 6,  seasons: [1],          yield: [2, 3], seedPrice: 35, regrow: 3, color: '#5b9b30' },
   melancia: { n: 'Melancia', i: '🍉', days: 10, seasons: [1],          yield: [1, 1], seedPrice: 70, color: '#4a9f3a' },
+  abacaxi:  { n: 'Abacaxi',  i: '🍍', days: 14, seasons: [0, 1, 2, 3], yield: [1, 1], seedPrice: 60, regrow: 10, color: '#5f8f3a' },
 };
 
 // ---------- Árvores frutíferas (pomar) ----------
@@ -74,36 +75,42 @@ D.fruits = {
   banana:  { n: 'Bananeira',  fruit: 'banana',  i: '🍌', seasons: [0, 1, 2, 3], every: 4, yield: [2, 3], price: 180, mature: 8 },
   abacate: { n: 'Abacateiro', fruit: 'abacate', i: '🥑', seasons: [2],          every: 3, yield: [2, 3], price: 300, mature: 12 },
   limao:   { n: 'Limoeiro',   fruit: 'limao',   i: '🍋', seasons: [0, 1, 2, 3], every: 4, yield: [2, 3], price: 220, mature: 10 },
+  acerola:    { n: 'Aceroleira',  fruit: 'acerola',    i: '🍒', seasons: [0, 1, 2],    every: 2, yield: [4, 7], price: 160, mature: 7 },
+  jabuticaba: { n: 'Jabuticabeira', fruit: 'jabuticaba', i: '🫐', seasons: [0, 3],     every: 3, yield: [6, 10], price: 350, mature: 14, desc: 'Frutifica no tronco!' },
+  coco:       { n: 'Coqueiro',    fruit: 'coco',       i: '🥥', seasons: [0, 1, 2, 3], every: 5, yield: [2, 3], price: 320, mature: 14 },
+  // trepadeiras: a muda precisa ser plantada numa espaldeira (estrutura de madeira e arame)
+  uva:        { n: 'Parreira',    fruit: 'uva',        i: '🍇', seasons: [1, 2],       every: 3, yield: [3, 5], price: 280, mature: 10, climber: true },
+  maracuja:   { n: 'Maracujazeiro', fruit: 'maracuja', i: '🟡', seasons: [0, 1, 2],    every: 3, yield: [3, 5], price: 200, mature: 8, climber: true },
 };
 
 // ---------- Animais ----------
 D.animals = {
-  galinha: {
+  galinha: { roam: 5,
     n: 'Galinha', baby: 'Pintinho', i: '🐔', bi: '🐤', price: 80, homes: ['galinheiro'], adult: 4, eat: 1,
     produce: { item: 'ovo', every: 1, where: 'home' }, manure: 0.5, grazer: false, sfx: 'chicken',
     slaughter: { carne_frango: 2, penas: 3 }, speed: 1.4,
   },
-  porco: {
+  porco: { roam: 5,
     n: 'Porco', baby: 'Leitão', i: '🐖', bi: '🐖', price: 300, homes: ['chiqueiro', 'galpao'], adult: 7, eat: 2,
     produce: null, manure: 1, grazer: false, sfx: 'pig',
     slaughter: { carne_porco: 6, banha: 2, couro: 1, ossos: 1 }, speed: 0.9,
   },
-  vaca: {
+  vaca: { roam: 11,
     n: 'Vaca', baby: 'Bezerro', i: '🐄', bi: '🐄', price: 700, homes: ['curral', 'galpao'], adult: 10, eat: 3,
     produce: { item: 'leite_balde', every: 1, where: 'hand' }, manure: 2, grazer: true, sfx: 'cow',
     slaughter: { carne_boi: 10, couro: 2, ossos: 3 }, speed: 0.7,
   },
-  ovelha: {
+  ovelha: { roam: 8,
     n: 'Ovelha', baby: 'Cordeiro', i: '🐑', bi: '🐑', price: 400, homes: ['curral', 'galpao'], adult: 6, eat: 2,
     produce: { item: 'la', every: 3, where: 'hand' }, manure: 1, grazer: true, sfx: 'sheep',
     slaughter: { carne_cordeiro: 5, la: 1, couro: 1, ossos: 1 }, speed: 0.9,
   },
-  cabra: {
+  cabra: { roam: 8,
     n: 'Cabra', baby: 'Cabrito', i: '🐐', bi: '🐐', price: 450, homes: ['curral', 'galpao'], adult: 6, eat: 2,
     produce: { item: 'leite_cabra', every: 1, where: 'hand' }, manure: 1, grazer: true, sfx: 'sheep',
     slaughter: { carne_cabrito: 4, couro: 1, ossos: 1 }, speed: 1.0,
   },
-  codorna: {
+  codorna: { roam: 2,
     n: 'Codorna', baby: 'Filhote de codorna', i: '🐦', bi: '🐣', price: 40, homes: ['viveiro'], adult: 3, eat: 1,
     produce: { item: 'ovo_codorna', every: 1, where: 'home' }, manure: 0.3, grazer: false, sfx: 'chicken',
     slaughter: { carne_codorna: 1, penas: 1 }, speed: 1.6, breed: 0.25,
@@ -168,6 +175,7 @@ D.buildings = {
     { n: 'Colmeia com melgueira', every: 2, cost: 900, desc: 'mel a cada 2 dias' },
     { n: 'Apiário', every: 1, cost: 2500, desc: 'mel todo dia e polinização mais forte' }] },
   cerca:       { n: 'Cerca', w: 1, h: 1, i: '🚧', desc: 'Delimita pastos e protege canteiros. Segure a cerca e arraste o mouse para cercar uma área.' },
+  espaldeira:  { n: 'Espaldeira', w: 1, h: 1, i: '🪜', desc: 'Estrutura de madeira e arame para trepadeiras: plante muda de uva ou maracujá nela.' },
   porteira:    { n: 'Porteira', w: 1, h: 1, i: '🚪', desc: 'Passagem na cerca: você passa, os animais não.' },
 };
 
@@ -196,6 +204,12 @@ D.items = {
   morango:  { n: 'Morango', i: '🍓', sell: 50, cat: 'Colheita', e: { fome: 6, sede: 4, energia: 4 }, organic: 1 },
   pimenta:  { n: 'Pimenta', i: '🌶️', sell: 30, cat: 'Colheita', organic: 1 },
   melancia: { n: 'Melancia', i: '🍉', sell: 180, cat: 'Colheita', e: { fome: 10, sede: 35 }, organic: 2 },
+  abacaxi:  { n: 'Abacaxi', i: '🍍', sell: 140, cat: 'Colheita', e: { fome: 10, sede: 20 }, organic: 2 },
+  acerola:    { n: 'Acerola', i: '🍒', sell: 12, cat: 'Fruta', e: { sede: 4, energia: 2 }, organic: 1 },
+  jabuticaba: { n: 'Jabuticaba', i: '🫐', sell: 15, cat: 'Fruta', e: { fome: 2, sede: 3 }, organic: 1 },
+  coco:       { n: 'Coco verde', i: '🥥', sell: 45, cat: 'Fruta', e: { sede: 30 }, organic: 2 },
+  uva:        { n: 'Uva', i: '🍇', sell: 25, cat: 'Fruta', e: { fome: 4, sede: 6 }, organic: 1 },
+  maracuja:   { n: 'Maracujá', i: '🟡', sell: 30, cat: 'Fruta', organic: 1 },
   // frutas
   laranja: { n: 'Laranja', i: '🍊', sell: 40, cat: 'Fruta', e: { fome: 6, sede: 15 }, organic: 1 },
   manga:   { n: 'Manga', i: '🥭', sell: 50, cat: 'Fruta', e: { fome: 10, sede: 10 }, organic: 1 },
@@ -247,6 +261,11 @@ D.items = {
   conserva_codorna: { n: 'Ovos de codorna em conserva', i: '🫙', sell: 140, cat: 'Processado', e: { fome: 20, energia: 8 } },
   tilapia_defumada: { n: 'Tilápia defumada', i: '🐠', sell: 160, cat: 'Processado', e: { fome: 30, energia: 12 } },
   limonada:      { n: 'Limonada', i: '🍹', sell: 80, cat: 'Prato', e: { sede: 40, energia: 6 } },
+  suco_acerola:  { n: 'Suco de acerola', i: '🧃', sell: 90, cat: 'Prato', e: { sede: 40, energia: 12 } },
+  suco_maracuja: { n: 'Suco de maracujá', i: '🧃', sell: 100, cat: 'Prato', e: { sede: 40, energia: 5 } },
+  suco_uva:      { n: 'Suco de uva', i: '🧃', sell: 110, cat: 'Prato', e: { sede: 40, energia: 10 } },
+  geleia_jabuticaba: { n: 'Geleia de jabuticaba', i: '🫙', sell: 220, cat: 'Processado', e: { fome: 15, energia: 15 } },
+  doce_coco:     { n: 'Cocada', i: '🥥', sell: 130, cat: 'Processado', e: { fome: 20, energia: 15 } },
   // compras de mercado
   marmita: { n: 'Marmita', i: '🍱', sell: 20, cat: 'Mercado', e: { fome: 40, energia: 15 } },
   agua:    { n: 'Garrafa de água', i: '💧', sell: 5, cat: 'Mercado', e: { sede: 35 } },
@@ -256,7 +275,7 @@ D.items = {
 // sementes e mudas geradas automaticamente
 for (const [id, c] of Object.entries(D.crops)) {
   D.items['sem_' + id] = {
-    n: (id === 'mandioca' ? 'Ramas de ' : id === 'capim' ? 'Mudas de ' : 'Sementes de ') + c.n.toLowerCase(),
+    n: (id === 'mandioca' ? 'Ramas de ' : id === 'capim' || id === 'abacaxi' ? 'Mudas de ' : 'Sementes de ') + c.n.toLowerCase(),
     i: c.i, seed: id, sell: Math.floor(c.seedPrice / 2), cat: 'Semente',
   };
 }
@@ -276,6 +295,7 @@ D.recipes = [
   { out: 'fogueira', q: 1, in: { madeira: 5, pedra: 3 }, st: null, cat: 'Construção' },
   { out: 'cerca', q: 4, in: { madeira: 2 }, st: null, cat: 'Construção' },
   { out: 'porteira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
+  { out: 'espaldeira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
   { out: 'cocho', q: 1, in: { madeira: 10 }, st: null, cat: 'Construção' },
   { out: 'composteira', q: 1, in: { madeira: 15, pedra: 5 }, st: null, cat: 'Construção' },
   { out: 'poco', q: 1, in: { pedra: 25, madeira: 10, ferragens: 2 }, st: null, cat: 'Construção' },
@@ -313,6 +333,11 @@ D.recipes = [
   { out: 'salada', q: 1, in: { alface: 1, tomate: 1 }, st: null, cat: 'Preparo' },
   { out: 'suco_laranja', q: 1, in: { laranja: 2 }, st: null, cat: 'Preparo' },
   { out: 'limonada', q: 1, in: { limao: 2 }, st: null, cat: 'Preparo' },
+  { out: 'suco_acerola', q: 1, in: { acerola: 6 }, st: null, cat: 'Preparo' },
+  { out: 'suco_maracuja', q: 1, in: { maracuja: 2 }, st: null, cat: 'Preparo' },
+  { out: 'suco_uva', q: 1, in: { uva: 4 }, st: null, cat: 'Preparo' },
+  { out: 'geleia_jabuticaba', q: 1, in: { jabuticaba: 10, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'doce_coco', q: 2, in: { coco: 2, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   // moinho
   { out: 'farinha', q: 1, in: { trigo: 3 }, st: 'moinho', cat: 'Moinho' },
   { out: 'fuba', q: 1, in: { milho: 2 }, st: 'moinho', cat: 'Moinho' },
