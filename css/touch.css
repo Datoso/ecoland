@@ -65,6 +65,16 @@ body.touch.modal-open #touch-ui { display: none; }
 .tc-cyc { right: 92px; bottom: 88px; width: 54px; height: 54px; }
 .tc-eat.off { opacity: .5; }
 
+/* ---------- qualquer tela de toque: tirar menu/zoom dos cantos de baixo (joystick e botões) ---------- */
+body.touch #menu-btns {
+  left: 50%; bottom: auto; top: calc(var(--st) + 10px); transform: translateX(-50%);
+  flex-direction: row; gap: 6px; padding: 4px; border-radius: 12px; background: rgba(74,47,23,.45);
+}
+body.touch #menu-btns button { width: 48px; height: 48px; padding: 0; }
+body.touch #zoom-btns { right: calc(var(--sr) + 12px); bottom: auto; top: calc(var(--st) + 250px); }
+body.touch #zoom-btns button { width: 46px; height: 46px; padding: 0; }
+body.touch .slot .k { display: none; }
+
 /* ---------- HUD compacto em celular (≤ 900px, retrato e paisagem) ---------- */
 @media (max-width: 900px), (max-height: 500px) {
   body.touch #stats { left: calc(var(--sl) + 6px); top: calc(var(--st) + 6px); width: 150px; padding: 5px 8px; }
@@ -178,7 +188,7 @@ body.touch.modal-open #touch-ui { display: none; }
   body.touch #quest { top: calc(var(--st) + 166px); }
   body.touch #zoom-btns { top: calc(var(--st) + 166px); flex-direction: column; }
   body.touch #hotbar { max-width: calc(100vw - var(--sl) - var(--sr) - 12px); gap: 3px; padding: 4px; }
-  body.touch .slot { width: 40px; height: 42px; }
+  body.touch .slot { flex: 1 1 0; min-width: 36px; max-width: 46px; width: auto; height: 44px; }
   body.touch .slot .svgic, body.touch .slot .itemic { width: 32px; height: 32px; }
   body.touch .tc-acts { bottom: calc(var(--sb) + 76px); }
   body.touch .tc-joy { top: calc(100% - var(--sb) - 170px); left: calc(var(--sl) + 84px); }
@@ -189,3 +199,7 @@ body.touch.modal-open #touch-ui { display: none; }
     background: rgba(40,28,15,.85); color: #ffe9a8; font-size: 13px; padding: 6px 12px; border-radius: 14px; white-space: nowrap; pointer-events: none;
   }
 }
+
+/* ajuda de controles por toque na tela inicial */
+.tc-help { display: none; }
+body.touch .tc-help { display: block; margin: 6px 0 0; }

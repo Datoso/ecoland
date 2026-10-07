@@ -169,7 +169,7 @@ window.UI = (() => {
           ic = e.i; name = e.n; sub = e.desc; if (S.upgrades[e.upgrade]) { dis = true; sub = '✔ já comprado'; }
         } else {
           const it = D.items[e.id]; ic = icon(e.id); name = it.n;
-          if (it.seed) { const c = D.crops[it.seed]; const inS = c.seasons.includes(S.season); sub = `${c.days} dias · ${c.seasons.map(s => D.SEASONS[s]).join(', ')}${inS ? '' : ' · <b style="color:#c0392b">fora de época</b>'}${c.regrow ? ' · rebrota' : ''}`; }
+          if (it.seed) { const c = D.crops[it.seed]; const inS = c.seasons.includes(S.season); sub = `${D.families[c.fam] || ''} · ${c.days} dias · ${c.seasons.map(s => D.SEASONS[s]).join(', ')}${inS ? '' : ' · <b style="color:#c0392b">fora de época</b>'}${c.regrow ? ' · rebrota' : ''}${c.desc ? '<br>' + c.desc : ''}`; }
           else if (it.sapling) { const f = D.fruits[it.sapling]; sub = `produz em ${f.mature} dias · ${f.seasons.map(s => D.SEASONS[s]).join(', ')}`; }
           else if (it.e) sub = `+${it.e.fome || 0}🍖 +${it.e.sede || 0}💧 +${it.e.energia || 0}⚡`;
           else if (it.feed) sub = `alimento animal: ${it.feed} un.`;
@@ -230,7 +230,7 @@ window.UI = (() => {
   ui.openSeedBank = b => {
     const L = G.lvl(b), lv = b.level || 1, nx = G.nextLevel(b);
     const gens = g => g ? '🌱'.repeat(g) + '<span style="opacity:.25">' + '🌱'.repeat(5 - g) + '</span>' : '<small>nenhuma geração ainda</small>';
-    const cards = Object.keys(D.crops).map(id => {
+    const cards = Object.keys(D.crops).filter(id => !D.crops[id].greenManure).map(id => {
       const c = D.crops[id], bank = S.seedBank[id] || {}, have = S.inv[id] || 0, per = D.seedSave[id] + (L.bonus || 0);
       const next = bank.fresh ? Math.min(5, Math.max(bank.gen || 0, bank.fresh + (L.genStep || 1))) : 0;
       return `<div class="card ${have ? '' : 'off'}"><div class="ic">${icon('cri_' + id)}</div><div class="info"><b>${c.n}</b>${gens(bank.gen || 0)}

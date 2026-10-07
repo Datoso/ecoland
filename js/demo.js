@@ -51,6 +51,7 @@ G.newDemoWorld = function () {
     if (!t || t.o || t.g === 'water') return;
     t.g = 'tilled'; t.wet = true;
     t.c = { id, g: grown == null ? rnd(0, c.days) : grown, fert: chance(0.4), dead: false, hp: rnd(80, 100), cri: chance(0.5) ? rnd(1, 5) : undefined };
+    t.f = rnd(60, 95); t.lastFam = chance(0.5) ? 'leguminosa' : 'adubo_verde';
   };
   const tree = (x, y, k) => {
     const f = D.fruits[k], t = G.tile(x, y);
@@ -150,6 +151,10 @@ G.newDemoWorld = function () {
   G.bridgeLine(v.x + 5, v.y + 11, v.x + 19, v.y + 11, true);   // mais ao sul, longe do tanque de baixo
   clear(v.x + 4, v.y + 1, 4, 5);
   for (let y = v.y + 1; y < v.y + 6; y++) for (let x = v.x + 4; x < v.x + 8; x++) plant(x, y, ['alface', 'tomate', 'morango', 'pimenta'][x % 4]);
+
+  // ---------- Solo vivo e controle de pragas (lavoura NE) ----------
+  for (let y = ne.y + 2; y < ne.y + 13; y++) { plant(ne.x + 4, y, 'cravo'); plant(ne.x + 12, y, y % 2 ? 'crotalaria' : 'feijao_porco'); }
+  [[ne.x + 1, ne.y + 4], [ne.x + 2, ne.y + 5], [ne.x + 9, ne.y + 9]].forEach(([x, y], i) => { const t = G.tile(x, y); if (t && t.c) t.c.pest = ['lagarta', 'lagarta', 'pulgao'][i]; });
 
   // ---------- Água e energia ----------
   build('cisterna', s.x, s.y, 3).data.water = 1800;

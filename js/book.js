@@ -42,6 +42,7 @@
     { title: 'Expandindo', sub: 'terras novas e animais grandes', ids: ['terra', 'galpao'], doodle: 'house' },
     { title: 'Do campo à mesa', sub: 'abate respeitoso e conservação', ids: ['abate', 'conserva'], doodle: 'pot' },
     { title: 'Pomar, abelhas e ração própria', sub: 'árvores, mel e moinho', ids: ['pomar', 'colmeia', 'racao'], doodle: 'bee' },
+    { title: 'Solo vivo e pragas sem veneno', sub: 'adubação verde e controle natural', ids: ['solo', 'pragas'], doodle: 'flower' },
     { title: 'Sementes crioulas e o sistema integrado', sub: 'a autonomia da fazenda', ids: ['sementes', 'integrado'], doodle: 'flower' },
   ];
   const FALLBACK = { title: 'Páginas soltas do vô', sub: 'novas lições', doodle: 'sprout' };
@@ -89,6 +90,10 @@
       todo: ['<kbd>C</kbd> → Construção → <b>Colmeia</b> (15 madeiras + 2 ferragens).', 'Coloque perto da horta e do pomar: ela poliniza tudo em volta.', 'Volte de tempos em tempos e recolha o <b>mel</b> com <kbd>E</kbd>.'] },
     racao: { icons: ['moinho', 'milho', 'feijao', 'racao'], note: 'A lavoura alimenta a criação.',
       todo: ['<kbd>C</kbd> → Construção → <b>Moinho</b>.', 'Fique perto dele e abra <kbd>C</kbd> → aba <b>Moinho</b>.', 'Milho + feijão = 3 rações. Mandioca + 2 capins = 2 rações. Faça 6.'] },
+    solo: { icons: ['sem_crotalaria', 'sem_feijao_porco', 't:foice', 'adubo'], note: 'Adubo que nasce do chão!',
+      todo: ['Compre sementes de <b>crotalária</b> ou <b>feijão-de-porco</b> na loja (aba Sementes).', 'Plante e regue como qualquer cultura.', 'Quando florirem, use a <b>foice</b> <kbd>4</kbd>: a planta é incorporada ao solo. Faça 3 vezes.', 'Troque a família do canteiro a cada plantio.'] },
+    pragas: { icons: ['sem_cravo', 'cravo', 'calda', 'neem'], note: 'Diversidade é remédio.',
+      todo: ['Plante 4 <b>cravos-de-defunto</b> entre os canteiros.', 'Faça <b>calda</b> (<kbd>C</kbd> → Preparo: 2 pimentas + 1 sabão) ou compre <b>óleo de neem</b> na loja.', 'Segure a calda (slot <kbd>8</kbd>) e clique na planta com praga.'] },
     sementes: { icons: ['banco_sementes', 'cri_milho', 'cri_feijao', 'cri_tomate'], note: 'Semente boa é semente trocada.',
       todo: ['<kbd>C</kbd> → Construção → <b>Banco de Sementes</b>.', 'Aperte <kbd>E</kbd> nele e clique em <b>Separar</b> em 3 culturas que você colheu.', 'Plante as crioulas e guarde de novo: cada geração fica mais forte.'] },
     integrado: { icons: ['milho', 'galinheiro', 'muda_laranja', 'colmeia', 'composteira'], note: 'Tudo ligado, tudo vivo.',
@@ -235,13 +240,13 @@
       <h2 class="bk-title"><span class="bk-snum">${i + 1}</span>${esc(q.t)}</h2>
       <div class="bk-goal">🎯 ${esc(q.goal)}</div>
       <div class="bk-body">
+        ${st === 'done' ? '<div class="bk-stamp">Feito!</div>' : ''}
         <div class="bk-art">${(info.icons || []).map(x => ic(x)).join('<span class="bk-plus">·</span>')}</div>
         <div class="bk-todo"><h4>O que fazer</h4><ol>${info.todo.map(t => `<li>${t}</li>`).join('')}</ol></div>
         <div class="bk-why"><h4>Por que isso importa</h4><p>“${esc(q.txt)}”</p><span class="bk-sig">— vô Zé</span></div>
       </div>
       ${info.note ? `<div class="bk-note n-margin">${esc(info.note)}</div>` : ''}
       ${status}
-      ${st === 'done' ? '<div class="bk-stamp">Feito!</div>' : ''}
       ${p.first ? doodle(p.ch.doodle, 'd-chap') : ''}
       ${pno(n)}
     </div>`;

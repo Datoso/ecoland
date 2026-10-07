@@ -173,6 +173,18 @@
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(n => document.addEventListener(n, e => e.preventDefault(), { passive: false }));
   document.addEventListener('touchmove', e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
 
+  // ajuda na tela inicial e dicas com o nome do botão em vez da tecla
+  const help = document.querySelector('#title .controls');
+  if (help) {
+    const p = el('p', 'tc-help', '<b>📱 No toque:</b> joystick (polegar esquerdo) anda · <b>toque</b> num tile perto usa a ferramenta · <b>toque longo</b> interage/colhe · <b>pinça</b> com dois dedos dá zoom · botões <b>Usar</b>, <b>Interagir</b>, <b>Comer</b> e <b>🔄</b> (troca o item na mão) · com cerca/ponte na mão, <b>arraste</b> para cercar uma área');
+    help.insertBefore(p, help.querySelector('p'));
+    help.open = false;
+  }
+  if (window.UI && UI.hint) {
+    const hint0 = UI.hint;
+    UI.hint = text => hint0(text ? String(text).replace(/<b>E<\/b>/g, '<b>✋</b>').replace(/ \((?:T|J|K|P)\)/g, '') : text);
+  }
+
   // ---------- estado visual ----------
   let wasPlaying = null, lastIc = '', toldRotate = false;
   function tick() {

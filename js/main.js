@@ -197,8 +197,9 @@
     if (t.o && t.o.t === 'b') { const b = G.getBuilding(t.o.id); return `${G.bname(b)}${b.level > 1 ? ' ' + '★'.repeat(b.level) : ''} · <b>E</b> interagir`; }
     if (t.o && t.o.t === 'fruit') return `${D.fruits[t.o.k].n}${t.o.ready ? ' · <b>E</b> colher' : ''}`;
     if (G.cropReady(t)) return `${D.crops[t.c.id].n} pronto! · <b>E</b> colher`;
-    if (t.c && !t.c.dead) { const c = D.crops[t.c.id]; return `${c.n}${t.c.cri ? ` crioula (geração ${t.c.cri})` : ''} · faltam ${Math.max(0, c.days - t.c.g)} dia(s) regado(s) · saúde ${Math.round(t.c.hp ?? 100)}%${t.wet ? ' · 💧 regado' : ' · <b>precisa de água</b>'}`; }
+    if (t.c && !t.c.dead) { const c = D.crops[t.c.id]; return `${c.n}${t.c.cri ? ` crioula (G${t.c.cri})` : ''} · faltam ${Math.max(0, c.days - t.c.g)}d · saúde ${Math.round(t.c.hp ?? 100)}%${t.wet ? ' · 💧' : ' · <b>precisa de água</b>'} · solo ${Math.round(G.fert(t, tg.x, tg.y))}%${t.c.pest ? ` · <b style="color:#ffb3a8">🐛 ${D.pests[t.c.pest].n}!</b>` : ''}${t.c.mono ? ' · 🔁 monocultura' : ''}`; }
     if (t.c && t.c.dead) return 'Planta morta · use a enxada ou a foice para limpar';
+    if (t.g === 'tilled') return `Canteiro · solo ${Math.round(G.fert(t, tg.x, tg.y))}% (${G.soilLabel(G.fert(t, tg.x, tg.y))})${t.lastFam ? ` · última família: ${D.families[t.lastFam]}` : ''}${t.drip ? ' · 〰️ gotejamento' : ''}`;
     if (t.g === 'water') return 'Lago · <b>E</b> beber · regador enche';
     return '';
   }

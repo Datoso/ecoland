@@ -444,9 +444,10 @@ const G = window.G = {
       case 'vara': return this.cast(tx, ty);
       case 'enxada': {
         const n = this.areaAction(tx, ty, info.area, 2,
-          tt => (tt.c && tt.c.dead) || (tt.g === 'grass' && !tt.o),
+          tt => (tt.c && tt.c.dead) || (tt.c && D.crops[tt.c.id].greenManure && this.cropReady(tt)) || (tt.g === 'grass' && !tt.o),
           (tt, x, y) => {
             if (tt.c && tt.c.dead) tt.c = null;
+            else if (tt.c) this.greenManure(x, y);
             else { tt.g = 'tilled'; this.stat('till'); if (chance(0.12)) { this.add('minhoca', 1); this.popup(x + 0.5, y, '🪱'); } }
             this.burst(x + 0.5, y + 0.5, '#7a5230', 5);
           });
@@ -583,8 +584,10 @@ const G = window.G = {
 
   harvest(tx, ty, quiet) {
     const t = this.tile(tx, ty), c = t.c, crop = D.crops[c.id];
+    if (crop.greenManure) return this.greenManure(tx, ty);   // adubação verde: incorpora ao solo
     let n = rnd(crop.yield[0], crop.yield[1]);
     if (c.fert && chance(0.6)) n++;
+    n = this.soilYield(t, c, n, tx, ty);
     if ((c.hp ?? 100) < 50) n = Math.max(1, n - 1);
     if (c.cri) {
       if (chance(0.08 * c.cri)) n++;            // variedade adaptada produz mais
@@ -596,6 +599,7 @@ const G = window.G = {
     if (!quiet) sfx('harvest');
     this.burst(tx + 0.5, ty + 0.5, '#ffe066', quiet ? 4 : 10);
     this.stat('harvest');
+    this.soilAfterHarvest(t, crop, tx, ty);
     if (crop.regrow) { c.g = crop.days - crop.regrow; c.fert = false; }
     else t.c = null;
   },
@@ -775,6 +779,7 @@ const G = window.G = {
       this.take(id); t.c = { id: it.seed, g: 0, fert: !!t.fert, dead: false, hp: 100 }; t.fert = false;
       if (it.crioula) t.c.cri = (S.seedBank[it.seed] && S.seedBank[it.seed].gen) || 1;
       this.ecoAdd(it.crioula ? 'seedCri' : 'seedShop', 1);
+      this.onPlant(t, crop, tx, ty);
       sfx('plant'); this.stat('plant');
       return;
     }
@@ -818,9 +823,11 @@ const G = window.G = {
       if (t.g !== 'tilled') { toast('Use o adubo em terra arada.'); return; }
       if ((t.c && t.c.fert) || t.fert) { toast('Já está adubado.'); return; }
       this.take(id); if (t.c) t.c.fert = true; else t.fert = true;
+      t.f = Math.min(100, this.fert(t, tx, ty) + 25);
       sfx('plant'); this.burst(tx + 0.5, ty + 0.5, '#5a3d22');
       return;
     }
+    if (it.pesticide) return this.applyPesticide(tx, ty, id);
     if (it.e) return this.eat(id);
     toast(`${it.n}: não há uso aqui. Venda na loja ou use em uma receita.`);
   },
@@ -990,7 +997,7 @@ const G = window.G = {
         if (t.wet) {
           c.hp = Math.min(100, c.hp + 10);
           if (!mature) {
-            c.g++; grew++;
+            c.g += this.growStep(t, c, x, y); grew++;
             if (c.fert && chance(0.5)) c.g++;
             if (this.nearBee(x, y) && chance(0.2)) c.g++;
           }
@@ -1014,6 +1021,7 @@ const G = window.G = {
     });
     if (grew) R.push(`🌱 ${grew} plantas regadas cresceram.`);
     if (wilted) R.push(`🥀 ${wilted} planta(s) morreram por falta de água ou cuidado.`);
+    this.nightPests(R);
 
     // construções
     for (const b of S.buildings) {

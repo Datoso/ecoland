@@ -70,19 +70,31 @@ D.fish = {
 // ---------- Culturas ----------
 // days = dias regados para amadurecer; regrow = dias para rebrotar após colheita
 D.crops = {
-  alface:   { n: 'Alface',   i: '🥬', days: 4,  seasons: [0, 1, 2, 3], yield: [1, 1], seedPrice: 15, color: '#7ccf4a' },
-  cenoura:  { n: 'Cenoura',  i: '🥕', days: 5,  seasons: [0, 2, 3],    yield: [1, 2], seedPrice: 20, color: '#5fae3a' },
-  feijao:   { n: 'Feijão',   i: '🫘', days: 6,  seasons: [0, 1, 2],    yield: [2, 3], seedPrice: 20, color: '#6cbf3f' },
-  milho:    { n: 'Milho',    i: '🌽', days: 7,  seasons: [0, 1],       yield: [1, 2], seedPrice: 25, color: '#9bc93c' },
-  tomate:   { n: 'Tomate',   i: '🍅', days: 8,  seasons: [0, 1],       yield: [1, 2], seedPrice: 40, regrow: 3, color: '#4f9f32' },
-  mandioca: { n: 'Mandioca', i: '🍠', days: 10, seasons: [0, 1, 2],    yield: [2, 3], seedPrice: 30, color: '#3f8f3a' },
-  abobora:  { n: 'Abóbora',  i: '🎃', days: 11, seasons: [1, 2],       yield: [1, 1], seedPrice: 50, color: '#5aa83a' },
-  trigo:    { n: 'Trigo',    i: '🌾', days: 5,  seasons: [2, 3],       yield: [2, 3], seedPrice: 15, color: '#c9b24a' },
-  capim:    { n: 'Capim',    i: '🌿', days: 3,  seasons: [0, 1, 2, 3], yield: [2, 3], seedPrice: 10, regrow: 2, color: '#4caf50' },
-  morango:  { n: 'Morango',  i: '🍓', days: 7,  seasons: [0, 3],       yield: [1, 2], seedPrice: 70, regrow: 3, color: '#4e9a36' },
-  pimenta:  { n: 'Pimenta',  i: '🌶️', days: 6,  seasons: [1],          yield: [2, 3], seedPrice: 35, regrow: 3, color: '#5b9b30' },
-  melancia: { n: 'Melancia', i: '🍉', days: 10, seasons: [1],          yield: [1, 1], seedPrice: 70, color: '#4a9f3a' },
-  abacaxi:  { n: 'Abacaxi',  i: '🍍', days: 14, seasons: [0, 1, 2, 3], yield: [1, 1], seedPrice: 60, regrow: 10, color: '#5f8f3a' },
+  alface:   { fam: 'folhosa', n: 'Alface',   i: '🥬', days: 4,  seasons: [0, 1, 2, 3], yield: [1, 1], seedPrice: 15, color: '#7ccf4a' },
+  cenoura:  { fam: 'raiz', n: 'Cenoura',  i: '🥕', days: 5,  seasons: [0, 2, 3],    yield: [1, 2], seedPrice: 20, color: '#5fae3a' },
+  feijao:   { fam: 'leguminosa', n: 'Feijão',   i: '🫘', days: 6,  seasons: [0, 1, 2],    yield: [2, 3], seedPrice: 20, color: '#6cbf3f' },
+  milho:    { fam: 'graminea', n: 'Milho',    i: '🌽', days: 7,  seasons: [0, 1],       yield: [1, 2], seedPrice: 25, color: '#9bc93c' },
+  tomate:   { fam: 'fruto', n: 'Tomate',   i: '🍅', days: 8,  seasons: [0, 1],       yield: [1, 2], seedPrice: 40, regrow: 3, color: '#4f9f32' },
+  mandioca: { fam: 'raiz', n: 'Mandioca', i: '🍠', days: 10, seasons: [0, 1, 2],    yield: [2, 3], seedPrice: 30, color: '#3f8f3a' },
+  abobora:  { fam: 'fruto', n: 'Abóbora',  i: '🎃', days: 11, seasons: [1, 2],       yield: [1, 1], seedPrice: 50, color: '#5aa83a' },
+  trigo:    { fam: 'graminea', n: 'Trigo',    i: '🌾', days: 5,  seasons: [2, 3],       yield: [2, 3], seedPrice: 15, color: '#c9b24a' },
+  capim:    { fam: 'graminea', n: 'Capim',    i: '🌿', days: 3,  seasons: [0, 1, 2, 3], yield: [2, 3], seedPrice: 10, regrow: 2, color: '#4caf50' },
+  morango:  { fam: 'fruto', n: 'Morango',  i: '🍓', days: 7,  seasons: [0, 3],       yield: [1, 2], seedPrice: 70, regrow: 3, color: '#4e9a36' },
+  pimenta:  { fam: 'fruto', n: 'Pimenta',  i: '🌶️', days: 6,  seasons: [1],          yield: [2, 3], seedPrice: 35, regrow: 3, color: '#5b9b30' },
+  melancia: { fam: 'fruto', n: 'Melancia', i: '🍉', days: 10, seasons: [1],          yield: [1, 1], seedPrice: 70, color: '#4a9f3a' },
+  crotalaria:   { fam: 'adubo_verde', n: 'Crotalária', i: '🌼', days: 6, seasons: [0, 1, 2], yield: [0, 0], seedPrice: 15, greenManure: 45, color: '#7fae3a', desc: 'Adubação verde: quando florir, incorpore com a foice ou enxada (+fertilidade). Flores atraem abelhas.' },
+  feijao_porco: { fam: 'adubo_verde', n: 'Feijão-de-porco', i: '🌿', days: 7, seasons: [0, 1, 2, 3], yield: [0, 0], seedPrice: 15, greenManure: 55, color: '#4f8f2f', desc: 'Leguminosa de adubação verde: fixa nitrogênio. Incorpore quando estiver pronta.' },
+  cravo:        { fam: 'flor', n: 'Cravo-de-defunto', i: '🌼', days: 5, seasons: [0, 1, 2], yield: [2, 3], seedPrice: 20, regrow: 3, color: '#5f9f3a', companion: true, desc: 'Planta companheira: afasta pragas num raio de 2 canteiros.' },
+  abacaxi:  { fam: 'fruto', n: 'Abacaxi',  i: '🍍', days: 14, seasons: [0, 1, 2, 3], yield: [1, 1], seedPrice: 60, regrow: 10, color: '#5f8f3a' },
+};
+
+// famílias para a rotação de culturas
+D.families = { folhosa: 'Folhosas', raiz: 'Raízes', leguminosa: 'Leguminosas', graminea: 'Gramíneas', fruto: 'Frutos', adubo_verde: 'Adubação verde', flor: 'Flores' };
+D.soilBase = { sede: 60, pasto: 55, mata: 75, cerrado: 35, lago: 70 };
+D.pests = {
+  lagarta:  { n: 'Lagarta', dmg: 15, fams: ['folhosa', 'graminea', 'fruto'] },
+  pulgao:   { n: 'Pulgão', dmg: 8, stall: true, fams: ['folhosa', 'fruto', 'leguminosa'] },
+  formiga:  { n: 'Formiga-cortadeira', dmg: 25, fams: ['folhosa', 'raiz', 'fruto', 'leguminosa'] },
 };
 
 // ---------- Árvores frutíferas (pomar) ----------
@@ -241,6 +253,7 @@ D.items = {
   morango:  { n: 'Morango', i: '🍓', sell: 50, cat: 'Colheita', e: { fome: 6, sede: 4, energia: 4 }, organic: 1 },
   pimenta:  { n: 'Pimenta', i: '🌶️', sell: 30, cat: 'Colheita', organic: 1 },
   melancia: { n: 'Melancia', i: '🍉', sell: 180, cat: 'Colheita', e: { fome: 10, sede: 35 }, organic: 2 },
+  cravo:    { n: 'Cravo-de-defunto', i: '🌼', sell: 20, cat: 'Colheita', organic: 1 },
   abacaxi:  { n: 'Abacaxi', i: '🍍', sell: 140, cat: 'Colheita', e: { fome: 10, sede: 20 }, organic: 2 },
   acerola:    { n: 'Acerola', i: '🍒', sell: 12, cat: 'Fruta', e: { sede: 4, energia: 2 }, organic: 1 },
   jabuticaba: { n: 'Jabuticaba', i: '🫐', sell: 15, cat: 'Fruta', e: { fome: 2, sede: 3 }, organic: 1 },
@@ -330,9 +343,11 @@ for (const [id, c] of Object.entries(D.crops)) {
 // peixes viram itens
 for (const [id, f] of Object.entries(D.fish)) D.items['peixe_' + id] = { n: f.n, i: '🐟', sell: f.sell, cat: 'Peixe', organic: f.organic };
 D.items.gotejamento = { n: 'Mangueira de gotejamento', i: '〰️', sell: 3, cat: 'Insumo', drip: true };
+D.items.calda = { n: 'Calda de pimenta e sabão', i: '🧴', sell: 15, cat: 'Insumo', pesticide: 3, desc: 'Defensivo natural: aplique sobre a planta para tirar pragas numa área 3×3.' };
+D.items.neem = { n: 'Óleo de neem', i: '🫗', sell: 25, cat: 'Insumo', pesticide: 6, desc: 'Defensivo natural: tira pragas numa área 3×3 e protege por 6 dias.' };
 D.items.minhoca = { n: 'Minhoca (isca)', i: '🪱', sell: 2, cat: 'Insumo', organic: 1 };
 // quantas sementes saem de cada produto colhido
-D.seedSave = { alface: 3, cenoura: 3, feijao: 3, milho: 4, tomate: 4, mandioca: 2, abobora: 5, trigo: 3, capim: 2, morango: 2, pimenta: 4, melancia: 4, abacaxi: 1 };
+D.seedSave = { crotalaria: 6, feijao_porco: 4, cravo: 5, alface: 3, cenoura: 3, feijao: 3, milho: 4, tomate: 4, mandioca: 2, abobora: 5, trigo: 3, capim: 2, morango: 2, pimenta: 4, melancia: 4, abacaxi: 1 };
 for (const [id, f] of Object.entries(D.fruits)) {
   D.items['muda_' + id] = { n: 'Muda de ' + f.n.toLowerCase(), i: f.i, sapling: id, sell: Math.floor(f.price / 2), cat: 'Muda' };
 }
@@ -355,6 +370,7 @@ D.recipes = [
   { out: 'catavento', q: 1, in: { madeira: 10, ferragens: 12 }, st: null, cat: 'Construção' },
   { out: 'biodigestor', q: 1, in: { pedra: 30, ferragens: 8 }, st: null, cat: 'Construção' },
   { out: 'fogao_biogas', q: 1, in: { pedra: 10, ferragens: 6 }, st: null, cat: 'Construção' },
+  { out: 'calda', q: 4, in: { pimenta: 2, sabao: 1 }, st: null, cat: 'Preparo' },
   { out: 'banco_sementes', q: 1, in: { madeira: 25, pedra: 15, ferragens: 2 }, st: null, cat: 'Construção' },
   { out: 'espaldeira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
   { out: 'cocho', q: 1, in: { madeira: 10 }, st: null, cat: 'Construção' },
@@ -428,6 +444,7 @@ D.shop = [
   { id: 'ferragens', price: 50, tab: 'Materiais' },
   { id: 'racao', price: 15, tab: 'Insumos' },
   { id: 'gotejamento', price: 8, tab: 'Insumos' },
+  { id: 'neem', price: 45, tab: 'Insumos' },
   { id: 'minhoca', price: 4, tab: 'Insumos' },
   { id: 'painel_solar', price: 1200, tab: 'Materiais' },
   { id: 'adubo', price: 40, tab: 'Insumos' },
@@ -501,6 +518,11 @@ D.quests = [
     txt: 'As abelhas produzem mel e polinizam: plantas e frutíferas perto da colmeia crescem e produzem mais.' },
   { id: 'racao', t: 'Ração caseira', goal: 'Produza 6 rações no moinho', stat: 'racao', n: 6, reward: { money: 300 },
     txt: 'Comprar ração é dependência. Moendo milho com feijão (ou mandioca com capim) você fecha o ciclo: a lavoura alimenta a criação.' },
+  { id: 'solo', t: 'Solo vivo', goal: 'Incorpore 3 adubações verdes (crotalária ou feijão-de-porco)', stat: 'greenmanure', n: 3, reward: { items: { adubo: 5 } },
+    txt: 'Cada colheita tira nutrientes da terra, e plantar sempre a mesma família no mesmo canteiro cansa o solo e chama pragas. Alterne as famílias (folhas, raízes, grãos, frutos, leguminosas) e use adubação verde: semeie crotalária ou feijão-de-porco e, quando florirem, corte e deixe no solo. É adubo que nasce do chão!' },
+  { id: 'pragas', t: 'Controle natural de pragas', goal: 'Plante 4 cravos-de-defunto e aplique 1 calda ou óleo de neem', check: g => (g.stats.cravo || 0) >= 4 && (g.stats.pesticide || 0) >= 1,
+    prog: g => `${Math.min(4, g.stats.cravo || 0)}/4 cravos · ${Math.min(1, g.stats.pesticide || 0)}/1 aplicação`, reward: { money: 300 },
+    txt: 'Lagarta, pulgão e formiga aparecem mais em monocultura e em plantas fracas. Diversidade é remédio: cravo-de-defunto afasta pragas, as galinhas perto da horta comem insetos e a calda de pimenta com sabão (ou o óleo de neem) resolve sem veneno.' },
   { id: 'sementes', t: 'Sementes da terra', goal: 'Guarde sementes crioulas de 3 culturas no Banco de Sementes', check: g => Object.keys(g.seedBank || {}).length >= 3,
     prog: g => `${Math.min(3, Object.keys(g.seedBank || {}).length)}/3 variedades`, reward: { money: 400 },
     txt: 'Semente comprada deixa você dependente da loja. Separando sementes da sua colheita, cada geração se adapta melhor ao seu solo e ao seu clima: fica mais resistente à seca e mais produtiva. Guardar e trocar sementes crioulas é uma tradição dos agricultores — e a base da autonomia.' },
