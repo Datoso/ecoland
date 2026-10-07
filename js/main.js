@@ -15,6 +15,18 @@
   function audioInit() { try { SFX.init(); if (!SFX.music.playing) SFX.music.start(); } catch (e) { /* */ } }
 
   // alvo = tile sob o mouse (se ao alcance) ou tile à frente
+  // modo construção: com uma construção na mão, a prévia segue o mouse pela tela toda
+  const placing = () => running && S && !S.indoors && S.tool === 7 && S.held && D.items[S.held] && D.items[S.held].place && !['cerca', 'ponte'].includes(S.held) ? D.items[S.held].place : null;
+  function buildSpot(type) {
+    const def = D.buildings[type], p = S.player;
+    if (mouse.moved) {
+      const w = R.screenToWorld(mouse.x, mouse.y);
+      return { x: Math.floor(w.x - def.w / 2 + 0.5), y: Math.floor(w.y - def.h / 2 + 0.5) };
+    }
+    // sem mouse: logo à frente do jogador, sem cobrir o próprio jogador
+    const px = Math.floor(p.x), py = Math.floor(p.y);
+    return { down: { x: px - Math.floor(def.w / 2), y: py + 1 }, up: { x: px - Math.floor(def.w / 2), y: py - def.h }, left: { x: px - def.w, y: py - Math.floor(def.h / 2) }, right: { x: px + 1, y: py - Math.floor(def.h / 2) } }[p.dir];
+  }
   function target() {
     const p = S.player;
     const w = R.screenToWorld(mouse.x, mouse.y);
@@ -32,6 +44,12 @@
 
   function act(interact) {
     if (!running || UI.isOpen()) return;
+    const bt = placing();
+    if (bt) {
+      if (interact) { S.tool = 0; UI.toast('Construção cancelada.'); UI.hud(true); return; }   // botão direito cancela
+      const sp = buildSpot(bt);
+      G.useItem(sp.x, sp.y); UI.hud(true); return;
+    }
     if (G.fish && !interact) { G.reel(); UI.hud(true); return; }   // pescando: clique fisga
     const tg = target();
     faceTo(tg);
@@ -66,7 +84,7 @@
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
     if (!running) return;
-    if (k === 'escape') { UI.isOpen() ? UI.close() : UI.pause(); return; }
+    if (k === 'escape') { if (UI.isOpen()) UI.close(); else if (placing()) { S.tool = 0; UI.toast('Construção cancelada.'); UI.hud(true); } else UI.pause(); return; }
     if (k === 'i' || k === 'tab') { e.preventDefault(); openPanel('inv'); return; }
     if (k === 'c') { openPanel('craft'); return; }
     if (k === 'j') { openPanel('manual'); return; }
@@ -123,6 +141,31 @@
     else G.fenceRect(d.start.x, d.start.y, d.end.x, d.end.y);
     UI.hud(true);
   });
+  function drawBuildOverlay(gh) {
+    const ctx = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1), TS = R.tileSize ? R.tileSize() : R.TS;
+    const def = D.buildings[gh.type];
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // grade de apoio em volta
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1;
+    for (let y = gh.y - 3; y <= gh.y + def.h + 3; y++) for (let x = gh.x - 3; x <= gh.x + def.w + 3; x++) { const q = R.worldToScreen(x, y); ctx.strokeRect(q.x + 0.5, q.y + 0.5, TS, TS); }
+    // contorno de cada tile da construção
+    for (let y = gh.y; y < gh.y + def.h; y++) for (let x = gh.x; x < gh.x + def.w; x++) {
+      const q = R.worldToScreen(x, y), ok = G.canPlace(gh.type, x, y) || (def.w * def.h > 1 && G.owned(x, y) && !((t => t.o || t.c || t.g === 'water')(G.tile(x, y))));
+      ctx.strokeStyle = ok ? 'rgba(120,255,120,0.9)' : 'rgba(255,80,80,0.95)'; ctx.lineWidth = 2; ctx.strokeRect(q.x + 2, q.y + 2, TS - 4, TS - 4);
+    }
+    // porta (por onde se entra)
+    const door = { x: gh.x + Math.floor(def.w / 2), y: gh.y + def.h };
+    if (def.w * def.h > 1) {
+      const q = R.worldToScreen(door.x, door.y), free = !G.solid(door.x, door.y);
+      ctx.fillStyle = free ? 'rgba(255,230,120,0.55)' : 'rgba(255,80,80,0.5)'; ctx.fillRect(q.x + 6, q.y + 6, TS - 12, TS - 12);
+      ctx.font = `bold ${Math.max(10, TS * 0.3)}px Fredoka, sans-serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#3b2a1a'; ctx.fillText(free ? 'porta' : 'bloqueada', q.x + TS / 2, q.y + TS / 2 + 4);
+    }
+    const q = R.worldToScreen(gh.x + def.w / 2, gh.y), txt = `${def.n} · ${gh.ok ? 'clique para construir' : 'não cabe aqui'} · Esc/botão direito cancela`;
+    ctx.font = 'bold 13px Fredoka, sans-serif'; ctx.textAlign = 'center';
+    const tw = ctx.measureText(txt).width + 16;
+    ctx.fillStyle = 'rgba(40,28,15,0.88)'; ctx.fillRect(q.x - tw / 2, q.y - 30, tw, 22);
+    ctx.fillStyle = gh.ok ? '#b6f5a0' : '#ffb3a8'; ctx.fillText(txt, q.x, q.y - 14);
+  }
   function drawDrag() {
     if (!drag) return;
     const ctx = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1), TS = R.tileSize ? R.tileSize() : R.TS;
@@ -230,9 +273,12 @@
       if (G.swing > 0) G.swing -= dt;
       const tg = target();
       let ghost = null;
-      if (S.tool === 7 && S.held && D.items[S.held] && D.items[S.held].place) ghost = { type: D.items[S.held].place, x: tg.x, y: tg.y, ok: G.canPlace(D.items[S.held].place, tg.x, tg.y) };
-      R.frame(dt, UI.isOpen() || drag ? null : tg, drag ? null : ghost);
+      const bt = placing();
+      if (bt) { const sp = buildSpot(bt); ghost = { type: bt, x: sp.x, y: sp.y, ok: G.canPlace(bt, sp.x, sp.y) }; }
+      else if (S.tool === 7 && S.held && D.items[S.held] && D.items[S.held].place) ghost = { type: D.items[S.held].place, x: tg.x, y: tg.y, ok: G.canPlace(D.items[S.held].place, tg.x, tg.y) };
+      R.frame(dt, UI.isOpen() || drag || placing() ? null : tg, drag ? null : ghost);
       drawDrag();
+      if (ghost && placing()) drawBuildOverlay(ghost);
       UI.hud();
       if (!UI.isOpen()) UI.hint(hintFor(tg));
       // música e ambiente

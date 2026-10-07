@@ -138,7 +138,9 @@ const G = window.G = {
       const t = this.tile(x, y);
       if (!t || t.o || t.c) return false;
       if ((t.g === 'water') !== (type === 'ponte')) return false;   // ponte só na água; o resto só em terra
-      if (Math.floor(S.player.x) === x && Math.floor(S.player.y) === y) return false;
+      // nunca construir em cima do jogador (corpo inteiro, não só o tile do pé)
+      const p = S.player;
+      if (x + 1 > p.x - 0.32 && x < p.x + 0.32 && y + 1 > p.y - 0.45 && y < p.y + 0.2) return false;
     }
     return true;
   },
@@ -343,6 +345,7 @@ const G = window.G = {
       if (p.fome > 30 && p.sede > 30) p.hp = Math.min(100, p.hp + 0.02 * mins);
     }
     if (p.hp <= 0) { this.faint('Você desmaiou de fraqueza...'); return; }
+    this.unstuck();
     if (S.time >= PASS_OUT) { this.faint('Você desmaiou de cansaço às 2h da manhã...'); return; }
 
     this.updateAnimals(dt);
@@ -353,6 +356,18 @@ const G = window.G = {
     this.particles = this.particles.filter(q => q.life > 0);
     this._qTimer = (this._qTimer || 0) + dt;
     if (this._qTimer > 1) { this._qTimer = 0; this.checkQuests(); }
+  },
+
+  // se o jogador ficar preso dentro de algo sólido, empurra para o tile livre mais próximo
+  unstuck() {
+    const p = S.player, tx = Math.floor(p.x), ty = Math.floor(p.y);
+    if (!this.solid(tx, ty)) return;
+    for (let r = 1; r < 12; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || this.solid(tx + dx, ty + dy)) continue;
+      p.x = tx + dx + 0.5; p.y = ty + dy + 0.6;
+      toast('Você foi para um lugar livre (estava preso).');
+      return;
+    }
   },
 
   // ---------------- Animais (movimento) ----------------
