@@ -220,7 +220,7 @@ window.R = (() => {
     const x0 = cx * CH - 1, y0 = cy * CH - 1;
     for (let y = y0; y <= y0 + CH + 1; y++) for (let x = x0; x <= x0 + CH + 1; x++) {
       const tl = tileC(x, y);
-      const code = (GI[tl.g] || 0) + (tl.wet ? 4 : 0) + (tl.fert || (tl.c && tl.c.fert) ? 8 : 0) + (tl.o && tl.o.t === 'b' ? 16 : 0) + (tl.drip ? 32 : 0);
+      const code = (GI[tl.g] || 0) + (tl.wet ? 4 : 0) + (tl.fert || (tl.c && tl.c.fert) ? 8 : 0) + (tl.o && tl.o.t === 'b' ? 16 : 0) + (tl.drip ? 32 : 0) + (tl.g === 'tilled' ? fertCat(tl) * 64 : 0);
       s = (Math.imul(s, 31) + code) | 0;
     }
     return s;
@@ -304,7 +304,7 @@ window.R = (() => {
       if (tl.drip) drawDrip(c, x, y, px, py, tl);
       else if (tl.g === 'grass' && !(tl.o && tl.o.t === 'b')) grassDecor(c, x, y, px, py, season);
       else if (tl.g === 'water') waterDecor(c, x, y, px, py, season);
-      else if (tl.o && tl.o.t === 'b' && tl.g === 'grass' && (() => { const b = G.getBuilding(tl.o.id), d = b && D.buildings[b.type]; return d && d.w === 1 && d.h === 1; })()) { // terra batida sob construções pequenas
+      else if (tl.o && tl.o.t === 'b' && tl.g === 'grass' && (() => { const b = getB(tl.o.id), d = b && D.buildings[b.type]; return d && d.w === 1 && d.h === 1; })()) { // terra batida sob construções pequenas
         ell(c, px + TS / 2, py + TS / 2 + 6, 19, 13, 'rgba(110,80,40,0.16)');
       }
     }
@@ -381,11 +381,15 @@ window.R = (() => {
     }
   }
   function isTilled(x, y) { const n = G.tile(x, y); return n && n.g === 'tilled'; }
+  function fertCat(tl) { const f = tl.f == null ? 60 : tl.f; return f >= 75 ? 2 : f < 30 ? 0 : 1; }
   function drawSoil(c, x, y, px, py, tl) {
     const L = !isTilled(x - 1, y), Rr = !isTilled(x + 1, y), U = !isTilled(x, y - 1), Dn = !isTilled(x, y + 1);
     const x0 = px + (L ? 2.5 : 0), x1 = px + TS - (Rr ? 2.5 : 0), y0 = py + (U ? 2.5 : 0), y1 = py + TS - (Dn ? 2.5 : 0);
     const wet = tl.wet;
-    const base = wet ? '#5e3d26' : '#91643f', dark = wet ? '#40281a' : '#6c4629', lite = wet ? '#7a5638' : '#b07e52';
+    const fc = fertCat(tl);
+    const SOIL = wet ? [['#7a6044', '#5a4430', '#927656'], ['#5e3d26', '#40281a', '#7a5638'], ['#46301e', '#2e1d0f', '#5e4029']]
+                     : [['#b39068', '#8f7050', '#cbab80'], ['#91643f', '#6c4629', '#b07e52'], ['#6c4a2c', '#4a301a', '#8a6040']];
+    const [base, dark, lite] = SOIL[fc];
     const rad = [U && L ? 7 : 0, U && Rr ? 7 : 0, Dn && Rr ? 7 : 0, Dn && L ? 7 : 0];
     rrect4(c, x0, y0, x1 - x0, y1 - y0, rad); c.fillStyle = dark; c.fill();
     rrect4(c, x0 + (L ? 1.5 : 0), y0 + (U ? 1 : 0), x1 - x0 - (L ? 1.5 : 0) - (Rr ? 1.5 : 0), y1 - y0 - (U ? 1 : 0) - (Dn ? 2.5 : 0), rad.map(v => v ? 6 : 0)); c.fillStyle = base; c.fill();
@@ -402,6 +406,8 @@ window.R = (() => {
       for (let k = 0; k < 3; k++) c.fillRect(x0 + (L ? 3 : 0), py + 9 + k * 12.5, x1 - x0 - (L ? 3 : 0) - (Rr ? 3 : 0), 1.2);
       c.fillStyle = 'rgba(220,235,255,0.35)'; c.fillRect(px + 8 + r() * 20, py + 10, 4, 1); c.fillRect(px + 12 + r() * 20, py + 35, 3, 1);
     }
+    if (fc === 2) for (let k = 0; k < 10; k++) { c.fillStyle = k % 4 ? 'rgba(25,14,5,0.6)' : 'rgba(140,170,70,0.6)'; c.fillRect(px + 5 + r() * 32, py + 5 + r() * 32, 1.6, 1.2); }
+    if (fc === 0) { c.strokeStyle = 'rgba(90,65,40,0.55)'; c.lineWidth = 0.8; c.beginPath(); for (let k = 0; k < 3; k++) { let qx = px + 6 + r() * 30, qy = py + 6 + r() * 30; c.moveTo(qx, qy); for (let s2 = 0; s2 < 3; s2++) { qx += (r() - 0.5) * 8; qy += 2 + r() * 4; c.lineTo(qx, qy); } } c.stroke(); }
     if (tl.fert || (tl.c && tl.c.fert)) {
       for (let k = 0; k < 9; k++) { c.fillStyle = k % 3 ? 'rgba(35,18,6,0.65)' : 'rgba(210,180,90,0.7)'; c.fillRect(px + 6 + r() * 30, py + 6 + r() * 30, 2.5, 2.5); }
     }
@@ -467,7 +473,7 @@ window.R = (() => {
     for (let y = y0; y <= y1; y++) for (let x = Math.max(0, x0); x <= Math.min(G.W - 1, x1); x++) {
       const tl = S.tiles[y * G.W + x], o = tl.o, c = tl.c;
       let code = 0;
-      if (c) { const cr = D.crops[c.id]; code = 7 + (cr ? cropStage(c, cr) : 0) * 3 + (c.dead ? 1 : 0) + c.id.length * 31; }
+      if (c) { const cr = D.crops[c.id]; code = 7 + (cr ? cropStage(c, cr) : 0) * 3 + (c.dead ? 1 : 0) + (c.pest ? 2 : 0) + c.id.length * 31; }
       if (o) {
         if (o.t === 'b') { const b = bById.get(o.id); code += b ? b.id * 977 + (b.level | 0) * 13 + bVariant(b) * 7 + 1 : 3; }
         else if (o.t === 'fruit') { const f = D.fruits[o.k]; code += 50 + o.k.length * 17 + (o.ready ? 5 : 0) + Math.round(clamp((o.timer || 0) / ((f && f.every) || 1), 0, 1) * 4) + Math.min(4, Math.floor((o.age || 0) / ((f && f.mature) || 1) * 4)) * 11; }
@@ -809,22 +815,28 @@ window.R = (() => {
     const gp = Math.min(1, (o.age || 0) / f.mature), mature = gp >= 1;
     const cx = px + TS / 2, by = py + TS - 4;
     const prog = o.ready ? 1 : clamp((o.timer || 0) / (f.every || 1), 0, 1);
+    const fb = o.ready ? 'r' : prog > 0.05 ? Math.max(1, Math.round(prog * 4)) : 0;
     if (f.climber || o.trellis) {
       const st = gp < 0.35 ? 0 : gp < 0.7 ? 1 : gp < 1 ? 2 : 3;
-      const s = trellisSprite(o.k, S.season, st);
-      blit(s, cx, by);
-      if (mature && s.pts && (o.ready || prog > 0.05) && !(o.k === 'uva' && S.season === 3 && !o.ready)) for (const [fx, fy] of s.pts) drawFruit(o.k, cx + fx, by + fy, prog, o.ready);
+      const base = trellisSprite(o.k, S.season, st);
+      const show = mature && fb && !(o.k === 'uva' && S.season === 3 && !o.ready);
+      blit(show ? withFruits(base, `vine|${o.k}|${S.season}|${st}`, o.k, fb) : base, cx, by);
       return;
     }
-    const s = fruitSprite(o.k, S.season);
+    const base = fruitSprite(o.k, S.season);
     const sc = mature ? 1 : 0.38 + gp * 0.5;
-    const k = Math.sin(t * 1.1 + x * 0.7 + y * 0.4), amp = 0.03;
-    if (mature) blitSway(s, cx, by, k, amp);
-    else ctx.drawImage(s.cv, Math.round(cx - s.ox * sc), Math.round(by - s.oy * sc), s.w * sc, s.h * sc);
-    if (mature && s.pts && (o.ready || prog > 0.05)) {
-      const fi = Math.round((clamp(k, -1, 1) + 1) / 2 * (SWF - 1)), sk = (fi / ((SWF - 1) / 2) - 1) * amp;
-      for (const [fx, fy] of s.pts) drawFruit(o.k, cx + fx + sk * fy, by + fy, prog, o.ready);
-    }
+    if (mature) blitSway(fb ? withFruits(base, `fruit|${o.k}|${S.season}`, o.k, fb) : base, cx, by, Math.sin(t * 1.1 + x * 0.7 + y * 0.4), 0.03);
+    else ctx.drawImage(base.cv, Math.round(cx - base.ox * sc), Math.round(by - base.oy * sc), base.w * sc, base.h * sc);
+  }
+  // árvore + frutos compostos num único sprite em cache (por estágio de maturação)
+  function withFruits(base, key, k, fb) {
+    if (!base.pts) return base;
+    return sprite(key + '|f' + fb, base.w, base.h, base.ox, base.oy, c => {
+      c.drawImage(base.cv, -base.ox, -base.oy, base.w, base.h);
+      const main = ctx; ctx = c;
+      try { const ready = fb === 'r', prog = ready ? 1 : fb / 4; for (const [fx, fy] of base.pts) drawFruit(k, fx, fy, prog, ready); }
+      finally { ctx = main; }
+    }, false);
   }
 
   // ----- pedras -----
@@ -966,6 +978,40 @@ window.R = (() => {
           }
         }
         if (!gold) { leaf(c, 0, -3, 10 * s + 4, 1.8, -Math.PI / 2 - 0.6, col); leaf(c, 0, -3, 10 * s + 4, 1.8, -Math.PI / 2 + 0.6, dk); }
+        break;
+      }
+      case 'crotalaria': {
+        const hgt = 12 + 32 * s;
+        for (const [bx, lean] of [[-2, -0.12], [2, 0.14], [0, 0]]) {
+          const tx = bx + lean * hgt, ty = -hgt + Math.abs(bx) * 3;
+          c.strokeStyle = dk; c.lineWidth = 1.6; c.beginPath(); c.moveTo(bx * 0.4, 0); c.lineTo(tx, ty); c.stroke();
+          for (let k = 1; k <= 5; k++) { const q = k / 6, lx = bx * 0.4 + (tx - bx * 0.4) * q, ly = ty * q; leaf(c, lx, ly, 5 + s * 2, 1.8, (k % 2 ? -0.5 : -Math.PI + 0.5), k % 2 ? col : lt, vein); }
+          if (st === 3) for (let k = 0; k < 4; k++) circ(c, tx, ty - k * 2.5, 1.3, '#9cc35a');
+          if (st === 4) for (let k = 0; k < 6; k++) { ell(c, tx + (k % 2 ? 1.6 : -1.6), ty - k * 3, 2, 1.5, k % 3 ? '#f6d23a' : '#ffe56a'); ell(c, tx + (k % 2 ? 1.6 : -1.6) + (k % 2 ? 1 : -1), ty - k * 3 + 0.6, 0.8, 0.6, '#c99a1a'); }
+        }
+        break;
+      }
+      case 'feijao_porco': {
+        const R = 5 + 9 * s, n = 3 + st * 2;
+        c.strokeStyle = dk; c.lineWidth = 1.6; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -R * 1.4); c.stroke();
+        for (let i = 0; i < n; i++) {
+          const a = -Math.PI / 2 + (i / (n - 1 || 1) - 0.5) * 2.6, d = R * (0.6 + (i % 2) * 0.4), lx = Math.cos(a) * d, ly = -R * 0.8 + Math.sin(a) * d * 0.7;
+          c.strokeStyle = dk; c.lineWidth = 1; c.beginPath(); c.moveTo(0, -R * 0.5); c.lineTo(lx, ly); c.stroke();
+          for (let q = -1; q <= 1; q++) leaf(c, lx, ly, 4 + s * 3.5, 2.2 + s * 1.4, a + q * 0.8, q ? col : lt, vein);
+        }
+        if (st >= 3) for (let i = 0; i < 3; i++) { const fx = -6 + i * 6, fy = -R * 1.3 - (i % 2) * 3; circ(c, fx, fy, 1.8, '#a050c8'); circ(c, fx + 1.2, fy - 0.8, 1.2, '#d8a0f0'); }
+        if (st === 4) for (const [fx, fy, a] of [[-7, -R * 0.4, 0.3], [6, -R * 0.5, -0.3], [-2, -R * 0.2, 0.1]]) { c.save(); c.translate(fx, fy); c.rotate(a); c.fillStyle = '#6fa83a'; c.beginPath(); c.ellipse(0, 6, 2.2, 8, 0, 0, TAU); c.fill(); c.strokeStyle = '#4f7a2a'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(0, -1); c.lineTo(0, 13); c.stroke(); c.restore(); }
+        break;
+      }
+      case 'cravo': {
+        const R = 4 + 9 * s;
+        for (let i = 0; i < 14 + st * 6; i++) { const a = r() * TAU, d = Math.sqrt(r()) * R; c.strokeStyle = i % 2 ? dk : col; c.lineWidth = 1.1; c.beginPath(); const lx = Math.cos(a) * d, ly = -R * 0.7 + Math.sin(a) * d * 0.7; c.moveTo(lx, ly); c.lineTo(lx + Math.cos(a) * 3, ly + Math.sin(a) * 2 - 1.5); c.stroke(); }
+        ell(c, 0, -R * 0.7, R * 0.8, R * 0.55, col);
+        for (let i = 0; i < 10; i++) { const a = r() * TAU, d = Math.sqrt(r()) * R * 0.75; circ(c, Math.cos(a) * d, -R * 0.75 + Math.sin(a) * d * 0.6, 1.3, i % 2 ? dk : lt); }
+        if (st === 3) for (let i = 0; i < 4; i++) circ(c, -6 + i * 4, -R * 1.1 - (i % 2) * 2, 1.6, '#e8b040');
+        if (st === 4) for (const [fx, fy, fc] of [[-7, -R * 0.9, '#f28a1a'], [0, -R * 1.25, '#ffc21a'], [7, -R * 0.95, '#f28a1a'], [-3, -R * 0.55, '#ffc21a'], [4, -R * 0.5, '#e86a10']]) {
+          circ(c, fx, fy, 3.4, shade(fc, -0.2)); for (let k = 0; k < 7; k++) { const a = k / 7 * TAU; circ(c, fx + Math.cos(a) * 1.9, fy + Math.sin(a) * 1.9, 1.5, fc); } circ(c, fx, fy, 1.2, shade(fc, 0.35));
+        }
         break;
       }
       case 'abacaxi': {
@@ -1136,9 +1182,18 @@ window.R = (() => {
       }
     }
   }
-  function cropSprite(id, st, dead) {
-    return sprite(`crop|${id}|${dead ? 'd' : st}`, 56, 80, 28, 72, c => {
-      if (!dead) { paintCrop(c, id, st); return; }
+  function cropSprite(id, st, dead, sick) {
+    return sprite(`crop|${id}|${dead ? 'd' : st}|${sick ? 1 : 0}`, 56, 80, 28, 72, c => {
+      if (!dead) {
+        paintCrop(c, id, st);
+        if (sick) { // folhas amareladas e roídas
+          c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(205,180,60,0.38)'; c.fillRect(-28, -72, 56, 70);
+          const r = rng(id.length * 5 + st); c.globalCompositeOperation = 'destination-out';
+          for (let i = 0; i < 7; i++) circ(c, -10 + r() * 20, -6 - r() * (10 + st * 7), 1.3 + r() * 1.2);
+          c.globalCompositeOperation = 'source-over';
+        }
+        return;
+      }
       ell(c, 0, 1, 10, 3, 'rgba(40,20,5,0.3)');
       const tall = id === 'milho' || id === 'mandioca' || id === 'tomate' || id === 'feijao';
       const hgt = tall ? 26 : 14;
@@ -1152,12 +1207,37 @@ window.R = (() => {
     const crop = D.crops[c.id];
     if (!crop) return;
     const st = cropStage(c, crop);
-    const s = cropSprite(c.id, st, c.dead);
+    const s = cropSprite(c.id, st, c.dead, !!c.pest && !c.dead);
     const cx = px + TS / 2, by = py + TS - 9;
     blitSway(s, cx, by, Math.sin(t * 1.8 + x * 0.9 + y * 1.3), c.dead ? 0 : 0.05 * (0.3 + st / 4));
+    if (!c.dead && (c.pest || c.protect > 0) && !(Z < 0.55)) drawPestFx(c, cx, by, st, x, y);
     if (st === 4 && !c.dead) {
       const ph = (t * 0.7 + hash(x, y) * 10) % 3;
       if (ph < 0.4) { const k = Math.sin(ph / 0.4 * Math.PI); star4(ctx, cx + 8, by - 18 - hash(y, x) * 10, 4 * k, `rgba(255,255,230,${0.9 * k})`); }
+    }
+  }
+
+  function drawPestFx(c, cx, by, st, x, y) {
+    const hgt = 6 + st * 5, h0 = hash(x, y);
+    if (c.pest === 'lagarta') {
+      const lx = cx - 5 + Math.sin(t * 0.6 + h0 * 9) * 4, ly = by - hgt * 0.6;
+      for (let k = 0; k < 5; k++) { const sx = lx + k * 2.1, sy = ly + Math.sin(t * 6 + k * 0.9) * 0.9; circ(ctx, sx, sy, 1.7, k % 2 ? '#7fc23a' : '#a8de4a'); }
+      ctx.fillStyle = '#2a3a1a'; for (let k = 0; k < 5; k += 2) ctx.fillRect(lx + k * 2.1 - 0.4, ly - 1.6, 0.8, 3.2);
+      circ(ctx, lx + 10.5, ly - 0.3 + Math.sin(t * 8) * 0.5, 1.6, '#4f7a1a'); circ(ctx, lx + 11, ly - 0.8, 0.5, '#111');
+    } else if (c.pest === 'pulgao') {
+      const ax = cx + 3, ay = by - hgt * 0.75;
+      for (let k = 0; k < 9; k++) { const a = k * 2.4, d = 1 + (k % 3) * 1.4; circ(ctx, ax + Math.cos(a) * d + Math.sin(t * 3 + k) * 0.25, ay + Math.sin(a) * d * 1.4, 0.95, k % 3 ? '#c8ec7a' : '#e8f8b0'); }
+      circ(ctx, ax - 4, ay + 4, 0.9, '#c8ec7a'); circ(ctx, ax - 3, ay + 6, 0.9, '#c8ec7a');
+    } else if (c.pest === 'formiga') {
+      for (let k = 0; k < 5; k++) {
+        const q = ((t * 0.18 + k / 5) % 1), ax = cx - 20 + q * 22, ay = by + 4 - Math.sin(q * Math.PI) * 2 + (k % 2) * 2;
+        ctx.fillStyle = '#5a2a14'; ctx.fillRect(ax - 1.8, ay - 0.6, 3.6, 1.2); circ(ctx, ax + 2, ay, 0.8, '#3a1a0a');
+        ctx.fillStyle = '#6fb83a'; ctx.beginPath(); ctx.moveTo(ax - 1, ay - 1); ctx.lineTo(ax + 1, ay - 4.5); ctx.lineTo(ax + 3, ay - 1.5); ctx.closePath(); ctx.fill();
+      }
+    }
+    if (c.protect > 0) {
+      ell(ctx, cx, by - hgt * 0.5, 9 + st * 1.5, 4 + st * 2, 'rgba(190,230,255,0.10)');
+      for (let k = 0; k < 3; k++) { const ph = (t * 1.3 + k * 0.7 + h0 * 5) % 2.1; if (ph < 0.6) { const a = Math.sin(ph / 0.6 * Math.PI); star4(ctx, cx - 8 + k * 8, by - hgt * (0.3 + k * 0.25), 2.6 * a, `rgba(230,250,255,${0.9 * a})`); } }
     }
   }
 
@@ -1915,6 +1995,13 @@ window.R = (() => {
       c.fillStyle = '#d4a93a'; circ(c, vx, vy - 16, 1.6);
     }
   }
+  // busca de construção por id com mapa reconstruído a cada quadro (G.getBuilding é linear)
+  let bMap = null, bMapList = null, bMapLen = -1;
+  function getB(id) {
+    if (bMapList !== S.buildings || bMapLen !== S.buildings.length) { bMap = new Map(); for (const b of S.buildings) bMap.set(b.id, b); bMapList = S.buildings; bMapLen = S.buildings.length; }
+    const b = bMap.get(id);
+    return b || null;
+  }
   function bVariant(b) {
     switch (b.type) {
       case 'casa': return clamp((b.data && b.data.panels) | 0, 0, 6);
@@ -1929,7 +2016,7 @@ window.R = (() => {
       case 'biodigestor': { const L = (G.lvl && G.lvl(b)) || {}; return Math.round(clamp(((b.data && b.data.gas) || 0) / (L.gasCap || 30), 0, 1) * 4); }
       case 'ponte': {
         const t0 = (dx, dy) => { const o = G.tile(b.x + dx, b.y + dy); return o; };
-        const isP = (dx, dy) => { const o = t0(dx, dy); if (!o || !o.o || o.o.t !== 'b') return false; const ob = G.getBuilding(o.o.id); return !!ob && ob.type === 'ponte'; };
+        const isP = (dx, dy) => { const o = t0(dx, dy); if (!o || !o.o || o.o.t !== 'b') return false; const ob = getB(o.o.id); return !!ob && ob.type === 'ponte'; };
         const land = (dx, dy) => { const o = t0(dx, dy); return !!o && o.g !== 'water' && !isP(dx, dy); };
         let hor;
         if (isP(-1, 0) || isP(1, 0)) hor = true; else if (isP(0, -1) || isP(0, 1)) hor = false;
@@ -1938,7 +2025,7 @@ window.R = (() => {
         return (hor ? 1 : 0) | (a ? 2 : 0) | (z ? 4 : 0);
       }
       case 'cerca': case 'porteira': {
-        const has = (dx, dy) => { const o = G.tile(b.x + dx, b.y + dy); if (!o || !o.o || o.o.t !== 'b') return false; const ob = G.getBuilding(o.o.id); return ob && (ob.type === 'cerca' || ob.type === 'porteira'); };
+        const has = (dx, dy) => { const o = G.tile(b.x + dx, b.y + dy); if (!o || !o.o || o.o.t !== 'b') return false; const ob = getB(o.o.id); return ob && (ob.type === 'cerca' || ob.type === 'porteira'); };
         return (b.data && b.data.open ? 16 : 0) | (b.id < 0 ? 3 : (has(1, 0) ? 1 : 0) | (has(-1, 0) ? 2 : 0) | (has(0, 1) ? 4 : 0) | (has(0, -1) ? 8 : 0));
       }
     }
@@ -2806,6 +2893,7 @@ window.R = (() => {
 
   function frame(dt, target, ghost) {
     t += dt;
+    bMapLen = -1; // reconstrói o mapa de construções neste quadro
     const p = S.player;
     // zoom suave
     ZT = clamp(ZT, zMin(), 1.6);
@@ -2946,12 +3034,15 @@ window.R = (() => {
       if (!c || c.dead) continue;
       const crop = D.crops[c.id]; if (!crop) continue;
       const px = x * TS - cam.x + TS / 2, py = y * TS - cam.y + 4;
-      const hp = clamp(c.hp == null ? 100 : c.hp, 0, 100) / 100;
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(px - 10, py - 1, 20, 4);
-      ctx.fillStyle = `hsl(${hp * 120},85%,48%)`; ctx.fillRect(px - 9.5, py - 0.5, 19 * hp, 3);
+      const hp = Math.round(clamp(c.hp == null ? 100 : c.hp, 0, 100) / 5) / 20;
       const txt = Math.max(0, crop.days - c.g) + 'd';
-      ctx.strokeStyle = 'rgba(0,0,0,0.75)'; ctx.lineWidth = 2.5; ctx.strokeText(txt, px, py + 12);
-      ctx.fillStyle = '#fff'; ctx.fillText(txt, px, py + 12);
+      blit(sprite(`lbl|${txt}|${hp}`, 32, 20, 16, 2, l => {
+        l.fillStyle = 'rgba(0,0,0,0.6)'; l.fillRect(-10, -1, 20, 4);
+        l.fillStyle = `hsl(${hp * 120},85%,48%)`; l.fillRect(-9.5, -0.5, 19 * hp, 3);
+        l.font = 'bold 9px sans-serif'; l.textAlign = 'center'; l.lineJoin = 'round';
+        l.strokeStyle = 'rgba(0,0,0,0.75)'; l.lineWidth = 2.5; l.strokeText(txt, 0, 12);
+        l.fillStyle = '#fff'; l.fillText(txt, 0, 12);
+      }, false), px, py);
     }
     ctx.lineJoin = 'miter';
   }
