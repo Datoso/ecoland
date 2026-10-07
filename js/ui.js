@@ -37,6 +37,8 @@ window.UI = (() => {
     const sun = $('#c-sun');
     sun.textContent = G.isNight() ? '🌙' : S.weather === 'chuva' ? '🌦️' : '☀️';
     sun.style.left = (6 + dayP * 138) + 'px'; sun.style.top = (26 - Math.sin(dayP * Math.PI) * 18) + 'px';
+    const sc = G.ecoScore ? G.ecoScore().total : 0;
+    $('#c-eco').innerHTML = `🌍 <b>${sc}%</b> autossuficiente`;
     $('#c-money').innerHTML = S.creative ? '💰 <span class="creative-badge">∞ modo teste</span>' : `💰 ${S.money.toLocaleString('pt-BR')}`;
     document.getElementById('btn-dev').classList.toggle('hidden', !S.creative);
     const q = D.quests[S.quest];
@@ -202,6 +204,11 @@ window.UI = (() => {
     if (b.type === 'composteira') info.push(`♻️ carga ${b.data.load}/${L.per} · ${b.data.batches.length} lote(s) compostando · adubo em ${L.days} noite(s)`);
     if (b.type === 'colmeia') info.push(S.season === 3 ? '❄️ abelhas recolhidas no inverno' : `🍯 mel a cada ${L.every} dia(s) · próximo em ${Math.max(0, L.every - b.data.t)} dia(s)`);
     if (b.type === 'aspersor') info.push(`💦 ${L.desc}, toda manhã`);
+    if (b.type === 'cisterna') info.push(`🛢️ ${Math.round(b.data.water || 0)} / ${L.store} L · enche com chuva e com bombas · interaja para beber e encher o regador`);
+    if (b.type === 'roda_dagua' || b.type === 'catavento') { const on = G.pumps().includes(b); info.push(on ? `💧 bombeando: rega ${D.buildings[b.type].pump} canteiros com gotejamento e manda ${D.buildings[b.type].fill} L/dia para as cisternas${D.buildings[b.type].kwh ? ` · ⚡ ${D.buildings[b.type].kwh} kWh/dia` : ''}` : (b.type === 'roda_dagua' ? '⚠️ precisa ficar encostada na água' : '⚠️ precisa de um poço ou lago a até 5 tiles')); }
+    if (b.type === 'biodigestor') info.push(`🫧 biogás ${Math.round(b.data.gas || 0)} / ${L.gasCap} m³ · esterco na fila: ${Math.round(b.data.load || 0)} · processa ${L.rate}/dia${L.kwh ? ` · ⚡ gera ${L.kwh} kWh/dia` : ''} · segure esterco e interaja para abastecer`);
+    if (b.type === 'painel_solar') info.push(`☀️ ${L.kwh} kWh por dia de sol (¼ na chuva)`);
+    if (b.type === 'fogao_biogas') info.push(G.gasAvailable() ? '🔥 com biogás: as receitas da fogueira não gastam lenha' : '⚠️ sem biogás no biodigestor');
     const perks = { feeder: '🍽️ comedouro embutido', auto: '🤖 coleta automática', comfort: '💧 bebedouro/conforto (+felicidade, +reprodução)', biogas: '🔥 biodigestor (esterco em dobro)', aquaponia: '🌱 aquaponia (rega e aduba canteiros próximos)' };
     const pk = (L.perks || []).map(p => perks[p]).filter(Boolean);
     const animals = def.houses ? `<h3>Animais</h3><div class="grid">${list.map(a => { const ad = D.animals[a.type], adult = a.age >= ad.adult; return `<div class="card"><div class="ic">${adult ? ad.i : ad.bi}</div><div class="info"><b>${a.name}</b>${adult ? ad.n : ad.baby} · ${a.age} dias${adult ? '' : ` (adulto em ${ad.adult - a.age})`}
@@ -237,6 +244,22 @@ window.UI = (() => {
       <div class="grid">${cards}</div>${up}`);
     panel.querySelectorAll('[data-s]').forEach(el => el.onclick = () => { G.saveSeeds(b, el.dataset.s, +el.dataset.q); ui.openSeedBank(b); });
     const ub = panel.querySelector('#b-up'); if (ub) ub.onclick = () => { if (G.upgrade(b)) ui.openSeedBank(b); };
+  };
+
+  // ---------- placar de autossuficiência ----------
+  ui.openEco = () => {
+    const sc = G.ecoScore(), e = S.eco;
+    const bar = (icon, name, v, detail, tip) => `<div class="eco-row"><div class="eco-h"><b>${icon} ${name}</b><span>${v}%</span></div>
+      <div class="eco-bar"><i style="width:${v}%;background:${v >= 70 ? '#4f9a3a' : v >= 40 ? '#e8b33c' : '#d9534f'}"></i></div><small>${detail}${v < 70 ? ` · 💡 ${tip}` : ''}</small></div>`;
+    const hist = (e.history || []).slice(-14);
+    const spark = hist.length > 1 ? `<svg viewBox="0 0 ${(hist.length - 1) * 20} 40" class="eco-spark" preserveAspectRatio="none"><polyline fill="none" stroke="#4f9a3a" stroke-width="3" points="${hist.map((v, i) => `${i * 20},${40 - v * 0.38}`).join(' ')}"/></svg>` : '<small>O histórico aparece depois de algumas noites.</small>';
+    ui.show('eco', `<h2>📊 Autossuficiência da fazenda</h2>
+      <div class="eco-total"><span>${sc.total}%</span><div><b>${sc.total >= 80 ? '🏆 Fazenda autossuficiente!' : sc.total >= 50 ? '🌱 No caminho certo' : '🧭 Começando a jornada'}</b><br><small>Média dos cinco pilares, atualizada toda noite.</small>${spark}</div></div>
+      ${bar('🍲', 'Comida', sc.food, `${sc.food}% do que você comeu foi produzido na fazenda`, 'cozinhe o que você colhe e cria em vez de comprar marmita')}
+      ${bar('💧', 'Água', sc.water, `fontes próprias cobrem ${sc.water}% da demanda (lavoura, animais e casa)`, 'construa poço, cisterna, roda d\'água ou cata-vento')}
+      ${bar('⚡', 'Energia', sc.energy, `gerou ${Math.round(e.kwhGen)} kWh de ${Math.round(e.kwhUse)} kWh usados${e.kwhBought ? ` · ${Math.round(e.kwhBought)} kWh comprados da rede` : ''}${e.gasCook ? ` · ${Math.round(e.gasCook)} receitas no biogás` : ''}`, 'painéis solares, roda d\'água e biodigestor')}
+      ${bar('🌾', 'Ração animal', sc.feed, S.animals.length ? `${sc.feed}% do alimento dos animais veio da fazenda (pasto, grãos, capim, ração do moinho)` : 'sem animais ainda', 'pasto, capineira e ração feita no moinho')}
+      ${bar('🌱', 'Sementes', sc.seeds, `${sc.seeds}% do que você plantou foi semente crioula do seu banco`, 'separe sementes da colheita no Banco de Sementes')}`);
   };
 
   // ---------- painel dev (modo teste) ----------

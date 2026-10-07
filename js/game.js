@@ -168,6 +168,7 @@ const G = window.G = {
 
   nearStation(type, range = 3) {
     if (!type) return true;
+    if (type === 'fogueira' && this.nearStation('fogao_biogas', range)) return true;
     const px = S.player.x, py = S.player.y;
     return S.buildings.some(b => {
       if (b.type !== type) return false;
@@ -243,6 +244,8 @@ const G = window.G = {
     this.buildLotGrid();
     this.genWorld();
     this.toHouse();
+    this.ecoInit();
+    S.inv.minhoca = 3;
   },
 
   toHouse() {
@@ -293,6 +296,7 @@ const G = window.G = {
       S.worldId = S.worldId || id;
       S.tools = S.tools || {};
       S.seedBank = S.seedBank || {};
+      this.ecoInit();
       if (S.upgrades.regador && !S.tools.regador) { S.tools.regador = 2; delete S.upgrades.regador; }
       this.buildLotGrid();
       S.animals.forEach(a => { a.tx = null; });
@@ -333,6 +337,7 @@ const G = window.G = {
     if (S.time >= PASS_OUT) { this.faint('Você desmaiou de cansaço às 2h da manhã...'); return; }
 
     this.updateAnimals(dt);
+    this.updateFish(dt);
     for (const f of this.popups) { f.life -= dt; f.y -= dt * 0.8; }
     this.popups = this.popups.filter(f => f.life > 0);
     for (const q of this.particles) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 8 * dt; }
@@ -430,12 +435,13 @@ const G = window.G = {
     switch (tool) {
       case 'mao': return this.interact(tx, ty, wx, wy);
       case 'item': return this.useItem(tx, ty, wx, wy);
+      case 'vara': return this.cast(tx, ty);
       case 'enxada': {
         const n = this.areaAction(tx, ty, info.area, 2,
           tt => (tt.c && tt.c.dead) || (tt.g === 'grass' && !tt.o),
           (tt, x, y) => {
             if (tt.c && tt.c.dead) tt.c = null;
-            else { tt.g = 'tilled'; this.stat('till'); }
+            else { tt.g = 'tilled'; this.stat('till'); if (chance(0.12)) { this.add('minhoca', 1); this.popup(x + 0.5, y, '🪱'); } }
             this.burst(x + 0.5, y + 0.5, '#7a5230', 5);
           });
         if (n > 0) sfx('hoe');
@@ -674,7 +680,7 @@ const G = window.G = {
         this.popup(b.x + 1, b.y, '+40 💧 · regador cheio', '#9fd8ff');
         return;
       case 'composteira':
-        if (b.data.ready > 0) { this.add('adubo', b.data.ready); this.stat('compost', b.data.ready); b.data.ready = 0; sfx('pickup'); return; }
+        if (b.data.ready > 0) { this.add('adubo', b.data.ready); this.stat('compost', b.data.ready); if (b.level >= 3) this.add('minhoca', b.data.ready * 2); b.data.ready = 0; sfx('pickup'); return; }
         if (held && held.organic) return this.deposit(b, S.held);
         return UI.openBuilding(b);
       case 'colmeia':
@@ -682,6 +688,21 @@ const G = window.G = {
         return UI.openBuilding(b);
       case 'cerca': return;
       case 'banco_sementes': return UI.openSeedBank(b);
+      case 'fogao_biogas':
+        if (!this.gasAvailable()) toast('Sem biogás: alimente o biodigestor com esterco. (Dá para cozinhar com lenha na fogueira.)');
+        return UI.openCraft('Cozinha');
+      case 'cisterna': {
+        const w = b.data.water || 0, need = p.waterMax - p.water;
+        if (w <= 0) { toast('Cisterna vazia: espere a chuva ou ligue uma bomba (roda d\'água / cata-vento).'); return; }
+        const k = Math.min(w, need); b.data.water -= k; p.water += k;
+        p.sede = Math.min(100, p.sede + 30); p.nutri = false; sfx('drink');
+        this.popup(b.x + 1, b.y, `+30 💧 · regador +${k} L · restam ${Math.round(b.data.water)} L`, '#9fd8ff');
+        return;
+      }
+      case 'biodigestor':
+        if (b.data.ready > 0) { this.add('adubo', b.data.ready); b.data.bio -= b.data.ready; b.data.ready = 0; sfx('pickup'); toast('Biofertilizante coletado (vira adubo).'); return; }
+        if (held && S.held === 'esterco') { const n = S.inv.esterco; this.take('esterco', n); b.data.load = (b.data.load || 0) + n; sfx('place'); this.popup(b.x + 1, b.y, `+${n} 💩`); return; }
+        return UI.openBuilding(b);
     }
     if (held && held.feed && this.feedCap(b)) return this.deposit(b, S.held);
     if (def.houses && this.collectHouse(b)) return;
@@ -721,6 +742,7 @@ const G = window.G = {
       if (b.data.feed >= cap) { toast(`${this.bname(b)} cheio (${cap}).`); return; }
       const qty = Math.min(n, Math.ceil((cap - b.data.feed) / it.feed));
       this.take(id, qty); b.data.feed = Math.min(cap, b.data.feed + qty * it.feed);
+      this.feedProvenance(id, qty * it.feed);
       sfx('place'); this.popup(b.x + 1, b.y, `+${qty * it.feed} 🍽️`); this.stat('feed', qty * it.feed);
       return;
     }
@@ -746,6 +768,7 @@ const G = window.G = {
       if (!crop.seasons.includes(S.season)) { toast(`${crop.n} não cresce no(a) ${D.SEASONS[S.season]}. Épocas: ${crop.seasons.map(s => D.SEASONS[s]).join(', ')}.`); sfx('error'); return; }
       this.take(id); t.c = { id: it.seed, g: 0, fert: !!t.fert, dead: false, hp: 100 }; t.fert = false;
       if (it.crioula) t.c.cri = (S.seedBank[it.seed] && S.seedBank[it.seed].gen) || 1;
+      this.ecoAdd(it.crioula ? 'seedCri' : 'seedShop', 1);
       sfx('plant'); this.stat('plant');
       return;
     }
@@ -764,8 +787,14 @@ const G = window.G = {
       sfx('plant'); this.stat('trees');
       return;
     }
+    if (it.drip) {
+      if (t.g !== 'tilled' || t.drip) { toast(t.drip ? 'Já tem gotejamento aqui.' : 'Instale o gotejamento em canteiros arados (arraste para cobrir vários).'); return; }
+      this.take(id); t.drip = true; sfx('place');
+      return;
+    }
     if (it.place) {
       if (!this.canPlace(it.place, tx, ty)) { toast('Não cabe aqui. Precisa de espaço livre na sua terra.'); sfx('error'); return; }
+      if (it.place === 'roda_dagua' && !this.nearWater({ type: 'roda_dagua', x: tx, y: ty }, 1)) { toast("A roda d'água precisa ficar encostada na água de um lago."); sfx('error'); return; }
       this.take(id); this.addBuilding(it.place, tx, ty);
       sfx('place'); this.burst(tx + 0.5, ty + 0.5, '#d9c08c', 12);
       this.checkQuests();
@@ -787,6 +816,7 @@ const G = window.G = {
     if (!it || !it.e) { toast('Isso não é comestível.'); return; }
     if (!this.take(id)) return;
     const p = S.player, e = it.e;
+    this.ecoAdd(it.cat === 'Mercado' ? 'foodBought' : 'foodOwn', (e.fome || 0) + (e.sede || 0) + (e.energia || 0));
     if (e.fome) p.fome = Math.min(100, p.fome + e.fome);
     if (e.sede) p.sede = Math.min(100, p.sede + e.sede);
     if (e.energia) p.energy = Math.min(p.maxEnergy, p.energy + e.energia);
@@ -813,12 +843,17 @@ const G = window.G = {
   },
 
   // ---------------- Criação (crafting) ----------------
+  // perto do fogão a biogás (com gás), a lenha da receita não é gasta
+  gasCooking(r) { return r.st === 'fogueira' && r.in.madeira && this.nearStation('fogao_biogas') && this.gasAvailable(); },
+  recipeIn(r) { if (!this.gasCooking(r)) return r.in; const o = Object.assign({}, r.in); delete o.madeira; return o; },
   canCraft(r) {
-    return Object.entries(r.in).every(([k, n]) => this.has(k, n)) && this.nearStation(r.st);
+    return Object.entries(this.recipeIn(r)).every(([k, n]) => this.has(k, n)) && this.nearStation(r.st);
   },
   craft(r) {
     if (!this.canCraft(r)) return false;
-    for (const [k, n] of Object.entries(r.in)) this.take(k, n);
+    if (this.gasCooking(r)) this.useGas();
+    for (const [k, n] of Object.entries(this.recipeIn(r))) this.take(k, n);
+    if (r.out === 'racao') this.ecoAdd('rOwn', r.q);
     this.add(r.out, r.q);
     sfx(r.cat === 'Cozinha' ? 'cook' : 'craft');
     if (r.cat === 'Cozinha' || r.cat === 'Preparo') this.stat('cook');
@@ -857,6 +892,7 @@ const G = window.G = {
       return true;
     }
     this.spend(cost); this.add(entry.id, qty, true); sfx('buy');
+    if (entry.id === 'racao') this.ecoAdd('rBought', qty);
     return true;
   },
   sell(id, qty) {
@@ -1007,6 +1043,8 @@ const G = window.G = {
       R.push('🌧️ Está chovendo: a lavoura foi regada pela natureza.');
     }
     this.morningIrrigation(R);
+    this.nightSystems(R);
+    this.fish = null;
     S.time = DAY_START;
     for (const a of S.animals) {
       a.inside = false; a.tx = null;
@@ -1056,9 +1094,9 @@ const G = window.G = {
       const def = D.animals[a.type];
       const home = this.getBuilding(a.home);
       let fed = false;
-      if (def.grazer && grazeCap > 0) { grazeCap--; fed = true; }
-      else if (home && this.perk(home, 'feeder') && home.data.feed >= def.eat) { home.data.feed -= def.eat; fed = true; }
-      else if (!def.aquatic && pool >= def.eat) { pool -= def.eat; takeFeed(def.eat); fed = true; }
+      if (def.grazer && grazeCap > 0) { grazeCap--; fed = true; S.eco.feedOwn += def.eat; }
+      else if (home && this.perk(home, 'feeder') && home.data.feed >= def.eat) { home.data.feed -= def.eat; fed = true; this.troughEaten(def.eat); }
+      else if (!def.aquatic && pool >= def.eat) { pool -= def.eat; takeFeed(def.eat); fed = true; this.troughEaten(def.eat); }
       const comfort = home && this.perk(home, 'comfort');
       if (fed) {
         a.hungry = 0; a.age++;

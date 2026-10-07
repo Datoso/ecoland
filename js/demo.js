@@ -151,12 +151,28 @@ G.newDemoWorld = function () {
   clear(v.x + 4, v.y + 1, 4, 5);
   for (let y = v.y + 1; y < v.y + 6; y++) for (let x = v.x + 4; x < v.x + 8; x++) plant(x, y, ['alface', 'tomate', 'morango', 'pimenta'][x % 4]);
 
+  // ---------- Água e energia ----------
+  build('cisterna', s.x, s.y, 3).data.water = 1800;
+  for (let x = s.x + 2; x < s.x + 8; x++) build('painel_solar', x, s.y, 3);
+  build('catavento', s.x + 19, s.y + 13, 1);   // bombeia da lagoinha
+  build('fogao_biogas', s.x + 7, s.y + 3, 1);
+  const bio = build('biodigestor', l.x + 8, l.y + 2, 3); bio.data.gas = 120; bio.data.load = 30; bio.data.bio = 2; bio.data.ready = 2;
+  { // roda d'água na margem do lago da várzea
+    let done = false;
+    for (let y = v.y; y < v.y + v.h - 1 && !done; y++) for (let x = v.x + 12; x < v.x + v.w - 1 && !done; x++) {
+      if (G.canPlace('roda_dagua', x, y) && G.nearWater({ type: 'roda_dagua', x, y }, 1)) { build('roda_dagua', x, y, 1); done = true; }
+    }
+  }
+  build('cisterna', ne.x + 7, ne.y + 13, 2).data.water = 700;
+  for (const t of S.tiles) if (t.g === 'tilled' && t.c && (t.c.id === 'milho' || t.c.id === 'feijao' || t.c.id === 'trigo')) t.drip = true;   // gotejamento na lavoura de grãos
+
   // ---------- Mochila cheia ----------
   for (const [id, it] of Object.entries(D.items)) S.inv[id] = it.place ? 5 : it.seed || it.sapling ? 20 : 25;
   S.inv.cerca = 200;
   S.held = 'racao'; S.tool = 0;
   S.stats = { weeds: 50, till: 200, plant: 200, water: 300, wood: 200, stone: 200, harvest: 150, cook: 40, feed: 500, eggs: 200, compost: 30, lots: 8, slaughter: 10, smoke: 10, trees: 30, racao: 60 };
   S.quest = D.quests.length;   // manual concluído
+  Object.assign(S.eco, { foodOwn: 420, foodBought: 60, feedOwn: 300, feedBought: 40, seedCri: 60, seedShop: 25, kwhGen: 70, kwhUse: 62, waterSup: 520, waterDem: 480, history: [38, 44, 47, 52, 55, 61, 64, 70, 73, 78, 81, 84] });
   S.player.fome = 90; S.player.sede = 90;
   G.toHouse();
   G.save();

@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/touch.css">
 </head>
 <body>
   <canvas id="game"></canvas>
@@ -25,6 +26,7 @@
       <div id="c-arc"><span id="c-sun">☀️</span></div>
       <div id="c-time"></div>
       <div id="c-money"></div>
+      <div id="c-eco" title="Autossuficiência (P)"></div>
     </div>
     <div id="quest" class="box" title="Manual da Autossuficiência (J)"></div>
     <div id="zoom-btns"><button id="zoom-in" title="Aproximar (+)">➕</button><button id="zoom-out" title="Afastar (−)">➖</button><button id="zoom-all" title="Ver a fazenda inteira (Z)">🗺️</button></div>
@@ -35,6 +37,7 @@
       <button data-open="craft" title="Criação (C)">🔨</button>
       <button data-open="manual" title="Manual (J)">📗</button>
       <button data-open="lands" title="Terras (T)">🗺️</button>
+      <button data-open="eco" title="Autossuficiência (P)">📊</button>
       <button data-open="dev" title="Painel de testes (K)" id="btn-dev" class="hidden">🧪</button>
       <button data-open="sound" title="Som (M)" id="btn-sound">🔊</button>
       <button data-open="pause" title="Menu (Esc)">⚙️</button>
@@ -57,9 +60,9 @@
       <div id="worlds"></div>
       <details class="controls">
         <summary>Controles</summary>
-        <p><b>WASD/setas</b> andar · <b>Clique</b> ou <b>Espaço</b> usar ferramenta · <b>E</b>/<b>botão direito</b> interagir<br>
+        <p><b>WASD/setas</b> andar (<b>Shift</b> corre) · <b>Clique</b> ou <b>Espaço</b> usar ferramenta · <b>E</b>/<b>botão direito</b> interagir<br>
         <b>1–8</b> ou Shift+rodinha: trocar ferramenta · <b>rodinha</b>, <b>+</b>/<b>−</b> zoom · <b>Z</b> ver a fazenda inteira · <b>Q</b> trocar item na mão · <b>F</b> comer item na mão<br>
-        <b>I</b> inventário · <b>C</b> criação · <b>J</b> manual · <b>T</b> terras · <b>M</b> som · <b>K</b> painel de testes · <b>Esc</b> menu</p>
+        <b>I</b> inventário · <b>C</b> criação · <b>J</b> manual · <b>T</b> terras · <b>P</b> autossuficiência · <b>9</b> vara de pesca · <b>M</b> som · <b>K</b> painel de testes · <b>Esc</b> menu</p>
       </details>
     </div>
   </div>
@@ -69,9 +72,11 @@
   <script src="js/itemicons.js"></script>
   <script src="js/data.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/systems.js"></script>
   <script src="js/render.js"></script>
   <script src="js/demo.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/touch.js"></script>
 </body>
 </html>

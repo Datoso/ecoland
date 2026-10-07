@@ -99,6 +99,15 @@ window.ICONS = (() => {
       <rect x="20" y="28" width="8" height="5" fill="#555" stroke="#1d1d1d" stroke-width="1.5"/>
       <path d="M22 33 L24 45 L26 33 Z" fill="#c9d1d7" stroke="#2b3034" stroke-width="1.8" stroke-linejoin="round"/>
       <path d="M10 42 l4 -3 M38 42 l-4 -3 M15 46 l3 -2 M33 46 l-3 -2" stroke="#9a9a9a" stroke-width="2" stroke-linecap="round"/>`,
+    // vara de pesca de bambu com linha e boia
+    vara: `
+      <path d="M8 44 L40 6" stroke="#6b4a1a" stroke-width="5" stroke-linecap="round"/>
+      <path d="M8 44 L40 6" stroke="#c9a54a" stroke-width="3" stroke-linecap="round"/>
+      <path d="M17 33.5 l2.5 2 M25 24 l2.5 2 M33 14.5 l2.5 2" stroke="#7a5a1a" stroke-width="1.6"/>
+      <path d="M40 6 Q46 20 41 34" fill="none" stroke="#e8eef2" stroke-width="1.2"/>
+      <circle cx="41" cy="37" r="3.6" fill="#e23b2e" stroke="#5e1a12" stroke-width="1.4"/>
+      <path d="M37.4 37 h7.2" stroke="#fff" stroke-width="1.6"/>
+      <circle cx="13" cy="38" r="3" fill="#555" stroke="#222" stroke-width="1.2"/>`,
     // mochila / item na mão
     item: `
       <path d="M12 18 Q12 10 24 10 Q36 10 36 18 L38 40 Q38 44 34 44 H14 Q10 44 10 40 Z" fill="#b07a45" stroke="#4a2c14" stroke-width="2.2" stroke-linejoin="round"/>

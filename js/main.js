@@ -32,6 +32,7 @@
 
   function act(interact) {
     if (!running || UI.isOpen()) return;
+    if (G.fish && !interact) { G.reel(); UI.hud(true); return; }   // pescando: clique fisga
     const tg = target();
     faceTo(tg);
     G.swing = 0.3;
@@ -52,7 +53,7 @@
   function openPanel(name) {
     if (!running) return;
     if (UI.isOpen()) { UI.close(); return; }
-    ({ inv: UI.openInventory, craft: () => UI.openCraft(), manual: UI.openManual, lands: UI.openLands, pause: UI.pause, dev: UI.openDev })[name]?.();
+    ({ inv: UI.openInventory, craft: () => UI.openCraft(), manual: () => (UI.openBook || UI.openManual)(), lands: UI.openLands, eco: UI.openEco, pause: UI.pause, dev: UI.openDev })[name]?.();
   }
 
   function toggleSound() {
@@ -69,6 +70,7 @@
     if (k === 'c') { openPanel('craft'); return; }
     if (k === 'j') { openPanel('manual'); return; }
     if (k === 't') { openPanel('lands'); return; }
+    if (k === 'p') { openPanel('eco'); return; }
     if (k === 'm') { toggleSound(); return; }
     if (k === 'k') { openPanel('dev'); return; }
     if (!UI.isOpen() && (k === '+' || k === '=')) { zoomBy(1.2); return; }
@@ -76,7 +78,7 @@
     if (!UI.isOpen() && k === 'z') { toggleOverview(); return; }
     if (UI.isOpen()) return;
     keys.add(k);
-    if (k >= '1' && k <= '8') { S.tool = +k - 1; UI.hud(true); }
+    if (k >= '1' && k <= '9' && +k <= D.tools.length) { S.tool = +k - 1; UI.hud(true); }
     if (k === ' ') { e.preventDefault(); act(false); }
     if (k === 'e') act(true);
     if (k === 'q') cycleHeld();
@@ -87,7 +89,7 @@
 
   // arrastar com a cerca na mão: cerca a área selecionada
   let drag = null;
-  const holdingFence = () => running && !UI.isOpen() && S.tool === 7 && (S.held === 'cerca' || S.held === 'ponte');
+  const holdingFence = () => running && !UI.isOpen() && S.tool === 7 && (S.held === 'cerca' || S.held === 'ponte' || S.held === 'gotejamento');
   const tileAt = (sx, sy) => { const w = R.screenToWorld(sx, sy); return { x: Math.floor(w.x), y: Math.floor(w.y) }; };
   cv.addEventListener('mousemove', e => {
     mouse.x = e.clientX; mouse.y = e.clientY; mouse.moved = true;
@@ -103,7 +105,9 @@
     if (!drag) return;
     const d = drag; drag = null;
     if (d.start.x === d.end.x && d.start.y === d.end.y) { act(false); return; }
-    if (d.type === 'ponte') G.bridgeLine(d.start.x, d.start.y, d.end.x, d.end.y); else G.fenceRect(d.start.x, d.start.y, d.end.x, d.end.y);
+    if (d.type === 'ponte') G.bridgeLine(d.start.x, d.start.y, d.end.x, d.end.y);
+    else if (d.type === 'gotejamento') G.dripRect(d.start.x, d.start.y, d.end.x, d.end.y);
+    else G.fenceRect(d.start.x, d.start.y, d.end.x, d.end.y);
     UI.hud(true);
   });
   function drawDrag() {
@@ -115,12 +119,13 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = 'rgba(255,230,150,0.12)'; ctx.fillRect(p0.x, p0.y, (bx - ax + 1) * TS, (by - ay + 1) * TS);
     let need = 0;
-    const cell = (x, y) => { const q = R.worldToScreen(x, y), ok = G.canPlace(drag.type, x, y); if (ok) need++; ctx.fillStyle = ok ? 'rgba(140,255,120,0.45)' : 'rgba(255,90,90,0.4)'; ctx.fillRect(q.x + 3, q.y + 3, TS - 6, TS - 6); };
+    const okAt = (x, y) => drag.type === 'gotejamento' ? (t => !!t && t.g === 'tilled' && !t.drip)(G.tile(x, y)) : G.canPlace(drag.type, x, y);
+    const cell = (x, y) => { const q = R.worldToScreen(x, y), ok = okAt(x, y); if (ok) need++; ctx.fillStyle = ok ? 'rgba(140,255,120,0.45)' : 'rgba(255,90,90,0.4)'; ctx.fillRect(q.x + 3, q.y + 3, TS - 6, TS - 6); };
     if (drag.type === 'ponte') G.bridgeCells(drag.start.x, drag.start.y, drag.end.x, drag.end.y).forEach(([x, y]) => cell(x, y));
-    else if (ax === bx || ay === by) { for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) cell(x, y); }
+    else if (drag.type === 'gotejamento' || ax === bx || ay === by) { for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) cell(x, y); }
     else { for (let x = ax; x <= bx; x++) { cell(x, ay); cell(x, by); } for (let y = ay + 1; y < by; y++) { cell(ax, y); cell(bx, y); } }
     const have = S.creative ? '∞' : (S.inv[drag.type] || 0);
-    const txt = drag.type === 'ponte' ? `${need} trecho(s) de ponte (você tem ${have})` : `${bx - ax + 1}×${by - ay + 1} · ${need} cercas (você tem ${have})`;
+    const txt = drag.type === 'ponte' ? `${need} trecho(s) de ponte (você tem ${have})` : drag.type === 'gotejamento' ? `${need} canteiro(s) com gotejamento (você tem ${have} mangueiras)` : `${bx - ax + 1}×${by - ay + 1} · ${need} cercas (você tem ${have})`;
     const q = R.worldToScreen(bx + 1, by + 1);
     ctx.font = 'bold 14px Fredoka, sans-serif'; ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(40,28,15,0.85)'; ctx.fillRect(q.x + 4, q.y + 4, ctx.measureText(txt).width + 14, 24);
@@ -147,6 +152,15 @@
   document.getElementById('zoom-out').onclick = () => zoomBy(1 / 1.25);
   document.getElementById('zoom-all').onclick = () => toggleOverview();
   document.getElementById('quest').addEventListener('click', () => openPanel('manual'));
+  document.getElementById('c-eco').addEventListener('click', () => openPanel('eco'));
+
+  // ganchos para outros módulos (controles por toque, livro tutorial)
+  window.INPUT = {
+    keys, mouse, act, cycleHeld, openPanel, toggleSound,
+    zoomBy: (f, x, y) => zoomBy(f, x, y), toggleOverview: () => toggleOverview(),
+    isRunning: () => running,
+    eat: () => { if (S.held && D.items[S.held].e) G.eat(S.held); UI.hud(true); },
+  };
 
   // ---------- movimento ----------
   function move(dt) {
@@ -158,8 +172,10 @@
     if (keys.has('d') || keys.has('arrowright')) dx += 1;
     p.moving = !!(dx || dy);
     if (!p.moving) return;
+    if (G.fish) G.cancelFish();
+    const running = keys.has('shift');   // Shift = correr
     if (dx && dy) { dx *= 0.7071; dy *= 0.7071; }
-    let sp = 4.2 * (S.upgrades.botas ? 1.2 : 1) * (p.energy <= 0 ? 0.55 : 1) * (p.sick > 0 ? 0.8 : 1);
+    let sp = 4.2 * (running ? 1.65 : 1) * (S.upgrades.botas ? 1.2 : 1) * (p.energy <= 0 ? 0.55 : 1) * (p.sick > 0 ? 0.8 : 1);
     if (Math.abs(dx) > Math.abs(dy)) p.dir = dx < 0 ? 'left' : 'right'; else p.dir = dy < 0 ? 'up' : 'down';
     mouse.moved = false;
     const r = 0.28;
@@ -169,7 +185,7 @@
     if (free(nx, p.y)) p.x = nx;
     if (free(p.x, ny)) p.y = ny;
     stepT -= dt;
-    if (stepT <= 0) { stepT = 0.32; try { SFX.play('step', { volume: 0.5 }); } catch (e) { /* */ } }
+    if (stepT <= 0) { stepT = running ? 0.2 : 0.32; try { SFX.play('step', { volume: 0.5 }); } catch (e) { /* */ } }
   }
 
   function hintFor(tg) {

@@ -20,6 +20,7 @@ D.tools = [
   { id: 'picareta', n: 'Picareta', i: '⚒️', desc: 'Quebrar pedras e desmontar construções' },
   { id: 'faca', n: 'Faca', i: '🔪', desc: 'Abater animais adultos para carne e subprodutos' },
   { id: 'item', n: 'Item na mão', i: '🎒', desc: 'Usar o item selecionado no inventário (Q troca)' },
+  { id: 'vara', n: 'Vara de pesca', i: '🎣', desc: 'Clique na água para lançar; quando aparecer ❗ clique de novo para fisgar' },
 ];
 
 // ---------- Níveis das ferramentas (compra na loja, aba Ferramentas) ----------
@@ -48,6 +49,22 @@ D.toolLevels = {
   faca: [
     { n: 'Faca', bonus: 0 },
     { n: 'Faca de aço inox', bonus: 1, price: 500, desc: '+1 carne em cada abate.' }],
+  vara: [
+    { n: 'Vara de bambu', window: 0.8, wait: 1, rare: 0 },
+    { n: 'Vara com molinete', window: 1.2, wait: 0.75, rare: 0.05, price: 600, desc: 'Peixe morde mais rápido e dá mais tempo para fisgar.' },
+    { n: 'Vara com carretilha', window: 1.6, wait: 0.55, rare: 0.12, price: 2200, desc: 'Muito mais chance de peixes grandes e raros.' }],
+};
+
+// ---------- Peixes nativos (pesca no lago) ----------
+// w = peso na sorteio; big = só em lagos grandes (lotes de lago); night = mais ativo à noite
+D.fish = {
+  lambari:   { n: 'Lambari', w: 30, sell: 15, organic: 1 },
+  tilapia_l: { n: 'Tilápia', w: 18, sell: 35, organic: 1 },
+  traira:    { n: 'Traíra', w: 14, sell: 55, organic: 1, night: true },
+  pacu:      { n: 'Pacu', w: 12, sell: 70, organic: 2, seasons: [1, 2] },
+  bagre:     { n: 'Bagre', w: 10, sell: 60, organic: 2, night: true },
+  tambaqui:  { n: 'Tambaqui', w: 6, sell: 140, organic: 2, big: true },
+  pirarucu:  { n: 'Pirarucu', w: 1, sell: 600, organic: 3, big: true, rare: true },
 };
 
 // ---------- Culturas ----------
@@ -175,6 +192,21 @@ D.buildings = {
     { n: 'Colmeia com melgueira', every: 2, cost: 900, desc: 'mel a cada 2 dias' },
     { n: 'Apiário', every: 1, cost: 2500, desc: 'mel todo dia e polinização mais forte' }] },
   cerca:       { n: 'Cerca', w: 1, h: 1, i: '🚧', desc: 'Delimita pastos e protege canteiros. Segure a cerca e arraste o mouse para cercar uma área.' },
+  cisterna:    { n: 'Cisterna', w: 2, h: 2, i: '🛢️', desc: 'Capta a água da chuva do telhado. Reabastece o regador e alimenta a irrigação por gotejamento.', levels: [
+    { n: 'Cisterna de placas', store: 400 },
+    { n: 'Cisterna grande', store: 1000, cost: 1200, desc: 'guarda 1000 L' },
+    { n: 'Reservatório com calha', store: 2500, cost: 3000, desc: 'guarda 2500 L' }] },
+  roda_dagua:  { n: "Roda d'água", w: 2, h: 2, i: '🎡', desc: "Precisa ficar encostada na água. Bombeia água para a irrigação e as cisternas e gera um pouco de energia.", pump: 60, fill: 120, kwh: 4 },
+  catavento:   { n: 'Cata-vento', w: 1, h: 1, i: '🌬️', desc: 'Bombeia água de um poço ou lago próximo (até 5 tiles) para a irrigação e as cisternas.', pump: 30, fill: 60 },
+  biodigestor: { n: 'Biodigestor', w: 2, h: 2, i: '🫧', desc: 'Deposite esterco: ele vira biogás para o fogão e biofertilizante. Nada de lenha!', levels: [
+    { n: 'Biodigestor', gasCap: 30, rate: 10, kwh: 0 },
+    { n: 'Biodigestor com gasômetro', gasCap: 80, rate: 20, kwh: 3, cost: 1800, desc: 'mais gás e um gerador pequeno' },
+    { n: 'Usina de biogás', gasCap: 200, rate: 40, kwh: 8, cost: 5000, desc: 'muito gás e energia elétrica' }] },
+  painel_solar: { n: 'Painel solar', w: 1, h: 1, i: '☀️', desc: 'Gera energia elétrica nos dias de sol (pouco na chuva).', levels: [
+    { n: 'Painel solar', kwh: 6 },
+    { n: 'Painel solar duplo', kwh: 11, cost: 900, desc: '11 kWh por dia de sol' },
+    { n: 'Painel com bateria', kwh: 16, cost: 2400, desc: '16 kWh, e guarda energia para a noite' }] },
+  fogao_biogas: { n: 'Fogão a biogás', w: 1, h: 1, i: '🔥', desc: 'Cozinha as receitas da fogueira usando biogás em vez de lenha.' },
   banco_sementes: { n: 'Banco de Sementes', w: 2, h: 2, i: '🫙', desc: 'Separe sementes crioulas da própria colheita. A cada geração plantada e guardada elas se adaptam à sua terra.', levels: [
     { n: 'Banco de Sementes', bonus: 0, genStep: 1 },
     { n: 'Banco comunitário', bonus: 1, genStep: 1, cost: 1500, desc: '+1 semente em cada separação' },
@@ -265,6 +297,12 @@ D.items = {
   queijo_cabra:  { n: 'Queijo de cabra', i: '🧀', sell: 190, cat: 'Processado', e: { fome: 25, energia: 12 } },
   conserva_codorna: { n: 'Ovos de codorna em conserva', i: '🫙', sell: 140, cat: 'Processado', e: { fome: 20, energia: 8 } },
   tilapia_defumada: { n: 'Tilápia defumada', i: '🐠', sell: 160, cat: 'Processado', e: { fome: 30, energia: 12 } },
+  lambari_frito: { n: 'Lambari frito', i: '🐟', sell: 90, cat: 'Prato', e: { fome: 25, energia: 12 } },
+  traira_frita:  { n: 'Traíra frita', i: '🐟', sell: 120, cat: 'Prato', e: { fome: 35, energia: 15 } },
+  pacu_assado:   { n: 'Pacu assado', i: '🐟', sell: 170, cat: 'Prato', e: { fome: 45, energia: 20 } },
+  caldo_peixe:   { n: 'Caldo de peixe', i: '🥣', sell: 150, cat: 'Prato', e: { fome: 40, sede: 20, energia: 18 } },
+  costela_tambaqui: { n: 'Costela de tambaqui', i: '🐟', sell: 280, cat: 'Prato', e: { fome: 55, energia: 25 } },
+  pirarucu_casaca:  { n: 'Pirarucu de casaca', i: '🐟', sell: 900, cat: 'Prato', e: { fome: 80, energia: 40 } },
   limonada:      { n: 'Limonada', i: '🍹', sell: 80, cat: 'Prato', e: { sede: 40, energia: 6 } },
   suco_acerola:  { n: 'Suco de acerola', i: '🧃', sell: 90, cat: 'Prato', e: { sede: 40, energia: 12 } },
   suco_maracuja: { n: 'Suco de maracujá', i: '🧃', sell: 100, cat: 'Prato', e: { sede: 40, energia: 5 } },
@@ -289,6 +327,10 @@ for (const [id, c] of Object.entries(D.crops)) {
     i: c.i, seed: id, crioula: true, sell: Math.floor(c.seedPrice * 0.7), cat: 'Semente crioula',
   };
 }
+// peixes viram itens
+for (const [id, f] of Object.entries(D.fish)) D.items['peixe_' + id] = { n: f.n, i: '🐟', sell: f.sell, cat: 'Peixe', organic: f.organic };
+D.items.gotejamento = { n: 'Mangueira de gotejamento', i: '〰️', sell: 3, cat: 'Insumo', drip: true };
+D.items.minhoca = { n: 'Minhoca (isca)', i: '🪱', sell: 2, cat: 'Insumo', organic: 1 };
 // quantas sementes saem de cada produto colhido
 D.seedSave = { alface: 3, cenoura: 3, feijao: 3, milho: 4, tomate: 4, mandioca: 2, abobora: 5, trigo: 3, capim: 2, morango: 2, pimenta: 4, melancia: 4, abacaxi: 1 };
 for (const [id, f] of Object.entries(D.fruits)) {
@@ -308,6 +350,11 @@ D.recipes = [
   { out: 'cerca', q: 4, in: { madeira: 2 }, st: null, cat: 'Construção' },
   { out: 'porteira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
   { out: 'ponte', q: 2, in: { madeira: 3 }, st: null, cat: 'Construção' },
+  { out: 'cisterna', q: 1, in: { pedra: 40, ferragens: 4 }, st: null, cat: 'Construção' },
+  { out: 'roda_dagua', q: 1, in: { madeira: 40, ferragens: 6 }, st: null, cat: 'Construção' },
+  { out: 'catavento', q: 1, in: { madeira: 10, ferragens: 12 }, st: null, cat: 'Construção' },
+  { out: 'biodigestor', q: 1, in: { pedra: 30, ferragens: 8 }, st: null, cat: 'Construção' },
+  { out: 'fogao_biogas', q: 1, in: { pedra: 10, ferragens: 6 }, st: null, cat: 'Construção' },
   { out: 'banco_sementes', q: 1, in: { madeira: 25, pedra: 15, ferragens: 2 }, st: null, cat: 'Construção' },
   { out: 'espaldeira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
   { out: 'cocho', q: 1, in: { madeira: 10 }, st: null, cat: 'Construção' },
@@ -337,6 +384,13 @@ D.recipes = [
   { out: 'bolo_milho', q: 1, in: { fuba: 2, ovo: 1, leite: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'queijo', q: 1, in: { leite: 3, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'tilapia_frita', q: 1, in: { file_tilapia: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'tilapia_frita', q: 1, in: { peixe_tilapia_l: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'lambari_frito', q: 1, in: { peixe_lambari: 3, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'traira_frita', q: 1, in: { peixe_traira: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'pacu_assado', q: 1, in: { peixe_pacu: 1, limao: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'caldo_peixe', q: 1, in: { peixe_bagre: 1, mandioca: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'costela_tambaqui', q: 1, in: { peixe_tambaqui: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'pirarucu_casaca', q: 1, in: { peixe_pirarucu: 1, banana: 2, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'moqueca', q: 1, in: { file_tilapia: 2, tomate: 1, pimenta: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'queijo_cabra', q: 1, in: { leite_cabra: 3, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'omelete', q: 1, in: { ovo_codorna: 5, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
@@ -373,6 +427,9 @@ D.shop = [
   { id: 'pedra', price: 10, tab: 'Materiais' },
   { id: 'ferragens', price: 50, tab: 'Materiais' },
   { id: 'racao', price: 15, tab: 'Insumos' },
+  { id: 'gotejamento', price: 8, tab: 'Insumos' },
+  { id: 'minhoca', price: 4, tab: 'Insumos' },
+  { id: 'painel_solar', price: 1200, tab: 'Materiais' },
   { id: 'adubo', price: 40, tab: 'Insumos' },
   { id: 'marmita', price: 60, tab: 'Mercado' },
   { id: 'agua', price: 15, tab: 'Mercado' },
