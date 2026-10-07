@@ -517,13 +517,14 @@ window.R = (() => {
     const ncx = Math.ceil(G.W / CH), ncy = Math.ceil(G.H / CH), night = G.isNight();
     const cx0 = Math.max(0, Math.floor(cam.x / CPX)), cy0 = Math.max(0, Math.floor(cam.y / CPX));
     const cx1 = Math.min(ncx - 1, Math.floor((cam.x + VW) / CPX)), cy1 = Math.min(ncy - 1, Math.floor((cam.y + VH) / CPX));
-    const sc = Math.round(CPX * Math.min(dpr, 1) * 0.6) / CPX; // tamanho inteiro: evita frestas entre blocos
+    const zb = clamp(Math.ceil(Z * Math.min(dpr, 1.5) * 10) / 10, 0.3, 0.6) * (dpr > 1 ? 1.2 : 1);
+    const sc = Math.round(CPX * zb) / CPX; // tamanho inteiro (evita frestas); resolução acompanha o zoom
     for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
       const key = cx + ',' + cy;
       let fc = farChunks.get(key);
       if (!fc || fc.scale !== sc) { const cvs = document.createElement('canvas'); cvs.width = cvs.height = Math.ceil(CPX * sc); fc = { cv: cvs, sc, scale: sc, sig: null }; farChunks.set(key, fc); }
       // assinatura conferida em rodízio (um terço dos blocos por quadro) para poupar CPU
-      if (fc.sig === null || ((cx + cy + frameN) % 3 === 0)) {
+      if (fc.sig === null || ((cx + cy * 3 + frameN) % 6 === 0)) {
         const sig = farSig(cx, cy, night, bById);
         if (sig !== fc.sig) { fc.sig = sig; buildFar(cx, cy, fc, bById); }
       }
@@ -2716,9 +2717,10 @@ window.R = (() => {
     if (rain) { warm *= 0.3; dawn *= 0.3; }
     const nk = dark > 0.01 ? Math.min(1, dark / 0.67) : 0;
     const lw = light.width, lh = light.height;
-    lctx.globalCompositeOperation = 'source-over'; lctx.globalAlpha = 1;
-    lctx.clearRect(0, 0, lw, lh);
-    const layer = (col) => { lctx.fillStyle = col; lctx.fillRect(0, 0, lw, lh); };
+    // sem noite (sem furos de luz) desenha as camadas direto na tela: menos cópias de tela cheia
+    const L = nk ? lctx : ctx;
+    if (nk) { lctx.globalCompositeOperation = 'source-over'; lctx.globalAlpha = 1; lctx.clearRect(0, 0, lw, lh); }
+    const layer = (col) => { L.fillStyle = col; L.fillRect(0, 0, lw, lh); };
     if (S.season === 3 && !rain) layer('rgba(215,232,255,0.1)');
     if (rain) layer('rgba(50,66,96,0.26)');
     if (dawn > 0.01) layer(`rgba(255,140,170,${0.16 * dawn})`);
@@ -2730,9 +2732,9 @@ window.R = (() => {
       x = warmC.getContext('2d'); g = x.createLinearGradient(0, 0, lw, lh);
       g.addColorStop(0, 'rgba(255,150,40,0.42)'); g.addColorStop(1, 'rgba(235,90,50,0.3)'); x.fillStyle = g; x.fillRect(0, 0, lw, lh);
     }
-    if (warm > 0.01) { lctx.globalAlpha = warm; lctx.drawImage(warmC, 0, 0); lctx.globalAlpha = 1; }
+    if (warm > 0.01) { L.globalAlpha = warm; L.drawImage(warmC, 0, 0, lw, lh); L.globalAlpha = 1; }
     if (nk) layer(`rgba(12,20,72,${0.68 * nk})`);
-    lctx.drawImage(vigC, 0, 0);
+    L.drawImage(vigC, 0, 0, lw, lh);
     const p = S.player, plx = p.x * TS - cam.x, ply = p.y * TS - cam.y - 20;
     const warmGlows = [];
     if (nk) {
@@ -2758,7 +2760,7 @@ window.R = (() => {
       lctx.globalAlpha = 1;
     }
     lctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(light, 0, 0, W, H);
+    if (nk) ctx.drawImage(light, 0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
     if (nk) {
       for (const [x, y, r, al] of warmGlows) glowOn(ctx, '255,140,50', x * Z, y * Z, r * Z * (0.97 + Math.sin(t * 8 + x) * 0.03), al * nk);
