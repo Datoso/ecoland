@@ -26,10 +26,14 @@ window.UI = (() => {
     if (!S) return;
     if (!force && frame++ % 8) return;
     const p = S.player;
-    const set = (k, v, max) => { const el = document.querySelector(`.bar[data-k=${k}]`); el.querySelector('i').style.width = Math.max(0, v / max * 100) + '%'; el.classList.toggle('low', v / max < 0.2); el.title = `${Math.round(v)}/${max}`; };
+    const set = (k, v, max) => { const el = document.querySelector(`.bar[data-k=${k}]`); el.querySelector('i').style.width = Math.max(0, v / max * 100) + '%'; el.classList.toggle('low', v / max < 0.2); el.title = `${Math.round(v)}/${max}`; el.querySelector('b').textContent = Math.round(v); };
     set('hp', p.hp, 100); set('energy', p.energy, p.maxEnergy); set('fome', p.fome, 100); set('sede', p.sede, 100); set('water', p.water, p.waterMax);
     $('#c-date').textContent = `${D.SEASON_ICONS[S.season]} ${D.SEASONS[S.season]}, dia ${S.day} · Ano ${S.year}`;
     $('#c-time').textContent = `${S.weather === 'chuva' ? '🌧️' : G.isNight() ? '🌙' : '☀️'} ${G.clock()}`;
+    const dayP = Math.min(1, Math.max(0, (S.time - 360) / 1200));
+    const sun = $('#c-sun');
+    sun.textContent = G.isNight() ? '🌙' : S.weather === 'chuva' ? '🌦️' : '☀️';
+    sun.style.left = (6 + dayP * 138) + 'px'; sun.style.top = (26 - Math.sin(dayP * Math.PI) * 18) + 'px';
     $('#c-money').textContent = `💰 ${S.money.toLocaleString('pt-BR')}`;
     const q = D.quests[S.quest];
     $('#quest').innerHTML = q ? `<small>📗 Manual · etapa ${S.quest + 1}/${D.quests.length}</small><b>${q.t}</b>${q.goal}<br><small>${G.questProgress(q)}</small>` : '<b>🏆 Fazenda autossuficiente!</b>Continue expandindo seu sistema.';
@@ -216,7 +220,14 @@ window.UI = (() => {
     f.style.cssText = 'position:fixed;inset:0;background:#000;opacity:0;transition:opacity .6s;z-index:35';
     document.body.appendChild(f);
     requestAnimationFrame(() => f.style.opacity = 1);
-    setTimeout(() => { cb(); f.style.opacity = 0; setTimeout(() => f.remove(), 700); }, 700);
+    setTimeout(() => {
+      cb();
+      const c = document.createElement('div');
+      c.className = 'daycard';
+      c.innerHTML = `${D.SEASON_ICONS[S.season]} Dia ${S.day}<small>${D.SEASONS[S.season]} · Ano ${S.year} · ${S.weather === 'chuva' ? '🌧️ chuvoso' : '☀️ ensolarado'}</small>`;
+      document.body.appendChild(c);
+      setTimeout(() => { f.style.opacity = 0; c.style.transition = 'opacity .6s'; c.style.opacity = 0; setTimeout(() => { f.remove(); c.remove(); }, 700); }, 1100);
+    }, 700);
   }
   ui.fade = fadeSleep;
 

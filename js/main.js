@@ -154,6 +154,21 @@
   // ---------- tela inicial ----------
   const btnNew = document.getElementById('btn-new'), btnCont = document.getElementById('btn-continue');
   if (G.hasSave()) btnCont.classList.remove('hidden');
+  // folhas caindo na tela inicial
+  (() => {
+    const title = document.getElementById('title');
+    const leaves = ['🍃', '🍂', '🌸', '🍁', '🌿'];
+    for (let i = 0; i < 14; i++) {
+      const l = document.createElement('span');
+      l.className = 'leaf'; l.textContent = leaves[i % leaves.length];
+      l.style.left = Math.random() * 100 + 'vw';
+      l.style.animationDuration = 7 + Math.random() * 8 + 's';
+      l.style.animationDelay = -Math.random() * 12 + 's';
+      l.style.setProperty('--dx', (Math.random() * 200 - 100) + 'px');
+      l.style.setProperty('--r', (Math.random() * 720 - 360) + 'deg');
+      title.appendChild(l);
+    }
+  })();
   function start() {
     document.getElementById('title').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');

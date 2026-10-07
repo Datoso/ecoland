@@ -40,7 +40,7 @@ button { font-family: inherit; cursor: pointer; }
 #c-time { font-size: 22px; font-weight: 700; }
 #c-money { font-weight: 700; color: #7a5a00; }
 
-#quest { position: fixed; right: 12px; top: 112px; width: 240px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
+#quest { position: fixed; right: 12px; top: 148px; width: 240px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
 #quest b { display: block; color: var(--green); font-size: 14px; }
 #quest small { color: #7a6a50; }
 
@@ -116,3 +116,87 @@ canvas.minimap { width: 100%; image-rendering: pixelated; border-radius: 8px; bo
   #quest { display: none; }
   .slot { width: 40px; height: 40px; font-size: 20px; }
 }
+
+/* =============================================================
+   Tema visual: madeira, pergaminho e detalhes artesanais
+   ============================================================= */
+:root {
+  --wood-grain: repeating-linear-gradient(92deg, #7a4e29 0 6px, #6b4423 6px 9px, #74492a 9px 15px, #633e1f 15px 17px);
+  --parchment: radial-gradient(ellipse at 30% 20%, #fffaf0 0%, #fbf1d9 45%, #f3e2bb 100%);
+}
+.box {
+  background: var(--parchment);
+  border: 3px solid var(--wood);
+  outline: 2px solid #a8794a;
+  outline-offset: -7px;
+  box-shadow: 0 4px 0 var(--wood-d), 0 8px 22px rgba(0,0,0,.38), inset 0 0 18px rgba(160,110,50,.18);
+}
+/* barras de status com brilho e valor */
+#stats { padding: 10px 12px; }
+.bar div { position: relative; height: 14px; background: linear-gradient(#cbb486, #dfcda4); border: 2px solid #8a6438; border-radius: 8px; box-shadow: inset 0 2px 3px rgba(0,0,0,.2); }
+.bar i { position: relative; border-radius: 5px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+.bar i::after { content: ''; position: absolute; left: 3px; right: 3px; top: 2px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.45); }
+.bar[data-k=hp] i { background: linear-gradient(#ff6b5e, #d63a30); }
+.bar[data-k=energy] i { background: linear-gradient(#ffe066, #e9b11c); }
+.bar[data-k=fome] i { background: linear-gradient(#f4a557, #cf7420); }
+.bar[data-k=sede] i { background: linear-gradient(#6cc2ff, #2d86d1); }
+.bar[data-k=water] i { background: linear-gradient(#b9ecff, #6cc9f5); }
+.bar b { width: 30px; text-align: right; font-size: 11px; color: #6b5030; }
+
+/* relógio com arco do sol */
+#clock { padding: 8px 14px 10px; }
+#c-arc { position: relative; height: 26px; margin: 2px 0 2px auto; width: 150px; overflow: hidden; }
+#c-arc::before { content: ''; position: absolute; left: 4px; right: 4px; top: 6px; height: 40px; border: 2px dashed #c9a66b; border-radius: 50% 50% 0 0 / 100% 100% 0 0; border-bottom: none; }
+#c-sun { position: absolute; font-size: 16px; transform: translate(-50%, -50%); transition: left .5s linear, top .5s linear; }
+
+/* barra de ferramentas de madeira */
+#hotbar { background: var(--wood-grain); border: 3px solid var(--wood-d); padding: 7px; }
+.slot { background: linear-gradient(#fffaf0, #f3e2bb); border-color: #c9a66b; box-shadow: inset 0 -3px 0 rgba(0,0,0,.08); transition: transform .12s; }
+.slot:hover { transform: translateY(-2px); }
+.slot.sel { border-color: var(--gold); background: linear-gradient(#fff7d6, #ffe7a0); box-shadow: 0 0 0 2px #fff8, 0 0 14px #ffd76a; }
+.slot .k { color: #a07a48; }
+
+#menu-btns button { background: var(--parchment); border-color: var(--wood); transition: transform .12s; }
+#menu-btns button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--wood-d); }
+
+/* missão */
+#quest { border-left-width: 8px; border-left-color: var(--green); }
+#quest b::before { content: '🌱 '; }
+
+/* painéis */
+#panel { padding: 18px 22px; animation: pop .18s ease-out; }
+@keyframes pop { from { transform: scale(.94); opacity: 0; } }
+#panel h2 { font-size: 26px; padding-bottom: 6px; border-bottom: 2px dashed #c9a66b; margin-bottom: 10px; }
+#panel .close { border-radius: 50%; width: 34px; height: 34px; background: #f3e2bb; border: 2px solid var(--wood); font-size: 16px; }
+#panel .close:hover { background: #ffd6c9; }
+.tabs button { background: #f6e7c4; transition: background .1s; }
+.tabs button:hover { background: #ffeec7; }
+.tabs button.on { background: var(--wood-grain); border-color: var(--wood-d); }
+.card { background: linear-gradient(#fffdf6, #fff3d9); border-color: #e2c993; box-shadow: 0 2px 0 #e2c993; transition: transform .1s; }
+.card:hover { transform: translateY(-2px); }
+.card .ic { font-size: 32px; filter: drop-shadow(0 2px 1px rgba(0,0,0,.25)); }
+.card button, .btn { background: linear-gradient(#64b84b, #3f8a2e); box-shadow: 0 3px 0 #2d5f20; border-color: #2d5f20; text-shadow: 0 1px 0 rgba(0,0,0,.3); }
+.card button:active, .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #2d5f20; }
+.card button:disabled, .btn:disabled { background: #b9ab8e; box-shadow: 0 3px 0 #8f8268; border-color: #8f8268; }
+.btn.alt { background: linear-gradient(#fff3d9, #ecd7a8); color: var(--ink); box-shadow: 0 3px 0 #b8975d; border-color: #b8975d; text-shadow: none; }
+.btn.red { background: linear-gradient(#e0584a, #b03224); box-shadow: 0 3px 0 #7d2219; border-color: #7d2219; }
+.inv .it { background: linear-gradient(#fffdf6, #fff0cf); border-color: #e2c993; box-shadow: 0 2px 0 #e2c993; filter: none; }
+.inv .it:hover { transform: translateY(-2px); border-color: var(--gold); }
+.quest-list li.cur { box-shadow: 0 0 0 3px #b7e39a55; }
+
+.toast { border: 2px solid rgba(255,255,255,.15); box-shadow: 0 4px 14px rgba(0,0,0,.35); font-weight: 500; }
+
+/* tela inicial */
+#title { background: radial-gradient(ellipse at 50% 40%, rgba(255,230,160,.25), rgba(10,25,10,.75) 75%); overflow: hidden; }
+.title-card { background: var(--parchment); outline: 2px solid #a8794a; outline-offset: -9px; position: relative; animation: pop .4s ease-out; }
+.title-card h1 { font-size: 60px; letter-spacing: 1px; color: #4f9a3a; text-shadow: 0 3px 0 #2d5f20, 0 6px 12px rgba(0,0,0,.25); -webkit-text-stroke: 1px #2d5f20; }
+.title-card h1 span { display: inline-block; animation: sway 3s ease-in-out infinite; transform-origin: bottom center; }
+@keyframes sway { 50% { transform: rotate(8deg); } }
+.title-card .sub { font-weight: 500; }
+.title-card .tag { position: absolute; top: -16px; right: -14px; background: var(--gold); color: var(--ink); font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 12px; transform: rotate(8deg); border: 2px solid var(--wood); }
+.leaf { position: absolute; top: -40px; font-size: 22px; animation: fall linear infinite; pointer-events: none; opacity: .85; }
+@keyframes fall { to { transform: translate(var(--dx), 110vh) rotate(var(--r)); } }
+
+/* transição de dia */
+.daycard { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #ffe9a8; font-size: 40px; font-weight: 700; z-index: 36; pointer-events: none; text-shadow: 0 3px 8px #000; }
+.daycard small { font-size: 18px; color: #fff; font-weight: 500; }

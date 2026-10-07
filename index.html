@@ -14,14 +14,15 @@
   <!-- HUD -->
   <div id="hud" class="hidden">
     <div id="stats" class="box">
-      <div class="bar" data-k="hp"><span>❤️</span><div><i></i></div></div>
-      <div class="bar" data-k="energy"><span>⚡</span><div><i></i></div></div>
-      <div class="bar" data-k="fome"><span>🍖</span><div><i></i></div></div>
-      <div class="bar" data-k="sede"><span>💧</span><div><i></i></div></div>
-      <div class="bar water" data-k="water"><span>🚿</span><div><i></i></div></div>
+      <div class="bar" data-k="hp"><span>❤️</span><div><i></i></div><b></b></div>
+      <div class="bar" data-k="energy"><span>⚡</span><div><i></i></div><b></b></div>
+      <div class="bar" data-k="fome"><span>🍖</span><div><i></i></div><b></b></div>
+      <div class="bar" data-k="sede"><span>💧</span><div><i></i></div><b></b></div>
+      <div class="bar water" data-k="water"><span>🚿</span><div><i></i></div><b></b></div>
     </div>
     <div id="clock" class="box">
       <div id="c-date"></div>
+      <div id="c-arc"><span id="c-sun">☀️</span></div>
       <div id="c-time"></div>
       <div id="c-money"></div>
     </div>
@@ -44,7 +45,8 @@
   <!-- Tela inicial -->
   <div id="title">
     <div class="title-card">
-      <h1>🌱 EcoLand</h1>
+      <span class="tag">v0.1</span>
+      <h1><span>🌱</span> EcoLand</h1>
       <p class="sub">Construa, passo a passo, uma fazenda autossuficiente</p>
       <input id="farm-name" maxlength="24" placeholder="Nome da fazenda" value="Sítio Esperança">
       <button id="btn-new">Novo jogo</button>
