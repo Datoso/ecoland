@@ -277,3 +277,5 @@ body.touch #bag { right: 8px; bottom: auto; top: 50%; transform: translateY(-50%
 #btip .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: 8px; border-radius: 50%; background: #e8b33c; color: #3b2a1a; font-size: 13px; font-weight: 700; cursor: help; vertical-align: middle; }
 #btip .sum { display: none; white-space: normal; width: 260px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #c99a5e; color: #fff; font-weight: 400; font-size: 12.5px; line-height: 1.4; }
 #btip.open .sum { display: block; }
+#btip .sum { margin-top: 0; margin-bottom: 6px; padding-top: 0; padding-bottom: 6px; border-top: none; border-bottom: 1px dashed #c99a5e; }
+#btip { transform: translate(-24px, -100%); }   /* ancorado pela esquerda: o ⓘ não se mexe ao abrir o resumo */

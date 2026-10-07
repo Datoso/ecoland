@@ -33,17 +33,18 @@
         UI.toast(`🎒 Mochila cheia! ${moved.map(k => D.items[k].n).slice(0, 3).join(', ')}${moved.length > 3 ? '…' : ''} foi para o baú da casa.`, 'bad');
       }
     },
-    chestPut(id) {
+    // store = conteúdo de um baú construído (b.data.items) ou o depósito da casa (S.chest)
+    chestPut(id, store = S.chest) {
       const n = S.inv[id] || 0; if (!n) return;
-      S.chest[id] = (S.chest[id] || 0) + n; delete S.inv[id];
+      store[id] = (store[id] || 0) + n; delete S.inv[id];
       if (S.held === id) S.held = null;
       this.bagSync(); sfx('pickup');
     },
-    chestTake(id, all = true) {
-      const n = S.chest[id] || 0; if (!n) return;
+    chestTake(id, store = S.chest) {
+      const n = store[id] || 0; if (!n) return;
       if (!(S.inv[id] > 0) && !this.freeSlots()) { UI.toast('A mochila está cheia (28 slots). Guarde algo no baú primeiro.', 'bad'); sfx('error'); return; }
-      const k = all ? n : 1;
-      S.chest[id] -= k; if (S.chest[id] <= 0) delete S.chest[id];
+      const k = n;
+      store[id] -= k; if (store[id] <= 0) delete store[id];
       S.inv[id] = (S.inv[id] || 0) + k; this.bagSync(); sfx('pickup');
     },
   });
@@ -78,16 +79,31 @@
       S.chest = {}; S.slots = Array(SLOTS).fill(null);
       for (const id of Object.keys(S.inv)) if (!keep.includes(id)) { S.chest[id] = S.inv[id]; delete S.inv[id]; }
       keep.forEach((id, i) => { if (S.inv[id] > 0) S.slots[i] = id; });
+      // baús espalhados pela fazenda, cada um com a produção do lugar
+      const put = (x, y, label, items) => {
+        for (let k = 0; k < 6; k++) { if (G.canPlace('bau', x + k, y)) { const b = G.addBuilding('bau', x + k, y); b.data.label = label; b.data.items = items; return; } }
+      };
+      const lot = id => D.lots.find(l => l.id === id);
+      const n = lot('norte'), w = lot('oeste'), ne = lot('ne'), sd = lot('sede');
+      put(n.x + 13, n.y + 6, 'Leite do curral', { leite_balde: 18, leite: 12, queijo: 4, esterco: 20 });
+      put(w.x + 2, w.y + 15, 'Frutas do pomar', { laranja: 30, manga: 22, banana: 40, acerola: 60, jabuticaba: 80, uva: 35, maracuja: 25, mel: 9 });
+      put(ne.x + 8, ne.y + 14, 'Grãos e forragem', { milho: 60, feijao: 45, trigo: 50, capim: 80, mandioca: 30 });
+      put(sd.x + 1, sd.y + 6, 'Horta', { alface: 12, tomate: 18, cenoura: 15, pimenta: 20, abobora: 6 });
       G.bagSync(); G.save();
     };
   }
 
   // baú: construção 1×1 (todos os baús compartilham o mesmo estoque, como um depósito)
-  D.buildings.bau = { n: 'Baú', w: 1, h: 1, i: '📦', desc: 'Guarda itens que não cabem na mochila. Todos os baús e a casa acessam o mesmo depósito.' };
+  D.buildings.bau = { n: 'Baú', w: 1, h: 1, i: '📦', desc: 'Cada baú guarda as suas próprias coisas: ponha perto do curral, do pomar ou da horta para guardar a produção ali mesmo.' };
   D.items.bau = { n: 'Baú', i: '📦', place: 'bau', sell: 0, cat: 'Construção' };
   D.recipes.splice(1, 0, { out: 'bau', q: 1, in: { madeira: 15, ferragens: 1 }, st: null, cat: 'Construção' });
   const _bi = G.buildingInteract.bind(G);
-  G.buildingInteract = function (b) { if (b.type === 'bau') return UI.openChest(); return _bi(b); };
+  G.buildingInteract = function (b) { if (b.type === 'bau') return UI.openChest(b); return _bi(b); };
+  const _rm = G.removeBuilding.bind(G);
+  G.removeBuilding = function (b) {   // desmontar um baú devolve o conteúdo ao depósito da casa
+    if (b.type === 'bau' && b.data.items) for (const [k, n] of Object.entries(b.data.items)) S.chest[k] = (S.chest[k] || 0) + n;
+    return _rm(b);
+  };
 
   // ---------------- Interface ----------------
   const ii = id => (window.ITEMICONS && ITEMICONS.html(id)) || `<span class="emo">${D.items[id].i}</span>`;
@@ -103,7 +119,11 @@
   $('#hud').appendChild(bag);
   const grid = bag.querySelector('.bag-grid');
   bag.querySelector('#bag-close').onclick = () => UI.toggleBag(false);
-  bag.querySelector('#bag-chest').onclick = () => UI.openChest();
+  bag.querySelector('#bag-chest').onclick = () => {
+    // abre o baú mais próximo (ou o depósito da casa)
+    const near = S.buildings.filter(b => b.type === 'bau' && Math.hypot(b.x + 0.5 - S.player.x, b.y + 0.5 - S.player.y) <= 2.5)[0];
+    UI.openChest(near);
+  };
 
   function render(force) {
     if (!S || !S.slots) return;
@@ -139,15 +159,22 @@
   UI.openInventory = () => UI.toggleBag(true);
 
   // baú (modal): mochila ↔ depósito
-  const nearChest = () => G.nearStation('bau', 2) || G.nearStation('casa', 2) || S.creative;
-  UI.openChest = () => {
-    if (!nearChest()) { UI.toast('Vá até a casa ou até um baú para acessar o depósito.'); return; }
-    const ids = Object.keys(S.chest).filter(k => S.chest[k] > 0).sort((a, b) => D.items[a].cat.localeCompare(D.items[b].cat));
-    UI.show('chest', `<h2>📦 Baú</h2><p><small>Clique num item do baú para levar a pilha para a mochila; clique num item da mochila para guardar. A mochila tem ${SLOTS} slots (${G.freeSlots()} livres).</small></p>
+  UI.openChest = b => {
+    if (!b && !(G.nearStation('casa', 2) || S.creative)) { UI.toast('Vá até a casa ou até um baú para abrir.'); return; }
+    const store = b ? (b.data.items = b.data.items || {}) : S.chest;
+    const title = b ? `📦 Baú${b.data.label ? ' — ' + b.data.label : ''}` : '🏠 Depósito da casa';
+    const ids = Object.keys(store).filter(k => store[k] > 0).sort((a, c) => D.items[a].cat.localeCompare(D.items[c].cat));
+    UI.show('chest', `<h2>${title}</h2><p><small>Clique num item do baú para levar a pilha para a mochila; clique num item da mochila para guardar. A mochila tem ${SLOTS} slots (${G.freeSlots()} livres).${b ? ' Cada baú tem o seu próprio conteúdo.' : ' O que não cabe na mochila vem para cá.'}</small></p>
+      ${b ? `<div class="row" style="margin:0 0 6px"><input id="chest-label" maxlength="20" placeholder="Nome do baú (ex.: Leite do curral)" value="${(b.data.label || '').replace(/"/g, '&quot;')}" style="flex:1;padding:6px;border:2px solid #c99a5e;border-radius:8px;font-family:inherit"><button class="btn alt" id="chest-all">⬇️ Guardar a produção</button></div>` : ''}
       <div class="chest-cols"><div><h3>🎒 Mochila</h3><div class="inv bag-mini">${S.slots.map(id => `<div class="it ${id ? '' : 'empty'}" data-put="${id || ''}" title="${id ? info(id) : ''}">${id ? ii(id) + `<span class="q">${fmtN(S.inv[id])}</span>` : ''}</div>`).join('')}</div></div>
-      <div><h3>📦 Baú (${ids.length} tipos)</h3><div class="inv">${ids.map(id => `<div class="it" data-get="${id}" title="${info(id)}">${ii(id)}<span class="q">${fmtN(S.chest[id])}</span></div>`).join('') || '<p>Vazio.</p>'}</div></div></div>`);
-    document.querySelectorAll('#panel [data-put]').forEach(el => el.onclick = () => { if (el.dataset.put) { G.chestPut(el.dataset.put); UI.openChest(); } });
-    document.querySelectorAll('#panel [data-get]').forEach(el => el.onclick = () => { G.chestTake(el.dataset.get); UI.openChest(); });
+      <div><h3>📦 Conteúdo (${ids.length} tipos)</h3><div class="inv">${ids.map(id => `<div class="it" data-get="${id}" title="${info(id)}">${ii(id)}<span class="q">${fmtN(store[id])}</span></div>`).join('') || '<p>Vazio.</p>'}</div></div></div>`);
+    document.querySelectorAll('#panel [data-put]').forEach(el => el.onclick = () => { if (el.dataset.put) { G.chestPut(el.dataset.put, store); UI.openChest(b); } });
+    document.querySelectorAll('#panel [data-get]').forEach(el => el.onclick = () => { G.chestTake(el.dataset.get, store); UI.openChest(b); });
+    const lab = document.getElementById('chest-label');
+    if (lab) lab.onchange = () => { b.data.label = lab.value.trim(); };
+    const all = document.getElementById('chest-all');
+    // guarda produção (colheitas, frutas, produtos animais, peixes, carnes) e deixa insumos/sementes/construções na mochila
+    if (all) all.onclick = () => { for (const id of S.slots.filter(Boolean)) if (['Colheita', 'Fruta', 'Animal', 'Peixe', 'Carne', 'Subproduto', 'Processado', 'Prato'].includes(D.items[id].cat)) G.chestPut(id, store); UI.openChest(b); };
   };
 
   // a casa ganha o botão do baú no diálogo de dormir

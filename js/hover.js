@@ -6,11 +6,11 @@
   const tip = document.createElement('div');
   tip.id = 'btip'; tip.style.display = 'none';
   document.body.appendChild(tip);
-  let cur = null, overTip = false, lastKey = '';
+  let cur = null, overTip = false, lastKey = '', lastSeen = 0;
 
   tip.addEventListener('mouseenter', () => { overTip = true; });
   tip.addEventListener('mouseleave', () => { overTip = false; tip.classList.remove('open'); });
-  tip.addEventListener('click', e => { if (e.target.closest('.info')) tip.classList.toggle('open'); });
+  tip.addEventListener('click', e => { if (e.target.closest('.info')) tip.classList.add('open'); else if (cur) UI.openBuilding(cur); });
   tip.addEventListener('mouseover', e => { if (e.target.closest('.info')) tip.classList.add('open'); });
 
   // resumo curto de cada construção
@@ -35,7 +35,7 @@
     if (b.type === 'banco_sementes') out.push(`🌱 ${Object.keys(S.seedBank || {}).length} variedade(s) crioula(s) guardada(s)`);
     const nx = G.nextLevel && G.nextLevel(b);
     if (nx) out.push(`🏗️ próximo nível: ${nx.n} (💰 ${nx.cost.toLocaleString('pt-BR')})`);
-    out.push('<i>E para interagir</i>');
+    out.push('<i>E para interagir · duplo clique: informações e evolução</i>');
     return out.join('<br>');
   }
 
@@ -44,24 +44,27 @@
     const run = window.INPUT && INPUT.isRunning() && S && !UI.isOpen();
     if (!run) { tip.style.display = 'none'; cur = null; return; }
     if (!overTip) {
-      cur = null;
+      let found = null;
       const m = INPUT.mouse;
       if (m.moved) {
         const w = R.screenToWorld(m.x, m.y), t = G.tile(Math.floor(w.x), Math.floor(w.y));
-        if (t && t.o && t.o.t === 'b') cur = G.getBuilding(t.o.id);
+        if (t && t.o && t.o.t === 'b') found = G.getBuilding(t.o.id);
       }
+      // ao sair da construção, o rótulo espera um pouco para dar tempo de alcançar o ⓘ
+      if (found) { cur = found; lastSeen = performance.now(); }
+      else if (performance.now() - lastSeen > 700) cur = null;
     }
     if (!cur || !G.getBuilding(cur.id)) { tip.style.display = 'none'; tip.classList.remove('open'); cur = null; return; }
     const def = D.buildings[cur.type], lv = cur.level || 1, hasLv = !!def.levels;
     const key = cur.id + ':' + lv + ':' + G.bname(cur);
     if (key !== lastKey) {
       lastKey = key;
-      tip.innerHTML = `${def.i ? def.i + ' ' : ''}${G.bname(cur)}${hasLv ? `<span class="lv">${'★'.repeat(lv)}${'☆'.repeat(def.levels.length - lv)}</span>` : ''}<span class="info" title="Resumo">i</span><div class="sum"></div>`;
+      tip.innerHTML = `<div class="sum"></div><div class="hd">${def.i ? def.i + ' ' : ''}${G.bname(cur)}${hasLv ? `<span class="lv">${'★'.repeat(lv)}${'☆'.repeat(def.levels.length - lv)}</span>` : ''}<span class="info" title="Resumo">i</span></div>`;
     }
     if (tip.classList.contains('open')) tip.querySelector('.sum').innerHTML = summary(cur);
     const p = R.worldToScreen(cur.x + def.w / 2, cur.y);
     tip.style.left = p.x + 'px';
-    tip.style.top = Math.max(60, p.y - 6) + 'px';
+    tip.style.top = Math.max(60, p.y + 14) + 'px';   // encosta na construção: o mouse chega ao rótulo sem sair dela
     tip.style.display = 'block';
   }
   requestAnimationFrame(update);

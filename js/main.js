@@ -100,8 +100,19 @@
   cv.addEventListener('mousedown', e => {
     audioInit(); mouse.x = e.clientX; mouse.y = e.clientY; mouse.moved = true;
     if (e.button === 0 && holdingFence()) { const t = tileAt(e.clientX, e.clientY); drag = { start: t, end: t, type: S.held }; return; }
+    // clique em construção: espera um instante para ver se é duplo clique (duplo clique = informações)
+    const tt = tileAt(e.clientX, e.clientY), tl = G.tile(tt.x, tt.y);
+    const b = running && tl && tl.o && tl.o.t === 'b' ? G.getBuilding(tl.o.id) : null;
+    if (b && e.button === 0) {
+      if (pendingClick && pendingClick.b === b) { clearTimeout(pendingClick.timer); pendingClick = null; UI.openBuilding(b); return; }
+      if (pendingClick) clearTimeout(pendingClick.timer);
+      const right = false;
+      pendingClick = { b, timer: setTimeout(() => { pendingClick = null; act(right); }, 260) };
+      return;
+    }
     act(e.button === 2);
   });
+  let pendingClick = null;
   addEventListener('mouseup', () => {
     if (!drag) return;
     const d = drag; drag = null;
