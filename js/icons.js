@@ -52,6 +52,53 @@ window.ICONS = (() => {
       <path d="M17 36 L8 45" stroke="#4a2c14" stroke-width="8" stroke-linecap="round"/>
       <path d="M17 36 L8 45" stroke="#9a6233" stroke-width="5.5" stroke-linecap="round"/>
       <circle cx="14.5" cy="38.5" r="1.1" fill="#e3c25a"/><circle cx="11" cy="42" r="1.1" fill="#e3c25a"/>`,
+    // motosserra: corpo laranja, sabre e corrente
+    motosserra: `
+      <path d="M22 22 L44 13 Q47 13 46 17 L25 30 Z" fill="#c9d1d7" stroke="#2b3034" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M24 24 L44 16" stroke="#555" stroke-width="1.6" stroke-dasharray="2 2"/>
+      <rect x="6" y="20" width="20" height="16" rx="4" fill="#f07a1a" stroke="#6b3208" stroke-width="2.2"/>
+      <rect x="9" y="23" width="9" height="6" rx="1.5" fill="#2b2b2b"/>
+      <path d="M8 20 Q10 11 19 12 Q24 13 24 20" fill="none" stroke="#2b2b2b" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M8 36 L8 41 L18 41" fill="none" stroke="#2b2b2b" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="21" cy="31" r="2" fill="#ffd27a"/>`,
+    // motocultivador: microtrator vermelho com enxadas rotativas
+    motocultivador: `
+      <path d="M26 20 L44 6" stroke="#2b2b2b" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M41 6 L47 9" stroke="#2b2b2b" stroke-width="4" stroke-linecap="round"/>
+      <rect x="12" y="16" width="18" height="13" rx="3" fill="#d23a2a" stroke="#6b1a12" stroke-width="2.2"/>
+      <rect x="15" y="12" width="9" height="6" rx="2" fill="#3a3a3a" stroke="#111" stroke-width="1.5"/>
+      <rect x="15" y="20" width="10" height="3" rx="1" fill="#ffd27a"/>
+      <circle cx="18" cy="36" r="8" fill="#555" stroke="#1d1d1d" stroke-width="2"/>
+      <path d="M10 36 h16 M18 28 v16 M12.5 30.5 l11 11 M23.5 30.5 l-11 11" stroke="#bfc6cb" stroke-width="2.2"/>
+      <circle cx="18" cy="36" r="2.5" fill="#d23a2a"/>
+      <path d="M6 44 Q12 40 20 44 Q28 40 34 44" fill="none" stroke="#7a5230" stroke-width="2.5" stroke-linecap="round"/>`,
+    // mangueira enrolada no carretel
+    mangueira: `
+      <rect x="8" y="38" width="26" height="5" rx="2" fill="#7a5230" stroke="#3b2a1a" stroke-width="1.8"/>
+      <circle cx="21" cy="24" r="14" fill="#2f8c3e" stroke="#174d20" stroke-width="2.2"/>
+      <circle cx="21" cy="24" r="10" fill="none" stroke="#5fc46e" stroke-width="2.5"/>
+      <circle cx="21" cy="24" r="6" fill="none" stroke="#2f8c3e" stroke-width="2.5"/>
+      <circle cx="21" cy="24" r="3.5" fill="#e3c25a" stroke="#7a5c12" stroke-width="1.5"/>
+      <path d="M33 30 Q40 34 41 40" fill="none" stroke="#2f8c3e" stroke-width="4" stroke-linecap="round"/>
+      <rect x="38" y="38" width="7" height="5" rx="1.5" fill="#e3c25a" stroke="#7a5c12" stroke-width="1.5"/>
+      <circle cx="46" cy="36" r="1.3" fill="#7fd3ff"/><circle cx="44" cy="33" r="1.1" fill="#7fd3ff"/>`,
+    // roçadeira: motor laranja, haste longa, disco
+    rocadeira: `
+      <path d="M14 14 L38 40" stroke="#2b2b2b" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M20 26 L28 18 M24 30 L32 22" stroke="#2b2b2b" stroke-width="2.5" stroke-linecap="round"/>
+      <rect x="4" y="4" width="15" height="13" rx="3" fill="#f07a1a" stroke="#6b3208" stroke-width="2.2"/>
+      <rect x="7" y="7" width="6" height="4" rx="1" fill="#2b2b2b"/>
+      <ellipse cx="39" cy="41" rx="8" ry="4" fill="#c9d1d7" stroke="#2b3034" stroke-width="2"/>
+      <path d="M33 39 L45 43 M34 44 L44 38" stroke="#7a838a" stroke-width="1.4"/>
+      <path d="M30 42 Q35 47 47 44" fill="none" stroke="#f07a1a" stroke-width="2.4"/>`,
+    // rompedor elétrico (martelete) amarelo
+    rompedor: `
+      <rect x="14" y="4" width="20" height="5" rx="2.5" fill="#2b2b2b"/>
+      <rect x="16" y="8" width="16" height="20" rx="3" fill="#f2c230" stroke="#6b5208" stroke-width="2.2"/>
+      <rect x="19" y="12" width="10" height="4" rx="1" fill="#2b2b2b"/>
+      <rect x="20" y="28" width="8" height="5" fill="#555" stroke="#1d1d1d" stroke-width="1.5"/>
+      <path d="M22 33 L24 45 L26 33 Z" fill="#c9d1d7" stroke="#2b3034" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M10 42 l4 -3 M38 42 l-4 -3 M15 46 l3 -2 M33 46 l-3 -2" stroke="#9a9a9a" stroke-width="2" stroke-linecap="round"/>`,
     // mochila / item na mão
     item: `
       <path d="M12 18 Q12 10 24 10 Q36 10 36 18 L38 40 Q38 44 34 44 H14 Q10 44 10 40 Z" fill="#b07a45" stroke="#4a2c14" stroke-width="2.2" stroke-linejoin="round"/>
@@ -75,6 +122,11 @@ window.ICONS = (() => {
   }
   return {
     html: id => svg[id] ? `<span class="svgic">${wrap(svg[id])}</span>` : null,
-    img: id => (imgs[id] && imgs[id].complete && imgs[id].naturalWidth) ? imgs[id] : null,
+    // para ferramentas, usa o ícone do nível atual (ex.: machado → motosserra)
+    img: id => {
+      const info = window.S && window.G && G.toolInfo && G.toolInfo(id);
+      const key = info && info.icon || id;
+      return (imgs[key] && imgs[key].complete && imgs[key].naturalWidth) ? imgs[key] : null;
+    },
   };
 })();

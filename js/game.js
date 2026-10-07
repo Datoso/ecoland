@@ -43,10 +43,11 @@ const G = window.G = {
     });
   },
 
-  solid(x, y) {
+  solid(x, y, animal) {
     if (!this.inBounds(x, y) || !this.owned(x, y)) return true;
     const t = S.tiles[this.idx(x, y)];
     if (t.g === 'water') return true;
+    if (t.o && t.o.gate) return !!animal;   // porteira: você passa, os animais não
     if (t.o && (t.o.t === 'tree' || t.o.t === 'rock' || t.o.t === 'b' || t.o.t === 'fruit')) return true;
     return false;
   },
@@ -147,7 +148,7 @@ const G = window.G = {
     if (type === 'composteira') { b.data.load = 0; b.data.batches = []; b.data.ready = 0; }
     if (type === 'colmeia') { b.data.t = 0; b.data.mel = 0; }
     for (let y = y0; y < y0 + def.h; y++) for (let x = x0; x < x0 + def.w; x++) {
-      const t = this.tile(x, y); t.o = { t: 'b', id: b.id }; t.g = t.g === 'tilled' ? 'grass' : t.g; t.c = null;
+      const t = this.tile(x, y); t.o = { t: 'b', id: b.id }; if (type === 'porteira') t.o.gate = true; t.g = t.g === 'tilled' ? 'grass' : t.g; t.c = null;
     }
     S.buildings.push(b);
     return b;
@@ -236,7 +237,7 @@ const G = window.G = {
       player: { x: 0, y: 0, dir: 'down', hp: 100, energy: 100, maxEnergy: 100, fome: 85, sede: 85, water: 15, waterMax: 15, sick: 0 },
       inv: { sem_alface: 10, sem_cenoura: 6, marmita: 3, agua: 3 },
       held: 'sem_alface', tool: 0, lots: { sede: true }, tiles: [], buildings: [], animals: [], nextId: 1,
-      stats: {}, quest: 0, upgrades: {}, ended: false,
+      stats: {}, quest: 0, upgrades: {}, tools: {}, ended: false,
     };
     this.buildLotGrid();
     this.genWorld();
@@ -289,6 +290,8 @@ const G = window.G = {
       if (!raw) return false;
       S = JSON.parse(raw);
       S.worldId = S.worldId || id;
+      S.tools = S.tools || {};
+      if (S.upgrades.regador && !S.tools.regador) { S.tools.regador = 2; delete S.upgrades.regador; }
       this.buildLotGrid();
       S.animals.forEach(a => { a.tx = null; });
       for (const b of S.buildings) {
@@ -352,7 +355,7 @@ const G = window.G = {
         if (a.wait <= 0 && S.time < NIGHT_HOME) {
           for (let k = 0; k < 8; k++) {
             const tx = Math.floor(door.x) + rnd(-6, 6), ty = Math.floor(door.y) + rnd(-5, 6);
-            if (!this.solid(tx, ty)) { a.tx = tx + 0.5; a.ty = ty + 0.5; break; }
+            if (!this.solid(tx, ty, true)) { a.tx = tx + 0.5; a.ty = ty + 0.5; break; }
           }
           a.wait = 2 + Math.random() * 5;
         }
@@ -362,7 +365,7 @@ const G = window.G = {
       if (d > 0.1) {
         const sp = def.speed * dt * (a.age < def.adult ? 1.2 : 1);
         const nx = a.x + dx / d * Math.min(sp, d), ny = a.y + dy / d * Math.min(sp, d);
-        if (!this.solid(Math.floor(nx), Math.floor(ny))) { a.x = nx; a.y = ny; a.moving = true; }
+        if (!this.solid(Math.floor(nx), Math.floor(ny), true)) { a.x = nx; a.y = ny; a.moving = true; }
         else { a.tx = null; a.wait = 0.5; }
         a.face = dx < 0 ? -1 : 1;
       } else a.moving = false;
@@ -393,68 +396,89 @@ const G = window.G = {
   },
 
   // ---------------- Ações ----------------
+  // ---------------- Ferramentas (níveis e área de efeito) ----------------
+  toolLvl(id) { return (S.tools && S.tools[id]) || 1; },
+  toolInfo(id) { const L = D.toolLevels[id]; return L ? L[Math.min(this.toolLvl(id), L.length) - 1] : null; },
+  toolName(id) { const i = this.toolInfo(id); return i ? i.n : D.tools.find(t => t.id === id).n; },
+  areaTiles(tx, ty, area) {
+    if (area === 'line3') {
+      const [dx, dy] = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[S.player.dir];
+      return [0, 1, 2].map(i => [tx + dx * i, ty + dy * i]);
+    }
+    const r = ((area || 1) - 1) / 2, out = [];
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) out.push([tx + dx, ty + dy]);
+    return out;
+  },
+  // aplica fn em cada tile da área que passar no filtro; cobra energia proporcional
+  areaAction(tx, ty, area, base, filter, fn) {
+    const list = this.areaTiles(tx, ty, area).filter(([x, y]) => this.owned(x, y) && this.tile(x, y) && filter(this.tile(x, y), x, y));
+    if (!list.length) return 0;
+    if (!this.useEnergy(base * (1 + 0.4 * (list.length - 1)))) return -1;
+    for (const [x, y] of list) fn(this.tile(x, y), x, y);
+    return list.length;
+  },
+
   useTool(tx, ty, wx, wy) {
     const tool = D.tools[S.tool].id;
     const t = this.tile(tx, ty);
     if (!t) return;
     if (!this.owned(tx, ty)) { toast('Essa terra ainda não é sua. Compre o lote (tecla T).'); sfx('error'); return; }
     const cx = tx + 0.5, cy = ty + 0.5;
+    const info = this.toolInfo(tool) || {};
     switch (tool) {
       case 'mao': return this.interact(tx, ty, wx, wy);
       case 'item': return this.useItem(tx, ty, wx, wy);
-      case 'enxada':
-        if (t.c && t.c.dead) { if (!this.useEnergy(1)) return; t.c = null; sfx('hoe'); this.burst(cx, cy, '#6b4a2b'); return; }
-        if (t.g === 'grass' && !t.o) {
-          if (!this.useEnergy(2)) return;
-          t.g = 'tilled'; sfx('hoe'); this.burst(cx, cy, '#7a5230'); this.stat('till');
-          return;
-        }
-        if (t.o && t.o.t === 'weed') { toast('Roce o mato com a foice primeiro.'); return; }
+      case 'enxada': {
+        const n = this.areaAction(tx, ty, info.area, 2,
+          tt => (tt.c && tt.c.dead) || (tt.g === 'grass' && !tt.o),
+          (tt, x, y) => {
+            if (tt.c && tt.c.dead) tt.c = null;
+            else { tt.g = 'tilled'; this.stat('till'); }
+            this.burst(x + 0.5, y + 0.5, '#7a5230', 5);
+          });
+        if (n > 0) sfx('hoe');
+        else if (!n && t.o && t.o.t === 'weed') toast('Roce o mato com a foice primeiro.');
         return;
+      }
       case 'regador': {
         const b = t.o && t.o.t === 'b' ? this.getBuilding(t.o.id) : null;
+        const p = S.player;
         if (t.g === 'water' || (b && (b.type === 'poco' || b.type === 'tanque'))) {
-          const p = S.player;
           p.water = p.waterMax;
           p.nutri = !!(b && b.type === 'tanque' && S.animals.some(a => a.home === b.id));
           sfx('refill'); this.popup(cx, cy, p.nutri ? '💧 água nutritiva do tanque!' : '💧 cheio!', p.nutri ? '#b6f5a0' : '#9fd8ff'); return;
         }
-        if (t.g === 'tilled') {
-          const p = S.player;
-          if (p.water <= 0) { toast('Regador vazio! Encha no lago, poço ou tanque.'); sfx('error'); return; }
-          const r = S.upgrades.regador ? 1 : 0;   // regador grande rega 3×3
-          let n = 0;
-          for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-            const tt = this.tile(tx + dx, ty + dy);
-            if (!tt || tt.g !== 'tilled' || tt.wet || !this.owned(tx + dx, ty + dy) || p.water <= 0) continue;
-            if (n === 0 && !this.useEnergy(r ? 2 : 1)) return;
-            tt.wet = true; p.water--; n++;
+        if (t.g !== 'tilled') return;
+        if (p.water <= 0) { toast('Regador vazio! Encha no lago, poço ou tanque.'); sfx('error'); return; }
+        const n = this.areaAction(tx, ty, info.area, 1,
+          tt => tt.g === 'tilled' && !tt.wet,
+          (tt, x, y) => {
+            if (p.water <= 0) return;
+            tt.wet = true; p.water--;
             if (p.nutri && chance(0.25)) { if (tt.c) tt.c.fert = true; else tt.fert = true; }
-            this.burst(tx + dx + 0.5, ty + dy + 0.5, '#6cc4ff', 4);
-          }
-          if (!n) { toast('Já está regado.'); return; }
-          sfx('water'); this.stat('water', n);
-          return;
-        }
+            this.burst(x + 0.5, y + 0.5, '#6cc4ff', 4); this.stat('water');
+          });
+        if (n > 0) sfx('water'); else if (!n) toast('Já está regado.');
         return;
       }
-      case 'foice':
-        if (t.c) {
-          if (t.c.dead) { t.c = null; sfx('scythe'); return; }
-          if (this.cropReady(t)) { if (!this.useEnergy(1)) return; return this.harvest(tx, ty); }
-          toast('Ainda não está pronto para colher.'); return;
-        }
-        if (t.o && t.o.t === 'weed') {
-          if (!this.useEnergy(1)) return;
-          t.o = null; sfx('scythe'); this.burst(cx, cy, '#5fae3a'); this.add('capim', chance(0.4) ? 2 : 1); this.stat('weeds');
-          return;
-        }
+      case 'foice': {
+        let harvested = 0;
+        const n = this.areaAction(tx, ty, info.area, 1,
+          tt => (tt.c && (tt.c.dead || this.cropReady(tt))) || (tt.o && tt.o.t === 'weed'),
+          (tt, x, y) => {
+            if (tt.c && tt.c.dead) tt.c = null;
+            else if (tt.c) { this.harvest(x, y, true); harvested++; }
+            else { tt.o = null; this.add('capim', chance(0.4) ? 2 : 1, true); this.stat('weeds'); this.burst(x + 0.5, y + 0.5, '#5fae3a', 5); }
+          });
+        if (n > 0) { sfx(harvested ? 'harvest' : 'scythe'); this.popup(S.player.x, S.player.y - 0.8, harvested ? `🌾 colheu ${harvested}` : `+🌿`); }
+        else if (!n && t.c) toast('Ainda não está pronto para colher.');
         return;
+      }
       case 'machado':
         if (t.o && t.o.t === 'tree') {
           if (!this.useEnergy(3)) return;
-          t.o.hp--; this.burst(cx, cy, '#8b5a2b'); this.shake = 0.15;
-          if (t.o.hp <= 0) { t.o = null; sfx('treefall'); this.add('madeira', rnd(3, 5)); if (chance(0.3)) this.add('capim', 1, true); }
+          t.o.hp -= info.dmg || 1; this.burst(cx, cy, '#8b5a2b'); this.shake = 0.15;
+          if (t.o.hp <= 0) { t.o = null; sfx('treefall'); this.add('madeira', rnd(3, 5) + (info.bonus || 0)); if (chance(0.3)) this.add('capim', 1, true); }
           else sfx('chop');
           return;
         }
@@ -466,20 +490,21 @@ const G = window.G = {
         }
         if (t.o && t.o.t === 'b') {
           const b = this.getBuilding(t.o.id);
-          if (b.type === 'cerca') { this.removeBuilding(b); this.add('cerca', 1); sfx('chop'); }
+          if (b.type === 'cerca' || b.type === 'porteira') { this.removeBuilding(b); this.add(b.type, 1); sfx('chop'); }
         }
         return;
-      case 'picareta':
-        if (t.o && t.o.t === 'rock') {
-          if (!this.useEnergy(3)) return;
-          t.o.hp--; this.burst(cx, cy, '#9a9a9a'); this.shake = 0.12;
-          if (t.o.hp <= 0) { t.o = null; sfx('rockbreak'); this.add('pedra', rnd(2, 4)); if (chance(0.08)) this.add('ferragens', 1); }
-          else sfx('pick');
-          return;
-        }
+      case 'picareta': {
         if (t.o && t.o.t === 'b') return this.dismantle(this.getBuilding(t.o.id));
-        if (t.g === 'tilled') { t.g = 'grass'; t.c = null; t.wet = false; sfx('pick'); }
+        const n = this.areaAction(tx, ty, info.area, 3,
+          tt => tt.o && tt.o.t === 'rock',
+          (tt, x, y) => {
+            tt.o.hp -= info.dmg || 1; this.burst(x + 0.5, y + 0.5, '#9a9a9a', 5);
+            if (tt.o.hp <= 0) { tt.o = null; this.add('pedra', rnd(2, 4)); if (chance(0.08)) this.add('ferragens', 1); }
+          });
+        if (n > 0) { this.shake = 0.12; sfx(t.o ? 'pick' : 'rockbreak'); return; }
+        if (!n && t.g === 'tilled') { t.g = 'grass'; t.c = null; t.wet = false; sfx('pick'); }
         return;
+      }
       case 'faca': {
         const a = this.animalAt(wx, wy);
         if (!a) { toast('Use a faca sobre um animal adulto.'); return; }
@@ -488,16 +513,44 @@ const G = window.G = {
     }
   },
 
+  // cercas em área: contorno do retângulo, com porteira no meio do lado de baixo
+  fenceRect(x0, y0, x1, y1) {
+    const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
+    const cells = [];
+    if (ax === bx || ay === by) { for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) cells.push([x, y, 'cerca']); }
+    else {
+      for (let x = ax; x <= bx; x++) { cells.push([x, ay, 'cerca']); cells.push([x, by, 'cerca']); }
+      for (let y = ay + 1; y < by; y++) { cells.push([ax, y, 'cerca']); cells.push([bx, y, 'cerca']); }
+      const gx = Math.floor((ax + bx) / 2), gate = cells.find(c => c[0] === gx && c[1] === by);
+      if (gate && bx - ax >= 2) gate[2] = 'porteira';
+    }
+    let placed = 0, missing = 0;
+    for (const [x, y, type] of cells) {
+      if (!this.canPlace(type, x, y)) continue;
+      if (!S.creative && !this.has(type)) {
+        // sem porteira na mochila: usa cerca no lugar
+        if (type === 'porteira' && (this.has('cerca'))) { this.take('cerca'); this.addBuilding('cerca', x, y); placed++; continue; }
+        missing++; continue;
+      }
+      if (!S.creative) this.take(type);
+      this.addBuilding(type, x, y); placed++;
+    }
+    if (placed) { sfx('place'); toast(`🚧 ${placed} peça(s) de cerca colocadas.${missing ? ` Faltaram ${missing} — crie mais cercas (C).` : ''}`); }
+    else toast(missing ? 'Sem cercas na mochila. Crie mais no menu de criação (C).' : 'Não há espaço livre nessa área.');
+    return placed;
+  },
+
   cropReady(t) { return t.c && !t.c.dead && t.c.g >= D.crops[t.c.id].days; },
 
-  harvest(tx, ty) {
+  harvest(tx, ty, quiet) {
     const t = this.tile(tx, ty), c = t.c, crop = D.crops[c.id];
     let n = rnd(crop.yield[0], crop.yield[1]);
     if (c.fert && chance(0.6)) n++;
     if ((c.hp ?? 100) < 50) n = Math.max(1, n - 1);
     if (this.nearBee(tx, ty) && chance(0.3)) n++;
-    this.add(c.id, n);
-    sfx('harvest'); this.burst(tx + 0.5, ty + 0.5, '#ffe066', 10);
+    this.add(c.id, n, quiet);
+    if (!quiet) sfx('harvest');
+    this.burst(tx + 0.5, ty + 0.5, '#ffe066', quiet ? 4 : 10);
     this.stat('harvest');
     if (crop.regrow) { c.g = crop.days - crop.regrow; c.fert = false; }
     else t.c = null;
@@ -555,7 +608,8 @@ const G = window.G = {
       S.animals = S.animals.filter(o => o !== a);
       sfx('slaughter');
       let delay = 0;
-      for (const [k, n] of Object.entries(def.slaughter)) { setTimeout(() => this.add(k, n), delay); delay += 200; }
+      const bonus = (this.toolInfo('faca') || {}).bonus || 0;
+      for (const [k, n] of Object.entries(def.slaughter)) { setTimeout(() => this.add(k, n + (k.startsWith('carne') ? bonus : 0)), delay); delay += 200; }
       this.stat('slaughter');
     });
   },
@@ -725,6 +779,13 @@ const G = window.G = {
       }
       sfx('buy'); toast(`${qty > 1 ? 'Chegaram' : 'Chegou'} ${qty} ${D.animals[entry.animal].baby.toLowerCase()}(s)! Estão no(a) ${this.homeNames(entry.animal)}.`);
       this.checkQuests();
+      return true;
+    }
+    if (entry.tool) {
+      if (this.toolLvl(entry.tool) !== entry.level - 1) { toast('Compre o nível anterior primeiro.'); return false; }
+      this.spend(cost); S.tools[entry.tool] = entry.level;
+      if (entry.tool === 'regador') { S.player.waterMax = this.toolInfo('regador').cap; S.player.water = S.player.waterMax; }
+      sfx('unlock'); toast(`🛠️ Nova ferramenta: ${this.toolName(entry.tool)}!`, 'good');
       return true;
     }
     if (entry.upgrade) {

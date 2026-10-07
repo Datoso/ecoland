@@ -14,7 +14,8 @@ window.UI = (() => {
     const badge = it.seed ? '<span class="badge">🌱</span>' : it.sapling ? '<span class="badge">🪴</span>' : '';
     return `${it.i}${badge}`;
   };
-  const fmtIn = r => Object.entries(r.in).map(([k, n]) => `<span title="${D.items[k].n}" style="${G.has(k, n) ? '' : 'color:#c0392b'}">${n}${D.items[k].i}</span>`).join(' ');
+  const ii = k => (window.ITEMICONS && ITEMICONS.html(k)) || D.items[k].i;
+  const fmtIn = r => Object.entries(r.in).map(([k, n]) => `<span title="${D.items[k].n}" style="${G.has(k, n) ? '' : 'color:#c0392b'}">${n}${ii(k)}</span>`).join(' ');
   const play = n => { try { SFX.play(n); } catch (e) { /* */ } };
 
   // ---------- HUD ----------
@@ -50,11 +51,21 @@ window.UI = (() => {
         el.title = S.held ? D.items[S.held].n : 'Item na mão (escolha no inventário)';
       }
       if (D.tools[i].id === 'regador') el.querySelector('.q').textContent = p.water;
+      const tinfo = G.toolInfo(D.tools[i].id);
+      if (tinfo) {
+        const ic = el.querySelector('.ic'), key = (tinfo.icon || D.tools[i].id) + G.toolLvl(D.tools[i].id);
+        if (ic.dataset.v !== key) {
+          ic.dataset.v = key; ic.innerHTML = ICONS.html(tinfo.icon || D.tools[i].id);
+          el.querySelector('.badge').textContent = G.toolLvl(D.tools[i].id) > 1 ? '★'.repeat(G.toolLvl(D.tools[i].id) - 1) : '';
+          el.title = `${tinfo.n}${tinfo.desc ? ': ' + tinfo.desc : ''}`;
+        }
+      }
     });
   };
 
   ui.hint = text => { $('#hint').innerHTML = text || ''; };
 
+  ui.ii = ii;
   ui.toast = (msg, type) => {
     const el = document.createElement('div');
     el.className = 'toast ' + (type || '');
@@ -73,11 +84,12 @@ window.UI = (() => {
     panel.querySelector('.close').onclick = ui.close;
     if (modal.classList.contains('hidden')) play('open');
     modal.classList.remove('hidden');
+    document.body.classList.add('modal-open');
     G.paused = true;
   };
   ui.close = () => {
     if (modal.classList.contains('hidden')) return;
-    modal.classList.add('hidden'); current = null; G.paused = false; play('close');
+    modal.classList.add('hidden'); document.body.classList.remove('modal-open'); current = null; G.paused = false; play('close');
     ui.hud(true);
   };
   modal.addEventListener('mousedown', e => { if (e.target === modal) ui.close(); });
@@ -103,7 +115,7 @@ window.UI = (() => {
         const extra = it.seed ? ` · ${D.crops[it.seed].days} dias · épocas: ${D.crops[it.seed].seasons.map(s => D.SEASONS[s]).join(', ')}` :
           it.sapling ? ` · frutifica: ${D.fruits[it.sapling].seasons.map(s => D.SEASONS[s]).join(', ')}` :
           it.place ? ` · ${D.buildings[it.place].desc || ''}` : '';
-        $('#inv-info').innerHTML = `<b>${it.i} ${it.n}</b> (${S.inv[id]}) · venda 💰${it.sell || '—'}${e}${it.feed ? ` · alimento animal: ${it.feed}` : ''}${it.organic ? ' · compostável' : ''}${extra}`;
+        $('#inv-info').innerHTML = `<b>${ii(id)} ${it.n}</b> (${S.inv[id]}) · venda 💰${it.sell || '—'}${e}${it.feed ? ` · alimento animal: ${it.feed}` : ''}${it.organic ? ' · compostável' : ''}${extra}`;
       };
       el.onclick = () => { S.held = id; S.tool = 7; play('ui'); ui.close(); };
       el.oncontextmenu = ev => { ev.preventDefault(); if (it.e) { G.eat(id); ui.openInventory(); } };
@@ -146,6 +158,11 @@ window.UI = (() => {
           const home = G.homeWithSpace(e.animal);
           sub = `${home ? '✔ há vaga' : `✘ precisa de ${G.homeNames(e.animal)} com vaga`} · adulto em ${a.adult} dias · come ${a.eat}/dia${a.grazer ? ' (pasta)' : ''}`;
           dis = dis || !home;
+        } else if (e.tool) {
+          ic = ICONS.html(D.toolLevels[e.tool][e.level - 1].icon || e.tool); name = e.n;
+          const cur = G.toolLvl(e.tool);
+          sub = e.desc + (cur >= e.level ? ' · <b>✔ você já tem</b>' : cur < e.level - 1 ? ` · precisa antes: ${D.toolLevels[e.tool][e.level - 2].n}` : '');
+          dis = dis || cur !== e.level - 1;
         } else if (e.upgrade) {
           ic = e.i; name = e.n; sub = e.desc; if (S.upgrades[e.upgrade]) { dis = true; sub = '✔ já comprado'; }
         } else {
@@ -155,7 +172,7 @@ window.UI = (() => {
           else if (it.e) sub = `+${it.e.fome || 0}🍖 +${it.e.sede || 0}💧 +${it.e.energia || 0}⚡`;
           else if (it.feed) sub = `alimento animal: ${it.feed} un.`;
         }
-        const multi = !e.upgrade;
+        const multi = !e.upgrade && !e.tool;
         return `<div class="card ${dis ? 'off' : ''}"><div class="ic">${ic}</div><div class="info"><b>${name}</b>💰 ${e.price}<small>${sub}</small></div>
           <div style="display:flex;flex-direction:column;gap:3px"><button data-b="${idx}" data-q="1" ${dis ? 'disabled' : ''}>Comprar</button>${multi ? `<button data-b="${idx}" data-q="5" ${S.money < e.price * 5 ? 'disabled' : ''}>×5</button>` : ''}</div></div>`;
       }).join('')}</div>`;
@@ -222,7 +239,7 @@ window.UI = (() => {
     ui.show('manual', `<h2>📗 Manual da Autossuficiência</h2><p><small>Siga as etapas para transformar sua terra em um sistema integrado: lavoura, criação e floresta se alimentando mutuamente.</small></p>
       <ul class="quest-list">${D.quests.map((q, i) => {
         const cls = i < S.quest ? 'done' : i === S.quest ? 'cur' : 'lock';
-        const rew = [q.reward.money ? `💰${q.reward.money}` : '', ...Object.entries(q.reward.items || {}).map(([k, n]) => `${n}${D.items[k].i}`)].join(' ');
+        const rew = [q.reward.money ? `💰${q.reward.money}` : '', ...Object.entries(q.reward.items || {}).map(([k, n]) => `${n}${ii(k)}`)].join(' ');
         return `<li class="${cls}"><b>${i < S.quest ? '✅' : i === S.quest ? '▶️' : '🔒'} ${i + 1}. ${q.t}</b> — ${q.goal} <small>(${rew})</small>
           ${i <= S.quest ? `<p>${q.txt}</p>` : ''}${i === S.quest ? `<p><b>Progresso:</b> ${G.questProgress(q)}</p>` : ''}</li>`;
       }).join('')}</ul>

@@ -8,8 +8,9 @@ G.newDemoWorld = function () {
   S.creative = true; S.money = 999999;
   S.day = 10; S.time = 540; S.weather = 'sol'; S.tomorrow = 'sol';
   for (const l of D.lots) S.lots[l.id] = true;
-  for (const u of ['regador', 'mochila', 'botas', 'ferramentas']) S.upgrades[u] = true;
-  S.player.waterMax = 40; S.player.water = 40;
+  for (const u of ['mochila', 'botas', 'ferramentas']) S.upgrades[u] = true;
+  for (const [k, L] of Object.entries(D.toolLevels)) S.tools[k] = L.length;
+  S.player.waterMax = G.toolInfo('regador').cap; S.player.water = S.player.waterMax;
 
   const clear = (x0, y0, w, h, keepWater) => {
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {

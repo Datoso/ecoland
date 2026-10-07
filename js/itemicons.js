@@ -1,0 +1,702 @@
+// =============================================================
+// EcoLand — ícones dos itens desenhados em SVG (estilo "pixel-cozy")
+// ITEMICONS.svg(id)  -> string <svg> completa (ou null)
+// ITEMICONS.html(id) -> <span class="itemic"><svg/></span> (ou null)
+// ITEMICONS.img(id)  -> Image pronta para o canvas (ou null enquanto carrega)
+// ITEMICONS.has(id)
+// Todos em viewBox 48x48, contorno marrom-tinta, 2-3 tons + brilho.
+// =============================================================
+window.ITEMICONS = (() => {
+  const K = '#3b2a1a';
+  // ---------- primitivas ----------
+  const S = (c = K, w = 2) => `stroke="${c}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+  const p = (d, f, c = K, w = 2) => `<path d="${d}" fill="${f}" ${S(c, w)}/>`;
+  const f0 = (d, f, op = 1) => `<path d="${d}" fill="${f}"${op < 1 ? ` opacity="${op}"` : ''}/>`; // sem contorno
+  const e = (cx, cy, rx, ry, f, c = K, w = 2) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${f}" ${S(c, w)}/>`;
+  const ci = (cx, cy, r, f, c = K, w = 2) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${f}" ${S(c, w)}/>`;
+  const dot = (cx, cy, r, f, op = 1) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${f}"${op < 1 ? ` opacity="${op}"` : ''}/>`;
+  const l = (d, c = K, w = 1.6, op = 1) => `<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"${op < 1 ? ` opacity="${op}"` : ''}/>`;
+  const hi = (d, w = 1.8) => l(d, '#fff', w, 0.65);
+  const sh = (rx = 16, cy = 44, ry = 2.6) => `<ellipse cx="24" cy="${cy}" rx="${rx}" ry="${ry}" fill="#000" opacity=".16"/>`;
+  const g = (t, body) => `<g transform="${t}">${body}</g>`;
+  // linha grossa com contorno (galho, cabo, osso, prego...)
+  const rod = (x1, y1, x2, y2, w, col, k = K) =>
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${k}" stroke-width="${w + 2.6}" stroke-linecap="round"/>` +
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
+  // caixa "isométrica": frente (x,y,w,h), profundidade (dx,dy)
+  const box = (x, y, w, h, dx, dy, cf, cs, ct, k = K) =>
+    p(`M${x} ${y} L${x + dx} ${y - dy} H${x + w + dx} L${x + w} ${y} Z`, ct, k) +
+    p(`M${x + w} ${y} L${x + w + dx} ${y - dy} V${y + h - dy} L${x + w} ${y + h} Z`, cs, k) +
+    p(`M${x} ${y} H${x + w} V${y + h} H${x} Z`, cf, k);
+  // casinha com telhado de duas águas
+  const house = (x, y, w, h, dx, dy, rh, wall, side, roof, roofSide) =>
+    p(`M${x + w} ${y} L${x + w + dx} ${y - dy} V${y + h - dy} L${x + w} ${y + h} Z`, side) +
+    p(`M${x} ${y + h} V${y} L${x + w / 2} ${y - rh} L${x + w} ${y} V${y + h} Z`, wall) +
+    p(`M${x + w / 2} ${y - rh} L${x + w / 2 + dx} ${y - rh - dy} L${x + w + dx + 2} ${y - dy + 1.5} L${x + w + 2} ${y + 1.5} Z`, roofSide) +
+    rod(x - 2, y + 1.5, x + w / 2, y - rh, 2.6, roof) + rod(x + w / 2, y - rh, x + w + 2, y + 1.5, 2.6, roof);
+
+  // ---------- suportes compartilhados ----------
+  const plate = () => sh(21, 43) + e(24, 35, 21, 8.5, '#ece4d4') + e(24, 34, 14.5, 5.2, '#faf6ee', '#cdbfa6', 1.3);
+  const board = () => sh(21, 44) + e(24, 37.5, 21, 7, '#8a5a2e') + e(24, 35, 21, 7, '#c99456') +
+    l('M10 35 Q24 30 38 35', '#a8743e', 1.2) + l('M14 38 Q24 35 34 38', '#a8743e', 1.2);
+  const leaf = (d, fill = '#5aa83a', vein) => p(d, fill, '#2f5a1f') + (vein ? l(vein, '#2f5a1f', 1.2, 0.8) : '');
+  const twine = (d) => l(d, K, 3.4) + l(d, '#d9b46a', 1.8);
+  const bowl = (body, content, extra = '') =>
+    sh(18, 44) + p('M5 23 Q6 43 24 43 Q42 43 43 23 Z', body) + f0('M31 40 Q40 36 41.5 26 L43 23 Q42 41 24 43 Z', '#000', 0.15) +
+    e(24, 23, 19, 6, content) + extra;
+  const clayPot = (content, extra = '') =>
+    sh(17, 44) + e(7, 24, 3, 2.4, '#9a4a24') + e(41, 24, 3, 2.4, '#9a4a24') +
+    p('M9 20 Q5 40 15 43 H33 Q43 40 39 20 Z', '#b45a2c') + f0('M31 42 Q41 39 38.5 22 L39 20 Q43 40 33 43 Z', '#000', 0.18) +
+    l('M10 28 Q24 32 38 28', '#8a3f1c', 1.4) + e(24, 20, 16, 5, content) + extra;
+  // vidro: copo
+  const glass = (liquid, top = 15, extra = '') =>
+    sh(12, 44) + p('M12 8 L15.5 42 Q24 44.5 32.5 42 L36 8 Z', '#e4f3f6', K, 2) +
+    f0(`M${12 + (top - 8) * 0.103 + 1} ${top} L15.9 41 Q24 43.5 32.1 41 L${36 - (top - 8) * 0.103 - 1} ${top} Z`, liquid) +
+    e(24, top, 11 - (top - 8) * 0.103, 2, liquid, '#00000033', 1) +
+    p('M12 8 L15.5 42 Q24 44.5 32.5 42 L36 8', 'none', K, 2) + e(24, 8, 12, 2.4, 'none', K, 1.6) +
+    hi(`M15 ${top + 3} L17 39`, 2) + extra;
+  // garrafa de vidro
+  const bottle = (liquid, liqTop, cap, extra = '') => {
+    const out = 'M20 9 V12 Q12 15 12 23 V40 Q12 44 16 44 H32 Q36 44 36 40 V23 Q36 15 28 12 V9 Z';
+    return sh(13, 44.5) + p(out, '#e3f1f4') +
+      f0(`M13 ${liqTop} H35 V40 Q35 43 32 43 H16 Q13 43 13 40 Z`, liquid) +
+      p(out, 'none') + e(24, 9, 4.5, 1.4, '#cfe3e8', K, 1.5) + cap + hi(`M16 ${liqTop + 2} V39`, 2.2) + hi('M17 18 Q19 15 21 14', 1.4) + extra;
+  };
+  // pote de vidro com tampa
+  const jar = (content, ctop, lid, extra = '') => {
+    const out = 'M12 15 Q10 16 10 19 V38 Q10 43 15 43 H33 Q38 43 38 38 V19 Q38 16 36 15 Z';
+    return sh(15, 44.5) + p(out, '#e3f1f4') +
+      f0(`M11 ${ctop} H37 V38 Q37 42 33 42 H15 Q11 42 11 38 Z`, content) + extra +
+      p(out, 'none') + lid + hi(`M14 ${ctop + 3} V37`, 2.2);
+  };
+  // saco aberto (pano/estopa)
+  const sack = (cloth, cuff, content, extra = '', mound = 'M12 16 Q15 7 24 7 Q33 7 36 16 Q24 19 12 16 Z') =>
+    sh(15, 44.5) + p('M11 18 Q6 32 9 40 Q11 44 17 44 H31 Q37 44 39 40 Q42 32 37 18 Z', cloth) +
+    f0('M33 20 Q39 30 37 40 Q35 43 31 43 Q36 32 33 20 Z', '#000', 0.13) +
+    p(mound, content) + p('M9 15 Q24 20 39 15 L37.5 20.5 Q24 24.5 10.5 20.5 Z', cuff) + extra;
+  // pacote de sementes com desenho da planta
+  const packet = (art) =>
+    sh(14, 45) + p('M10 9 H38 V42 Q38 44 36 44 H12 Q10 44 10 42 Z', '#ead7a4') +
+    p('M10 9 L13 5 L16 9 L19 5 L22 9 L25 5 L28 9 L31 5 L34 9 L37 5 L38 9 Z', '#d1b47a', K, 1.6) +
+    f0('M33 11 H37 V42 Q37 43 36 43 H33 Z', '#000', 0.08) +
+    `<rect x="13.5" y="13" width="21" height="21" rx="3" fill="#fbf6e8" stroke="#b49863" stroke-width="1.3"/>` +
+    g('translate(13.2,12.6) scale(.45)', art) +
+    `<rect x="13.5" y="36.5" width="21" height="4" rx="2" fill="#8a6a3a" opacity=".55"/>`;
+  // muda em saquinho preto
+  const sapling = (crown) =>
+    sh(12, 45) + p('M14 30 L13 41 Q13 44 17 44 H31 Q35 44 35 41 L34 30 Z', '#2c2c2e', '#111', 2) +
+    l('M16 33 L16.5 41', '#5a5a60', 1.6) + l('M21 32 L21 34 M27 37 L27 39', '#555', 1.2) +
+    e(24, 30, 10, 2.6, '#5a3a22', '#111', 1.8) + crown;
+  // queijo/bolo: roda com fatia
+  const wheel = (top, side, cut, extra = '', wedgeExtra = '') =>
+    p('M3 17 V27 Q20 40 37 27 V17 Z', side) + e(20, 17, 17, 6.5, top) + extra +
+    p('M24 32 L38 37 V44 L24 39 Z', cut) + p('M38 37 Q42 34 43 29 V36 Q42 41 38 44 Z', side) +
+    p('M24 32 L43 29 Q42 34 38 37 Z', top) + wedgeExtra;
+  // peixe inteiro (cabeça à esquerda)
+  const fish = (body, back, belly, extra = '') =>
+    p('M30 15 Q24 8 17 13 L22 17 Z', back) + p('M24 31 Q28 37 33 33 L30 29 Z', back) +
+    p('M37 22 L46 13 Q44 24 46 34 L37 26 Z', back) +
+    p('M4 24 Q12 12 26 14 Q36 16 39 24 Q36 32 26 33 Q12 35 4 24 Z', body) +
+    f0('M6 26 Q14 33 26 31.5 Q34 30 37.5 25.5 Q33 34 25 33 Q12 34.5 6 26 Z', belly) +
+    l('M13 17 Q16 24 13 31', K, 1.5) + ci(9.5, 22, 1.9, '#fff', K, 1.2) + dot(9.8, 22, 0.9, K) + extra;
+  // coxinha (frango/cabrito)
+  const drum = (meat, shade, bone = '#f3ead8') =>
+    rod(27, 27, 40, 38, 4.4, bone) + ci(41.5, 36, 3, bone) + ci(39, 40.5, 3, bone) + rod(36, 35, 39, 37.6, 3.8, bone, bone) +
+    p('M8 30 Q5 18 15 13 Q26 9 31 19 Q33 26 29 30 Q21 38 13 37 Q8 35 8 30 Z', meat) +
+    f0('M28 22 Q32 27 28 30 Q21 37 13 36.5 Q22 33 28 22 Z', shade, 0.6) + hi('M12 19 Q15 15 20 14.5', 2.2);
+  // osso
+  const bone = (x1, y1, x2, y2, col = '#f1e8d2') => {
+    const a = Math.atan2(y2 - y1, x2 - x1), px = Math.cos(a + Math.PI / 2) * 2.6, py = Math.sin(a + Math.PI / 2) * 2.6;
+    const kn = (x, y) => ci(x + px, y + py, 3.2, col) + ci(x - px, y - py, 3.2, col);
+    return kn(x1, y1) + kn(x2, y2) + rod(x1, y1, x2, y2, 4.6, col) +
+      dot(x1 + px, y1 + py, 2.2, col) + dot(x1 - px, y1 - py, 2.2, col) + dot(x2 + px, y2 + py, 2.2, col) + dot(x2 - px, y2 - py, 2.2, col);
+  };
+  const steam = (x = 24, y = 10) => l(`M${x - 5} ${y} q-3 -3 0 -6 q3 -3 0 -6`, '#ffffff', 1.8, 0.75) + l(`M${x + 3} ${y + 1} q-3 -3 0 -6 q3 -3 0 -6`, '#ffffff', 1.8, 0.75);
+  const steamDark = (x = 24, y = 10) => l(`M${x - 5} ${y} q-3 -3 0 -6 q3 -3 0 -6`, '#8c8c8c', 1.8, 0.7) + l(`M${x + 3} ${y + 1} q-3 -3 0 -6 q3 -3 0 -6`, '#8c8c8c', 1.8, 0.7);
+
+  // ---------- frutas/verduras (reusadas em pacotes e mudas) ----------
+  const A = {};
+  A.alface = sh(16, 43) +
+    p('M6 30 Q3 19 12 15 Q16 6 25 9 Q35 6 39 15 Q47 22 41 33 Q35 42 24 41 Q11 42 6 30 Z', '#4f9a33', '#2a5a1c') +
+    p('M10 30 Q8 21 15 18 Q19 11 26 13 Q34 11 36 18 Q42 24 37 31 Q32 38 24 37 Q14 38 10 30 Z', '#79c04a', '#2a5a1c') +
+    p('M16 28 Q15 21 21 19 Q26 16 30 20 Q34 24 31 29 Q27 33 22 32 Q17 32 16 28 Z', '#bfe58a', '#2a5a1c', 1.6) +
+    l('M24 39 L24 28 M24 34 Q18 31 14 26 M24 34 Q30 31 34 26', '#3f7d27', 1.3, 0.8) + hi('M14 19 Q17 15 21 14', 1.6);
+  A.cenoura = leaf('M31 18 Q30 8 34 3 Q36 10 34 18 Z', '#5aa83a') + leaf('M33 19 Q38 9 45 8 Q42 15 35 21 Z', '#4a9430') +
+    leaf('M30 19 Q24 10 22 5 Q29 9 33 17 Z', '#6cbb44') +
+    p('M7 43 Q13 31 26 16 Q34 13 37 24 Q22 36 7 43 Z', '#ef8a2a', '#7a3a10') +
+    f0('M35 22 Q22 35 9 41.5 Q24 31 33 19 Z', '#c8611a', 0.7) +
+    l('M15 34 l3 2 M20 28 l3.5 2.5 M25 23 l3 2.5 M18 38 l2 1', '#9a4a14', 1.3) + hi('M14 33 Q19 26 25 19', 1.8);
+  A.feijao = (() => {
+    const b = (x, y, r, c = '#8b3a2a') => g(`translate(${x},${y}) rotate(${r})`,
+      e(0, 0, 5.4, 3.5, c, '#3a1810', 1.6) + `<ellipse cx="-1.5" cy="-1.2" rx="1.6" ry=".9" fill="#fff" opacity=".45"/>` + dot(0, 2, 0.9, '#f2e6d0'));
+    return sh(17, 43) + b(30, 21, -30) + b(20, 20, 20, '#a04a32')  +
+      b(14, 37, -15) + b(24, 39, 10, '#a04a32') + b(34, 37, 25) + b(18, 31, 30, '#a04a32') + b(29, 31, -20) +
+      b(23, 25, 5) + b(36, 29, 60, '#a04a32') + b(10, 31, 70);
+  })();
+  A.milho = g('rotate(22 24 24)',
+    p('M24 3 Q32 5 31.5 21 Q31 34 24 39 Q17 34 16.5 21 Q16 5 24 3 Z', '#f2c230', '#7a5a10') +
+    l('M17 9 H31 M16.5 13 H31.5 M16.5 17 H31.5 M16.5 21 H31.5 M17 25 H31 M17.5 29 H30.5 M19 33 H29', '#c99418', 1.1) +
+    l('M20.5 4.5 Q19.5 20 20.5 37 M24 3.5 V39 M27.5 4.5 Q28.5 20 27.5 37', '#c99418', 1.1) +
+    l('M24 3 Q22 -1 19 -2 M24 3 Q26 -1 29 -1', '#8a5a2a', 1.4) +
+    p('M24 46 Q9 40 11 17 Q17 30 24 34 Z', '#78b445', '#2f5a1f') +
+    p('M24 46 Q39 40 37 15 Q31 30 24 34 Z', '#5a9a30', '#2f5a1f') +
+    l('M14 24 Q16 34 22 40 M34 22 Q32 34 26 40', '#3f7a24', 1.2, 0.8) + hi('M19 8 Q18.5 14 19 19', 1.6));
+  A.tomate = sh(16, 44) +
+    p('M24 13 Q39 11 41.5 26 Q42 41 24 41.5 Q6 41 6.5 26 Q9 11 24 13 Z', '#e0402f', '#6e1a12') +
+    f0('M38 22 Q42 38 24 40.5 Q34 36 38 22 Z', '#a82618', 0.8) +
+    p('M24 15 L19 11 L22 15.5 L15 16 L22.5 17.5 L19 21 L24 18 L29 21 L25.5 17.5 L33 16 L26 15.5 L29 11 Z', '#4f9a33', '#24501a', 1.4) +
+    l('M24 15 Q24 10 27 7', '#2f5a1f', 2.2) + `<ellipse cx="15" cy="22" rx="3.6" ry="2.2" fill="#fff" opacity=".55" transform="rotate(-30 15 22)"/>`;
+  A.mandioca = (() => {
+    const root = (t, c = '#7a4a28') => g(t,
+      p('M4 34 Q16 23 33 15 Q39 13 41.5 17 Q43 22 38 24 Q22 31 4 34 Z', c, '#3a2010') +
+      l('M12 30 l2 -2 M19 26 l2.5 -1.5 M27 22 l2 -2 M33 19 l2 -1', '#4a2a14', 1.2) +
+      `<ellipse cx="40" cy="19.5" rx="2.6" ry="4" fill="#f6efdc" stroke="#3a2010" stroke-width="1.6" transform="rotate(-25 40 19.5)"/>` +
+      dot(40, 19.5, 1, '#d8c7a0'));
+    return sh(17, 43) + root('translate(1,-6)', '#8a5630') + root('translate(-1,6)') + hi('M12 34 Q22 29 30 25', 1.4);
+  })();
+  A.abobora = sh(18, 44) +
+    l('M24 13 Q24 6 29 4', '#4a6b22', 4.4) + l('M24 13 Q24 6 29 4', '#7a9a3a', 2.4) +
+    leaf('M27 9 Q34 3 41 7 Q36 13 28 11 Z', '#5aa83a', 'M28 10 Q34 7 40 7') +
+    p('M14 15 Q2 17 3 29 Q4 41 16 41 Q20 39 20 28 Q20 17 14 15 Z', '#d9741f', '#6e3510') +
+    p('M34 15 Q46 17 45 29 Q44 41 32 41 Q28 39 28 28 Q28 17 34 15 Z', '#d9741f', '#6e3510') +
+    p('M24 13 Q33 13 33 28 Q33 42 24 42 Q15 42 15 28 Q15 13 24 13 Z', '#f0912d', '#6e3510') +
+    f0('M40 22 Q45 32 38 39 Q41 30 40 22 Z', '#a8521a', 0.7) +
+    `<path d="M6 25 Q7 20 11 18" fill="none" stroke="#fff" stroke-width="1.6" opacity=".5" stroke-linecap="round"/>` + hi('M20 19 Q21 16 24 15.5', 1.8);
+  A.trigo = (() => {
+    const head = (x, y, r) => g(`translate(${x},${y}) rotate(${r})`,
+      l('M0 4 L0 -12 M-2 -10 L-4 -16 M2 -10 L4 -16 M0 -12 L0 -18', '#b8862a', 1) +
+      [0, -4, -8].map(o => `<ellipse cx="-2" cy="${o}" rx="2" ry="3.2" fill="#e8bb4e" stroke="#7a5214" stroke-width="1.2" transform="rotate(-20 -2 ${o})"/>` +
+        `<ellipse cx="2" cy="${o}" rx="2" ry="3.2" fill="#d9a83a" stroke="#7a5214" stroke-width="1.2" transform="rotate(20 2 ${o})"/>`).join(''));
+    return sh(13, 45) +
+      l('M24 30 L14 44 M24 30 L19 44 M24 30 L24 44 M24 30 L29 44 M24 30 L34 44', '#7a5214', 3.4) +
+      l('M24 30 L14 44 M24 30 L19 44 M24 30 L24 44 M24 30 L29 44 M24 30 L34 44', '#d9a83a', 1.8) +
+      l('M24 30 L12 14 M24 30 L18 10 M24 30 L24 8 M24 30 L30 10 M24 30 L36 14', '#7a5214', 3.2) +
+      l('M24 30 L12 14 M24 30 L18 10 M24 30 L24 8 M24 30 L30 10 M24 30 L36 14', '#d9a83a', 1.6) +
+      head(12, 14, -38) + head(18, 10, -18) + head(24, 8, 0) + head(30, 10, 18) + head(36, 14, 38) +
+      `<rect x="18" y="28" width="12" height="5" rx="2" fill="#a8743e" stroke="${K}" stroke-width="1.6"/>` + l('M22 28 V33 M26 28 V33', '#7a4a20', 1);
+  })();
+  A.morango = sh(13, 44) +
+    p('M24 42 Q10 34 9 22 Q9 14 17 14 Q21 14 24 16 Q27 14 31 14 Q39 14 39 22 Q38 34 24 42 Z', '#e0302f', '#6e1414') +
+    f0('M36 20 Q37 32 24 41 Q33 30 36 20 Z', '#a81c1c', 0.8) +
+    [[16, 21], [22, 20], [28, 20], [33, 22], [14, 27], [20, 26], [26, 26], [32, 28], [18, 32], [24, 32], [29, 34], [22, 37]]
+      .map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx=".9" ry="1.3" fill="#f6e07a"/>`).join('') +
+    p('M24 17 L16 12 L20 17 L13 18 L21 19.5 L24 22 L27 19.5 L35 18 L28 17 L32 12 Z', '#4f9a33', '#24501a', 1.4) +
+    l('M24 16 Q25 10 28 7', '#2f5a1f', 2.2) + hi('M13 21 Q14 17 17 16.5', 1.8);
+  A.pimenta = (() => {
+    const pep = (t, c, c2) => g(t,
+      p('M-6 4 Q0 -1 6 4 Q9 20 -4 35 Q-1 22 -6 4 Z', c, '#5a1008') +
+      f0('M4 5 Q7 19 -3 33 Q3 20 2 6 Z', c2, 0.7) + hi('M-3 7 Q-3 15 -2.5 22', 1.6) +
+      p('M-6 4 Q0 0 6 4 Q0 8 -6 4 Z', '#4f9a33', '#24501a', 1.4) + l('M0 3 Q0 -3 4 -6', '#2f5a1f', 2.2));
+    return sh(14, 44) + pep('translate(18,9) rotate(-12)', '#d6301f', '#9a1a10') + pep('translate(30,11) rotate(16)', '#e8452a', '#a8261a');
+  })();
+  A.melancia = sh(18, 44) +
+    e(17, 22, 14, 12, '#4c9a32', '#1f4a14') +
+    l('M8 14 Q12 22 8 30 M14 11 Q19 22 14 33 M21 10.5 Q26 22 21 33.5 M27 13 Q31 22 27 31', '#2a6a1e', 1.8) + hi('M8 18 Q10 13 15 11', 1.6) +
+    p('M31 11 L46 35 Q33 46 15 41 Z', '#3f8a2a', '#1f4a14') +
+    p('M31 14.5 L43.5 34.5 Q32 42.5 18.5 39 Z', '#eef3c8', 'none', 0) +
+    p('M31 16 L42 34 Q32 41 20 38 Z', '#e8433a', '#8a1a14', 1.2) +
+    [[30, 24], [34, 30], [27, 31], [31, 35], [24, 35], [37, 35]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="1" ry="1.6" fill="#2a1a10"/>`).join('');
+  A.laranja = sh(16, 44) +
+    ci(24, 27, 16, '#f39a1f', '#7a3e08') + f0('M36 18 Q44 32 31 41 Q39 30 36 18 Z', '#d0700e', 0.8) +
+    [[18, 22], [26, 20], [32, 26], [20, 31], [28, 33], [15, 28], [34, 34]].map(([x, y]) => dot(x, y, 0.8, '#c86a0e', 0.7)).join('') +
+    `<ellipse cx="16" cy="20" rx="3.8" ry="2.4" fill="#fff" opacity=".5" transform="rotate(-35 16 20)"/>` +
+    l('M24 12 Q24 8 26 6', '#5a3a1a', 2.2) + leaf('M25 9 Q31 2 39 5 Q34 12 26 11 Z', '#4f9a33', 'M26 10 Q32 7 38 5');
+  A.manga = sh(16, 44) +
+    p('M9 31 Q5 17 17 10 Q30 4 38 14 Q45 25 38 35 Q30 44 18 41 Q11 38 9 31 Z', '#f4b23a', '#7a4a0e') +
+    f0('M11 28 Q8 16 18 11.5 Q28 7.5 35 13 Q24 14 18 21 Q14 27 11 28 Z', '#e2553a', 0.9) +
+    f0('M30 41 Q40 38 42 28 Q44 36 36 40 Z', '#8db63a', 0.9) +
+    f0('M39 18 Q44 28 37 36 Q40 27 39 18 Z', '#c98418', 0.6) +
+    hi('M14 20 Q16 15 21 13', 2) + l('M31 9 Q32 6 34 5', '#5a3a1a', 2.2) +
+    leaf('M33 6 Q38 1 45 3 Q41 9 34 8 Z', '#4f9a33');
+  A.banana = (() => {
+    const b = (t, c = '#f2d03a') => g(t,
+      p('M6 10 Q22 29 42 14 Q44 16 42 19 Q24 37 6 15 Z', c, '#6a4a08') +
+      f0('M8 15 Q24 33 41 19 Q24 31 9 13 Z', '#c99a1a', 0.7) + l('M10 13 Q22 24 38 18', '#fff6b0', 1.3, 0.7) +
+      e(42.6, 16.5, 1.5, 2.2, '#4a3010', '#3a2408', 1));
+    return sh(17, 44) + b('translate(0,-8) rotate(-6 8 12)') + b('translate(1,0)', '#efc832') + b('translate(0,8) rotate(6 8 12)', '#f5d84a') +
+      `<rect x="3" y="7" width="7" height="18" rx="3" fill="#7a5a28" stroke="${K}" stroke-width="2"/>` + l('M6.5 4 V8', K, 3);
+  })();
+  A.abacate = sh(15, 45) +
+    p('M24 4 Q31.5 4 33.5 13.5 Q43 24 41 34 Q39 45 24 45 Q9 45 7 34 Q5 24 14.5 13.5 Q16.5 4 24 4 Z', '#3f6b22', '#1f3a10') +
+    p('M24 7.5 Q29.5 7.5 31 15.5 Q39 25 37.5 34 Q36 41.5 24 41.5 Q12 41.5 10.5 34 Q9 25 17 15.5 Q18.5 7.5 24 7.5 Z', '#c6dc6e', 'none', 0) +
+    p('M24 10 Q28 10 29.5 17 Q36 26 35 33.5 Q34 39.5 24 39.5 Q14 39.5 13 33.5 Q12 26 18.5 17 Q20 10 24 10 Z', '#eef0a8', 'none', 0) +
+    ci(24, 31, 7.5, '#8a5228', '#3a200c') + f0('M28 26 Q32 31 28 36 Q30 31 28 26 Z', '#5a3214', 0.6) +
+    `<ellipse cx="21.5" cy="28.5" rx="2.4" ry="1.6" fill="#fff" opacity=".55"/>`;
+  A.limao = sh(16, 44) +
+    `<ellipse cx="20" cy="24" rx="14" ry="11" fill="#6fb83a" stroke="#264f14" stroke-width="2" transform="rotate(-25 20 24)"/>` +
+    `<ellipse cx="7.5" cy="30" rx="2" ry="1.6" fill="#6fb83a" stroke="#264f14" stroke-width="1.6" transform="rotate(-25 7.5 30)"/>` +
+    `<ellipse cx="14" cy="18" rx="3.4" ry="2" fill="#fff" opacity=".5" transform="rotate(-30 14 18)"/>` +
+    leaf('M30 13 Q33 4 41 4 Q39 11 31 15 Z', '#3f8a2a') +
+    ci(33, 34, 9.5, '#5a9a2a', '#264f14') + ci(33, 34, 7.6, '#eaf2b4', 'none', 0) + ci(33, 34, 6.4, '#c5e06a', 'none', 0) +
+    l('M33 28 V40 M27.5 31 L38.5 37 M27.5 37 L38.5 31', '#eaf2b4', 1.2) + dot(33, 34, 1, '#eaf2b4');
+  A.capim = sh(14, 44) + (() => {
+    const bl = (tx, ty, f, bx = 24) => p(`M${bx - 2} 40 Q${(bx + tx) / 2 - 3} ${(40 + ty) / 2} ${tx} ${ty} Q${(bx + tx) / 2 + 3} ${(40 + ty) / 2} ${bx + 2} 40 Z`, f, '#24501a', 1.5);
+    return bl(6, 8, '#5aa83a', 22) + bl(42, 9, '#5aa83a', 26) + bl(14, 4, '#7cc44e', 23) + bl(34, 3, '#7cc44e', 25) +
+      bl(24, 2, '#4a9430') + bl(9, 18, '#4a9430', 22) + bl(40, 19, '#4a9430', 26) + bl(20, 5, '#8fd05a') + bl(29, 6, '#5aa83a');
+  })() + p('M18 40 Q24 43 30 40 L29 44 Q24 46 19 44 Z', '#a8c46a', '#24501a', 1.5) +
+    `<rect x="17.5" y="30" width="13" height="4.5" rx="2" fill="#d9b25a" stroke="${K}" stroke-width="1.6"/>` + l('M21 30.5 V34 M27 30.5 V34', '#a8843a', 1);
+
+  // ---------- itens ----------
+  const I = { ...A };
+  I.madeira = (() => {
+    const log = (x, y, r) => rod(x - 9, y - 6, x, y, r * 2, '#8a5a2e', K) ;
+    const face = (x, y, r) => ci(x, y, r, '#7a4a24') + ci(x, y, r - 2, '#e6bb7c', '#a8743e', 1) +
+      ci(x, y, r - 4.6, 'none', '#c08a4e', 1.2) + dot(x, y, 1, '#a8743e');
+    return sh(19, 44.5) + log(27, 21, 7) + log(19, 35, 7.5) + log(35, 35, 7.5) +
+      l('M12 26 L18 30 M28 26 L34 30 M20 13 L26 17', '#5a3418', 1.2, 0.8) +
+      face(27, 21, 7.5) + face(19, 35, 7.5) + face(35, 35, 7.5);
+  })();
+  I.pedra = sh(19, 43) +
+    p('M25 31 Q27 19 35 18 Q44 19 44 30 Q43 39 33 40 Q26 39 25 31 Z', '#b3ae9f', '#3d3a33') +
+    p('M6 37 Q4 26 12 22 Q20 18 27 24 Q32 31 28 39 Q17 44 6 37 Z', '#94918a', '#3d3a33') +
+    f0('M26 27 Q31 33 27 38.5 Q17 43 7 37.5 Q20 38 26 27 Z', '#6e6b64', 0.8) +
+    f0('M41 24 Q44 33 36 39 Q41 31 41 24 Z', '#8a8578', 0.8) +
+    e(35, 41, 5.5, 3, '#a7a294', '#3d3a33', 1.6) +
+    hi('M10 26 Q13 23 17 22.5', 2) + hi('M30 22 Q32 20 35 20', 1.8) + l('M15 30 l3 2 M35 26 l2 2', '#5a5750', 1.2);
+  I.ferragens = (() => {
+    const nail = (x1, y1, x2, y2) => rod(x1, y1, x2, y2, 2.2, '#aab3ba', '#2b3034') +
+      `<ellipse cx="${x1}" cy="${y1}" rx="3.4" ry="1.6" fill="#8d969d" stroke="#2b3034" stroke-width="1.4" transform="rotate(${Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI + 90} ${x1} ${y1})"/>`;
+    return sh(17, 44) + nail(10, 8, 22, 38) + nail(17, 6, 25, 39) + nail(26, 6, 27, 39) + nail(35, 8, 30, 38) +
+      p('M13 24 Q24 28 34 23 L35 27.5 Q24 32.5 13.5 28.5 Z', '#d9b46a', K, 1.6) + l('M17 26 l1 3.5 M29 25.8 l1 3.5', '#a8843a', 1) +
+      p('M33 32 L38 29 L43 32 L43 38 L38 41 L33 38 Z', '#9aa3ab', '#2b3034') + ci(38, 35, 2.4, '#4a5258', '#2b3034', 1.4) +
+      hi('M34.5 32.5 L38 30.5', 1.4) +
+      g('translate(8,36) rotate(-30)', `<rect x="-6" y="-2.2" width="12" height="4.4" rx="1" fill="#b8c0c6" stroke="#2b3034" stroke-width="1.5"/>` +
+        l('M-3 -2 L-2 2 M0 -2 L1 2 M3 -2 L4 2', '#5a6268', 1) + `<rect x="-9" y="-3.6" width="3.6" height="7.2" rx="1" fill="#8d969d" stroke="#2b3034" stroke-width="1.5"/>`);
+  })();
+  I.racao = sack('#c9a26b', '#b08a52', '#d9b44a',
+    [[18, 12], [22, 10], [27, 11], [31, 13], [24, 14], [16, 15], [29, 15.5], [21, 15.5]].map(([x, y], i) => dot(x, y, 1.2, i % 2 ? '#8a5a1a' : '#f2d27a')).join('') +
+    `<rect x="16" y="27" width="16" height="10" rx="2" fill="#efe2bf" stroke="${K}" stroke-width="1.5"/>` +
+    e(22, 32, 2.2, 1.6, '#e3b84a', '#7a5214', 1) + e(26.5, 32, 2.2, 1.6, '#c98a3a', '#7a5214', 1) +
+    l('M15 40 l2 -1 M31 41 l2 -1.5', '#8a6a3a', 1.2));
+  I.esterco = sh(19, 43.5) +
+    l('M4 40 L14 37 M8 42 L18 40 M32 41 L44 38 M30 38 L42 42 M6 37 L12 41 M36 37 L44 41', '#8a6a22', 3) +
+    l('M4 40 L14 37 M8 42 L18 40 M32 41 L44 38 M30 38 L42 42 M6 37 L12 41 M36 37 L44 41', '#e2c060', 1.5) +
+    p('M7 40 Q7 31 15 29 Q15 22 23 21 Q30 19 33 26 Q41 27 41 35 Q41 41 33 41 H13 Q7 41 7 40 Z', '#6b4423', '#2a1808') +
+    f0('M30 28 Q39 29 39 36 Q38 40 32 40 Q37 34 30 28 Z', '#4a2c14', 0.8) +
+    e(17, 34, 4, 2.4, '#7d5230', '#2a1808', 1.2) + e(27, 30, 3.4, 2, '#7d5230', '#2a1808', 1.2) +
+    hi('M13 31 Q16 29 19 29', 1.4) + hi('M21 24 Q24 22 27 22.5', 1.4) +
+    l('M18 23 L15 26 M30 22 L33 21', '#e2c060', 1.4);
+  I.adubo = sack('#a07a4a', '#8a6638', '#4a3020',
+    [[18, 12], [23, 10], [28, 12], [31, 14.5], [20, 15]].map(([x, y]) => dot(x, y, 1.1, '#7a5638')).join('') +
+    leaf('M24 9 Q20 1 13 2 Q15 9 23 10 Z', '#6cbb44') + leaf('M25 9 Q30 2 37 3 Q34 10 26 10 Z', '#4f9a33') + l('M24 12 V7', '#2f5a1f', 1.8) +
+    `<rect x="15.5" y="26" width="17" height="11" rx="2" fill="#e8dcb8" stroke="${K}" stroke-width="1.5"/>` +
+    leaf('M19 34 Q20 27 29 28 Q28 35 19 34 Z', '#5aa83a', 'M19.5 33.5 Q24 31 28 28.5'));
+  I.ovo = sh(13, 43.5) +
+    l('M7 41 L16 38 M30 38 L41 41 M10 43 L19 41 M29 41 L38 43', '#8a6a22', 2.8) + l('M7 41 L16 38 M30 38 L41 41 M10 43 L19 41 M29 41 L38 43', '#e2c060', 1.4) +
+    p('M24 5 Q37 5 38 25 Q38 41 24 41 Q10 41 10 25 Q11 5 24 5 Z', '#c98a55', '#5a3418') +
+    f0('M33 13 Q38 22 37 29 Q35 40 24 40 Q33 33 33 13 Z', '#a86a3a', 0.7) +
+    [[18, 20], [28, 16], [30, 30], [20, 33], [25, 25]].map(([x, y]) => dot(x, y, 0.8, '#8a5a30', 0.7)).join('') +
+    `<ellipse cx="17" cy="15" rx="3" ry="4.6" fill="#fff" opacity=".5" transform="rotate(25 17 15)"/>`;
+  I.leite_balde = sh(16, 44) +
+    l('M9 18 Q24 -4 39 18', '#2b3034', 3.4) + l('M9 18 Q24 -4 39 18', '#9aa3ab', 1.6) +
+    p('M9 17 L13 41 Q24 45 35 41 L39 17 Z', '#a9b4bc', '#2b3034') +
+    f0('M30 18 L38 17 L34 41.5 Q31 43 28 43.3 Z', '#7d8a93', 0.8) +
+    l('M10.5 24 Q24 28 37.5 24 M12.4 36 Q24 40 35.6 36', '#6b7780', 2) +
+    e(24, 17, 15, 4.5, '#fbf8ef', '#2b3034') + e(24, 17.5, 11, 2.6, '#ffffff', 'none', 0) +
+    p('M17 18.5 Q16 23 14.5 26 Q13 28 15 28 Q16.5 27 17 21 Z', '#fbf8ef', '#2b3034', 1.2) +
+    hi('M13 21 L15.5 38', 2) + ci(9, 18, 1.8, '#6b7780', '#2b3034', 1.2) + ci(39, 18, 1.8, '#6b7780', '#2b3034', 1.2);
+  I.leite = bottle('#fbfaf3', 19,
+    `<rect x="18.5" y="3" width="11" height="6.5" rx="2" fill="#c0392b" stroke="${K}" stroke-width="2"/>` + l('M18.5 7 H29.5', '#7a1a10', 1.4),
+    `<rect x="14" y="27" width="20" height="9" rx="2" fill="#f1e2b8" stroke="${K}" stroke-width="1.4"/>` +
+    l('M18 31.5 h12', '#7a5a2a', 1.4) + e(24, 31.5, 3, 2, '#fff', '#7a5a2a', 1.2) + dot(23, 31, 0.8, K));
+  I.agua = bottle('#8fd0ef', 21,
+    `<rect x="19.5" y="3" width="9" height="6.5" rx="1.5" fill="#c49a62" stroke="${K}" stroke-width="2"/>` + l('M21 5 h2 M24 7 h2', '#8a6638', 1),
+    p('M24 25 Q20 31 20 33.5 Q20 37 24 37 Q28 37 28 33.5 Q28 31 24 25 Z', '#e3f6fd', '#2a7aa8', 1.4) +
+    f0('M14 22 Q24 24.5 34 22 V23.5 Q24 26 14 23.5 Z', '#ffffff', 0.6));
+  I.la = sh(16, 44) +
+    l('M36 34 Q44 38 42 44 Q38 46 30 44', '#7a6a50', 3.6) + l('M36 34 Q44 38 42 44 Q38 46 30 44', '#efe6d2', 2) +
+    ci(23, 25, 16, '#efe6d2', '#6a5a40') +
+    l('M10 18 Q24 22 34 12 M8 26 Q24 30 38 16 M11 34 Q26 36 39 24 M17 39 Q30 38 37.5 31', '#c9bc9e', 1.6) +
+    l('M16 11 Q20 24 14 38 M24 9 Q30 24 24 41', '#d9cfb6', 1.6) +
+    f0('M34 15 Q43 27 33 37 Q38 26 34 15 Z', '#000', 0.08) + hi('M12 18 Q15 13 20 11', 2);
+  I.ovo_codorna = (() => {
+    const q = (x, y, r = 0, s = 1) => g(`translate(${x},${y}) rotate(${r}) scale(${s})`,
+      p('M0 -9 Q7.5 -9 8 1 Q8 9 0 9 Q-8 9 -8 1 Q-7.5 -9 0 -9 Z', '#eee2c2', '#5a4228') +
+      [[-3, -4, 1.5, 1], [2.5, -5, 1, 0.8], [4, 1, 1.8, 1.2], [-4, 3, 1.2, 0.9], [0, 5.5, 1.4, 1], [-1, -0.5, 0.9, 0.7], [2, 7, 0.8, 0.6]]
+        .map(([cx, cy, rx, ry]) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#5a3a22" opacity=".85"/>`).join('') +
+      `<ellipse cx="-3.5" cy="-4.5" rx="1.4" ry="2.4" fill="#fff" opacity=".5" transform="rotate(25 -3.5 -4.5)"/>`);
+    return sh(18, 43) + q(14, 31, -15) + q(33, 31, 18) + q(24, 23, 0, 1.05);
+  })();
+  I.leite_cabra = sh(15, 44) +
+    p('M11 18 L13.5 41 Q24 44 34.5 41 L37 18 Z', '#b07a45', '#3b2a1a') +
+    f0('M29 19 L36 18 L33.5 41.5 Q30 43 27 43.3 Z', '#7a4a24', 0.7) +
+    l('M17 20 L18 42 M23 20.5 V43 M29 20.5 L28.5 43', '#7a4a24', 1.2) +
+    l('M11.6 24 Q24 27.5 36.4 24 M13 36 Q24 39.5 35 36', '#4a5258', 2.6) +
+    e(24, 18, 13, 4, '#fbf8ef') + e(24, 18.5, 9, 2.2, '#ffffff', 'none', 0) +
+    p('M8 14 L11 18 M40 14 L37 18', 'none', K, 2) + `<rect x="5" y="10" width="6" height="6" rx="2" fill="#b07a45" stroke="${K}" stroke-width="1.6"/>` +
+    `<rect x="37" y="10" width="6" height="6" rx="2" fill="#b07a45" stroke="${K}" stroke-width="1.6"/>` + hi('M15 23 L17 37', 1.8) +
+    l('M34 30 Q40 26 42 33', K, 1.4) + ci(42, 35, 2.4, '#e3c25a', K, 1.4);
+  I.carne_frango = sh(17, 44) + drum('#f2b0a0', '#d98a7a') +
+    [[14, 22], [20, 18], [18, 28], [24, 24], [12, 30]].map(([x, y]) => dot(x, y, 0.9, '#d98a7a')).join('');
+  I.carne_cabrito = board() + g('translate(0,-6)', drum('#b94a3a', '#8a2a20', '#f1e8d2') + l('M12 22 Q18 18 26 20', '#f4e4d0', 2.2, 0.8));
+  I.carne_codorna = board() + g('translate(0,-5)',
+    rod(30, 22, 38, 13, 2.6, '#efc3a6') + rod(33, 25, 42, 18, 2.6, '#efc3a6') + ci(38.5, 12, 1.8, '#f6eadc', K, 1.2) + ci(42.5, 17, 1.8, '#f6eadc', K, 1.2) +
+    p('M10 30 Q8 20 18 18 Q28 16 34 24 Q38 32 30 36 Q18 40 10 30 Z', '#efc3a6', '#6a3a24') +
+    f0('M32 26 Q36 33 29 35.5 Q18 39 11 31 Q22 35 32 26 Z', '#d99a80', 0.8) +
+    l('M15 26 Q20 30 26 29', '#c8846a', 1.4) + hi('M14 22 Q17 19.5 21 19.5', 2));
+  I.carne_porco = board() + g('translate(-1,-6)',
+    rod(30, 31, 42, 36, 3.6, '#f1e8d2') + ci(43, 36, 2.6, '#f1e8d2') +
+    p('M7 26 Q7 15 20 15 Q35 15 37 26 Q38 35 28 37 L20 37 Q7 37 7 26 Z', '#f6e6cc', '#6a3a24') +
+    p('M10.5 26 Q10.5 18 20 18 Q32 18 33.5 26 Q34 32 27 33.5 L20 33.5 Q10.5 33.5 10.5 26 Z', '#ec9a96', 'none', 0) +
+    f0('M30 21 Q35 28 29 32.5 Q32 26 30 21 Z', '#c8706c', 0.8) +
+    ci(25, 27, 2.6, '#f6e6cc', '#c8706c', 1) + hi('M14 21 Q17 19 21 19', 1.8));
+  I.carne_boi = board() + g('translate(0,-6)',
+    p('M7 28 Q7 17 20 16 Q33 15 39 20 Q45 26 39 33 Q31 39 18 37.5 Q7 36 7 28 Z', '#f4e2c8', '#4a1410') +
+    p('M10 28 Q10.5 19.5 20 18.8 Q31 18 36.5 22 Q41 27 36.5 31.5 Q29.5 36 18 35 Q10 33.5 10 28 Z', '#c8372a', 'none', 0) +
+    f0('M35 23 Q40 28 35 32 Q28 35.5 20 35 Q33 31 35 23 Z', '#8e2018', 0.8) +
+    l('M15 24 Q20 27 18 31 M24 22 Q28 25 32 24 M25 29 Q29 31 33 29', '#f0a8a0', 1.2, 0.9) + hi('M14 21 Q17 19.5 21 19.5', 1.6));
+  I.carne_cordeiro = sh(18, 44) +
+    [14, 21, 28, 35].map(x => bone(x - 3, 9, x, 24, '#f1e8d2').replace(/<circle cx="[\d.-]+" cy="[\d.-]+" r="3.2"[^>]*\/>/g, '')).join('') +
+    [14, 21, 28, 35].map(x => ci(x - 3, 8, 2.8, '#f1e8d2')).join('') +
+    p('M6 33 Q6 25 14 24 H36 Q44 25 42 33 Q40 41 24 41 Q8 41 6 33 Z', '#c25a4a', '#4a1410') +
+    p('M7 29 Q9 24 15 23.5 H35 Q41 24 42 30 Q24 26.5 7 29 Z', '#f4e2c8', '#4a1410', 1.6) +
+    f0('M40 31 Q40 39 26 40.5 Q36 37 40 31 Z', '#8e2a20', 0.8) +
+    l('M14 31 V38 M21 30 V39 M28 30 V39 M35 31 V38', '#8e2a20', 1.2, 0.8) + hi('M10 33 Q11 31 13 30.5', 1.6);
+  I.file_tilapia = sh(20, 44) +
+    p('M2 33 Q16 19 46 28 Q30 46 2 33 Z', '#4f9a33', '#24501a') + l('M4 33 Q24 30 44 28.5', '#2f6a20', 1.2) +
+    p('M8 30 Q15 21 30 22 Q40 22.5 44 27 Q40 33 30 34 Q15 36 8 30 Z', '#f6e7de', '#7a4a3a') +
+    f0('M10 31 Q18 35 30 33.5 Q39 32 43 27.5 Q38 32 30 31 Q18 32 10 31 Z', '#f0c2b6', 0.9) +
+    l('M15 25 Q13 29 15 32 M21 23.5 Q19 28 21 33 M27 23 Q25 28 27 33.5 M33 23.5 Q31 28 33 33', '#e2b8aa', 1.2) + hi('M14 25 Q20 22.5 28 23', 1.6);
+  I.residuo_peixe = sh(19, 43) +
+    l('M18 24 H38', K, 4.6) + l('M18 24 H38', '#ece6d6', 2.4) +
+    l('M22 16 Q20 24 22 32 M27 15 Q25 24 27 33 M32 16 Q30 24 32 32', K, 3.6) +
+    l('M22 16 Q20 24 22 32 M27 15 Q25 24 27 33 M32 16 Q30 24 32 32', '#ece6d6', 1.6) +
+    p('M37 24 L45 15 Q43 24 45 33 Z', '#ece6d6') + l('M39 22 L43 18 M39 26 L43 30', '#b9b2a0', 1) +
+    p('M3 24 Q7 13 18 15 L20 24 L18 33 Q7 35 3 24 Z', '#b9c3c8', '#3a4248') +
+    f0('M5 27 Q9 33 18 32 L19 27 Z', '#8d989e', 0.8) +
+    l('M13 16.5 Q16 24 13 31.5', '#3a4248', 1.4) + ci(9, 22, 2.2, '#fff', '#3a4248', 1.2) + l('M8 21 l2 2 M10 21 l-2 2', K, 1) +
+    l('M3.5 25.5 L8 25.5', '#3a4248', 1.2);
+  I.mel = jar('#e3a01e', 18,
+    `<rect x="8" y="9" width="32" height="7" rx="2.5" fill="#c49a62" stroke="${K}" stroke-width="2"/>` +
+    p('M9 12 Q24 15 39 12 L37 18 Q24 21 11 18 Z', '#e8d9b0', K, 1.5) + l('M11 16.5 Q24 19.5 37 16.5', '#c0392b', 1.4),
+    f0('M14 22 Q24 20 34 22 V38 Q24 40 14 38 Z', '#f2c24a', 0.6) + f0('M30 20 H36 V38 Q36 41 33 41 H30 Z', '#b8740e', 0.5)) +
+    rod(30, 3, 38, 24, 2.2, '#a8743e') + g('rotate(20 39 26)', `<rect x="35" y="22" width="8" height="9" rx="3" fill="#c48a52" stroke="${K}" stroke-width="1.8"/>` + l('M35.5 25 h7 M35.5 28 h7', '#7a4a20', 1.2)) +
+    p('M37 31 Q38 34 37 36 Q36 34 37 31 Z', '#e3a01e', '#a8640e', 1);
+  I.penas = (() => {
+    const fe = (t, c, c2) => g(t,
+      p('M0 2 Q9 -12 2 -34 Q-8 -16 0 2 Z', c, '#3a2a1a', 1.6) + f0('M0 0 Q8 -12 2 -32 Q4 -14 0 0 Z', c2, 0.6) +
+      l('M1 -8 l5 -4 M1.5 -16 l5 -5 M1 -8 l-5 -5 M1.5 -16 l-5 -4 M2 -24 l-4 -4 M2 -24 l3 -4', '#3a2a1a', 0.9, 0.6) +
+      l('M0 6 Q1 -14 2 -33', '#3a2a1a', 2.6) + l('M0 6 Q1 -14 2 -33', '#f6efe0', 1.2));
+    return sh(16, 44) + fe('translate(16,38) rotate(-28)', '#f4efe4', '#c9bfae') + fe('translate(23,39) rotate(-4)', '#a8642a', '#7a4218') +
+      fe('translate(30,39) rotate(24)', '#d9b47a', '#a88050');
+  })();
+  I.couro = sh(19, 45) +
+    p('M12 7 Q18 11 24 8 Q30 11 36 7 Q39 13 35 18 Q42 21 43 29 Q37 31 36 35 Q39 41 34 44 Q29 40 24 42 Q19 40 14 44 Q9 41 12 35 Q11 31 5 29 Q6 21 13 18 Q9 13 12 7 Z', '#b5773d', '#4a2a10') +
+    p('M16 15 Q24 17 32 15 Q35 20 34 27 Q34 34 31 37 Q24 35 17 37 Q14 34 14 27 Q13 20 16 15 Z', '#cf9454', 'none', 0) +
+    l('M16 15 Q24 17 32 15 Q35 20 34 27 Q34 34 31 37 Q24 35 17 37 Q14 34 14 27 Q13 20 16 15 Z', '#8a5228', 1.1, 0.8) +
+    l('M18 22 q3 -2 6 0 M24 29 q3 -2 6 0 M18 31 q2 -1 4 0', '#a86a34', 1.2) + hi('M17 18 Q20 17 23 17.5', 1.6);
+  I.banha = clayPot('#f6f0de',
+    p('M14 20 Q16 13 24 13 Q32 13 34 20 Q24 23 14 20 Z', '#fbf7ea', '#b0a588', 1.4) + l('M20 18 Q24 15 28 17', '#d9cfb6', 1.4) +
+    rod(31, 17, 40, 4, 2.4, '#c48a52') + p('M28 15 Q29 21 34 20 Q36 17 33 15 Z', '#c48a52', K, 1.6) + hi('M12 25 Q11 32 14 38', 1.8));
+  I.ossos = sh(17, 43) + bone(10, 36, 38, 14) + bone(10, 14, 38, 36, '#e8dcc0') + hi('M16 16 L21 20', 1.4);
+  I.farinha = sack('#f1ece0', '#ddd5c2', '#ffffff',
+    `<rect x="14" y="27" width="20" height="11" rx="2" fill="#5b86b8" stroke="${K}" stroke-width="1.5"/>` +
+    g('translate(24,32.5) rotate(10) scale(.55)', l('M0 9 V-9', '#f2d27a', 2) + [-6, -1.5, 3].map(y => `<ellipse cx="-2.4" cy="${y}" rx="2" ry="3.2" fill="#f2d27a" transform="rotate(-25 -2.4 ${y})"/><ellipse cx="2.4" cy="${y}" rx="2" ry="3.2" fill="#f2d27a" transform="rotate(25 2.4 ${y})"/>`).join('')) +
+    hi('M11 22 Q10 30 11.5 36', 1.8) + dot(18, 12, 1, '#e8e2d4') + dot(28, 11, 1, '#e8e2d4'));
+  I.fuba = sack('#efe6d0', '#dccfb0', '#f2c230',
+    dot(19, 12, 0.9, '#d49a18') + dot(26, 10, 0.9, '#d49a18') + dot(30, 13.5, 0.9, '#d49a18') +
+    p('M2 44 Q4 37 11 37 Q17 38 18 44 Z', '#f2c230', '#8a6a10', 1.5) +
+    g('translate(38,32) rotate(25) scale(.42)', A.milho.replace(/<g transform="rotate\(22 24 24\)">/, '<g transform="translate(-24,-24)">')) +
+    `<rect x="14" y="26" width="16" height="9" rx="2" fill="#e8a23a" stroke="${K}" stroke-width="1.5"/>` + l('M17 30.5 h10', '#fff3c0', 1.6));
+  I.charque = (() => {
+    const slab = (t, c, c2) => g(t,
+      p('M4 30 Q18 37 30 35 Q40 34 44 28 V33 Q41 39 30 40 Q17 41 4 35 Z', c2, '#2a0a06') +
+      p('M4 30 Q8 24 15 25 Q22 22 30 24 Q38 22 44 28 Q40 34 30 35 Q18 37 4 30 Z', c, '#2a0a06') +
+      l('M7 27.5 Q12 24.5 16 25.5 Q23 22.5 30 24.5 Q37 22.6 42 26.8', '#f2e6d0', 2) +
+      l('M11 30 Q17 28 22 30 M25 28 Q31 26 37 28 M16 33 Q22 32 28 33', '#b04a36', 1.6, 0.9) +
+      [[13, 28.5], [28, 30.5], [35, 31.5], [20, 31.5]].map(([x, y]) => `<rect x="${x - 0.9}" y="${y - 0.9}" width="1.8" height="1.8" fill="#fff" opacity=".9" transform="rotate(30 ${x} ${y})"/>`).join(''));
+    return sh(20, 44) + slab('translate(0,3)', '#7a2418', '#4e1209') + slab('translate(1,-7) rotate(-5 24 30)', '#8a2a1e', '#5a160e') +
+      slab('translate(-1,-17) rotate(4 24 30)', '#7e261a', '#521409') +
+      twine('M22 9 Q21 25 23 42') + twine('M27 9 Q28 25 26.5 42') + l('M24.5 8 Q22 4 19 5 M24.5 8 Q27 4 30 4', '#d9b46a', 1.6);
+  })();
+  I.linguica = (() => {
+    const seg = (x, y, r) => g(`translate(${x},${y}) rotate(${r})`,
+      e(0, 0, 8.6, 5.4, '#b5543a', '#4a1408') + f0('M-7 2 Q0 6.5 7 2 Q4 5 0 5.2 Q-4 5 -7 2 Z', '#7a2a18', 0.8) +
+      dot(-3, 0.5, 0.9, '#f2d0b8', 0.7) + dot(2.5, -1, 0.8, '#f2d0b8', 0.7) + dot(4, 2, 0.7, '#7a2a18') + dot(-1, 2.6, 0.7, '#7a2a18') +
+      `<ellipse cx="-2" cy="-2.6" rx="4" ry="1.1" fill="#fff" opacity=".45"/>`);
+    const knot = (x, y) => ci(x, y, 2.2, '#d9b46a', K, 1.3);
+    return sh(18, 44) + l('M8 3 Q6 8 9 11', K, 3) + l('M8 3 Q6 8 9 11', '#d9b46a', 1.4) +
+      seg(12, 18, 70) + seg(17, 32, 40) + seg(31, 37, -5) + seg(40, 26, -75) +
+      knot(10, 10) + knot(14, 25.5) + knot(23.5, 37) + knot(38, 34.5) + knot(41, 17.5) + l('M41 17 Q44 12 42 8', '#d9b46a', 1.4);
+  })();
+  I.queijo = sh(21, 44.5) + wheel('#fbf8ee', '#ece4cf', '#f5efdd',
+    l('M6 22 l2 3 M10 24 l2 3 M14 25.5 l2 3 M18 26 l2 3 M26 25.5 l2 3 M31 24 l2 3', '#d6caa8', 1.2) + hi('M8 15 Q14 12 22 11.5', 1.8),
+    l('M39 39 l2 -2 M39 42 l2 -2', '#d6caa8', 1.1));
+  I.sabao = sh(18, 44) +
+    box(6, 30, 20, 10, 8, 6, '#e9dcae', '#cdbd88', '#f6eccb') +
+    g('rotate(-8 30 22)', box(18, 20, 20, 10, 7, 5, '#efe3b8', '#d2c08c', '#fbf3d8') + twine('M27 15.5 L27.8 30 M18 25 H38')) +
+    l('M10 34 h8', '#cdbd88', 1.4) + ci(40, 10, 2.6, '#e8f4fb', '#7aa8c0', 1.2) + ci(35, 6, 1.6, '#e8f4fb', '#7aa8c0', 1) +
+    `<path d="M14 33 l2 0 l0 3 l-2 0 z" fill="#b8a45a" opacity=".5"/>`;
+  I.omelete = plate() +
+    p('M7 33 Q7 22 24 21 Q41 22 41 33 Q24 36 7 33 Z', '#f3c93a', '#7a5a0e') +
+    f0('M9 32.5 Q24 35 39 32.5 Q38 28 34 25 Q38 30 24 31.5 Q12 31 9 32.5 Z', '#d9a020', 0.7) +
+    l('M7.5 33 Q24 36.5 40.5 33', '#c88a18', 1.6) +
+    [[15, 27, '#4f9a33'], [22, 24.5, '#4f9a33'], [30, 26, '#c0392b'], [27, 29, '#4f9a33'], [19, 30, '#c0392b'], [34, 29.5, '#4f9a33']]
+      .map(([x, y, c]) => `<rect x="${x}" y="${y}" width="2.2" height="1.4" rx=".6" fill="${c}"/>`).join('') + hi('M13 25 Q18 22.5 24 22.5', 1.8);
+  I.frango_assado = plate() +
+    rod(13, 24, 7, 17, 3.4, '#f3ead8') + rod(35, 24, 41, 17, 3.4, '#f3ead8') + ci(6.5, 16, 2.4, '#f3ead8') + ci(41.5, 16, 2.4, '#f3ead8') +
+    p('M8 30 Q7 19 24 17 Q41 19 40 30 Q38 37 24 37 Q10 37 8 30 Z', '#c97a2e', '#4a2408') +
+    f0('M38 26 Q39 35 24 36 Q34 32 38 26 Z', '#8a4414', 0.8) +
+    p('M7 26 Q5 33 12 34 Q17 33 16 27 Q12 23 7 26 Z', '#b86a26', '#4a2408', 1.6) +
+    p('M41 26 Q43 33 36 34 Q31 33 32 27 Q36 23 41 26 Z', '#b86a26', '#4a2408', 1.6) +
+    hi('M16 22 Q22 19 29 20', 2.4) + hi('M20 26 Q24 24.5 28 25', 1.4) + leaf('M18 37 Q22 33 27 36 Q23 39 18 37 Z', '#5aa83a');
+  I.churrasco = sh(18, 44) +
+    rod(8, 40, 44, 6, 1.8, '#c4ccd2', '#2b3034') +
+    g('translate(7,41) rotate(-43)', `<rect x="-7" y="-3.2" width="10" height="6.4" rx="2" fill="#8a5a2e" stroke="${K}" stroke-width="1.8"/>`) +
+    [[16, 32, '#8a3f22'], [22.5, 26, '#d9e8a0'], [28, 21, '#7a3418'], [34, 15.5, '#3f8a2a'], [39.5, 10.5, '#8a3f22']].map(([x, y, c], i) =>
+      g(`translate(${x},${y}) rotate(-43)`, i % 2
+        ? `<rect x="-2.6" y="-5.6" width="5.2" height="11.2" rx="2" fill="${c}" stroke="${K}" stroke-width="1.6"/>`
+        : `<rect x="-5.6" y="-6" width="11.2" height="12" rx="3" fill="${c}" stroke="#2a0a04" stroke-width="2"/>` +
+          l('M-4 -2.5 L-1 -5 M-3.5 1.5 L2 -4 M-2 5 L4.5 -1', '#3a1408', 1.6) + `<rect x="-5" y="-5.4" width="10" height="2.2" rx="1" fill="#f2e2c4" opacity=".85"/>`)).join('') +
+    l('M4 14 q-2 -3 0 -6 M10 10 q-2 -3 0 -6', '#9a9a9a', 1.6, 0.6);
+  I.feijoada = clayPot('#2a1a14',
+    [[14, 19], [19, 21.5], [26, 22], [31, 20], [20, 17.5], [28, 17.5], [35, 21], [12, 21.5]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.2" ry="1.4" fill="#4a3026" stroke="#120806" stroke-width=".8"/>`).join('') +
+    e(18, 19, 3.4, 2.2, '#c86a5a', '#4a1410', 1.3) + ci(18, 19, 1.2, '#f2c0b0', 'none', 0) +
+    p('M25 15 Q30 14 32 17 Q29 20 25 18.5 Z', '#9a4a32', '#4a1410', 1.3) +
+    `<rect x="27" y="20" width="5" height="3" rx="1" fill="#e8c8b0" stroke="#4a1410" stroke-width="1"/>` +
+    dot(22, 22.5, 0.9, '#5aa83a') + dot(30, 16, 0.9, '#5aa83a') + dot(14, 18, 0.9, '#5aa83a') + steam(24, 10));
+  I.sopa = bowl('#c8603a', '#e8a24a',
+    ci(15, 23, 2.6, '#f08a2a', '#8a3e0e', 1.2) + ci(30, 22, 2.6, '#f08a2a', '#8a3e0e', 1.2) +
+    `<rect x="20" y="20" width="4" height="4" rx="1" fill="#f4e6b8" stroke="#8a6a3a" stroke-width="1"/>` +
+    `<rect x="33" y="24" width="3.6" height="3.6" rx="1" fill="#f4e6b8" stroke="#8a6a3a" stroke-width="1"/>` +
+    dot(25, 25, 1.5, '#5aa83a') + dot(11, 24, 1.3, '#5aa83a') + dot(36, 20.5, 1.3, '#5aa83a') + dot(27, 19.5, 1.2, '#5aa83a') +
+    hi('M9 28 Q10 35 15 39', 2) + steam(24, 13));
+  I.pamonha = (() => {
+    const pm = (t, c) => g(t,
+      p('M-14 -1 Q-17 -6 -12 -8 H12 Q17 -6 14 -1 Q17 4 12 7 H-12 Q-17 4 -14 -1 Z', c, '#4a5a14') +
+      p('M12 -8 Q19 -4 20 -1 Q19 3 12 7 Q15 0 12 -8 Z', '#b8c060', '#4a5a14', 1.5) +
+      p('M-12 -8 Q-19 -4 -20 -1 Q-19 3 -12 7 Q-15 0 -12 -8 Z', '#b8c060', '#4a5a14', 1.5) +
+      l('M-10 -4 H10 M-10 0 H10 M-10 3.5 H10', '#9aa848', 1, 0.8) + twine('M-3 -8.5 V7.5') + hi('M-9 -6 H-2', 1.4));
+    return sh(19, 44) + pm('translate(25,33) rotate(-6)', '#d6dc8a') + pm('translate(22,19) rotate(8)', '#e2e49a');
+  })();
+  I.pao = sh(19, 43) +
+    p('M5 36 Q4 22 16 17 Q24 14 32 17 Q44 22 43 36 Q42 41 36 41 H12 Q6 41 5 36 Z', '#c9853a', '#4a2408') +
+    f0('M5.5 34 Q8 40 14 40 H36 Q41 40 42.5 34 Q42 38 37 38.5 H12 Q7 38.5 5.5 34 Z', '#8a4a18', 0.7) +
+    p('M11 25 Q14 21 18 22 Q15 25 12 27 Z', '#f0d090', '#8a4a18', 1.2) + p('M19 21 Q23 18 27 20 Q24 23 20 24 Z', '#f0d090', '#8a4a18', 1.2) +
+    p('M28 21 Q32 19 35 22 Q32 25 29 25 Z', '#f0d090', '#8a4a18', 1.2) +
+    [[14, 31], [22, 28], [31, 31], [36, 27], [18, 35], [27, 35]].map(([x, y]) => dot(x, y, 0.9, '#fff6e0', 0.85)).join('') + hi('M9 27 Q10 22 14 20', 2);
+  I.bolo_milho = sh(21, 44.5) + g('translate(0,-1)', wheel('#d99a3a', '#e9b44c', '#f6d67c',
+    `<ellipse cx="20" cy="17" rx="6" ry="2.2" fill="#7a4a14" opacity=".35"/>` +
+    l('M8 14 q3 2 6 0 M26 13 q3 2 6 0 M15 20 q3 2 6 0', '#b8742a', 1.2) + hi('M8 15 Q13 12.5 19 12', 1.6),
+    [[29, 38], [33, 40], [31, 36.5], [35, 41.5]].map(([x, y]) => dot(x, y, 0.8, '#d9a03a')).join(''))) +
+    dot(30, 33, 0.8, '#f2d27a') + dot(36, 31, 0.8, '#f2d27a');
+  I.salada = bowl('#a8743e', '#79c04a',
+    p('M8 22 Q10 14 16 16 Q19 11 24 14 Q29 10 32 15 Q38 13 40 21 Q24 27 8 22 Z', '#5aa83a', '#2a5a1c', 1.6) +
+    ci(17, 20, 3.6, '#e0402f', '#6e1a12', 1.3) + ci(17, 20, 2, '#f2806a', 'none', 0) +
+    ci(29, 21, 3.6, '#e0402f', '#6e1a12', 1.3) + ci(29, 21, 2, '#f2806a', 'none', 0) +
+    ci(23, 17, 3, '#cfe8a0', '#4a7a2a', 1.2) + ci(23, 17, 1.6, '#eef6d6', 'none', 0) +
+    l('M33 18 q2 -3 4 0', '#f4f0f8', 1.6) + l('M10 26 Q8 33 12 37', '#c48a52', 1.4) +
+    l('M12 30 Q18 38 30 37', '#7a4a20', 1.2, 0.7) + hi('M9 29 Q10 34 14 38', 1.6));
+  I.suco_laranja = glass('#f39a1f', 14,
+    f0('M16 17 L17 39 Q20 41 21 41 L19 17 Z', '#ffd27a', 0.6) +
+    rod(27, 2, 30, 28, 1.4, '#e8f6f8') +
+    ci(35, 10, 6.5, '#f39a1f', '#7a3e08') + ci(35, 10, 4.8, '#ffd27a', 'none', 0) +
+    l('M35 5.5 V14.5 M31 7.6 L39 12.4 M31 12.4 L39 7.6', '#f39a1f', 1));
+  I.limonada = glass('#eef2a8', 14,
+    `<rect x="17" y="18" width="7" height="7" rx="1.6" fill="#ffffff" opacity=".75" stroke="#b8c8c8" stroke-width="1" transform="rotate(12 20 21)"/>` +
+    `<rect x="24" y="24" width="7" height="7" rx="1.6" fill="#ffffff" opacity=".75" stroke="#b8c8c8" stroke-width="1" transform="rotate(-15 27 27)"/>` +
+    dot(22, 34, 0.9, '#fff') + dot(27, 37, 0.7, '#fff') + dot(19, 30, 0.7, '#fff') +
+    leaf('M14 6 Q12 0 18 -1 Q19 4 16 7 Z', '#4f9a33') +
+    ci(35, 10, 6.5, '#5a9a2a', '#264f14') + ci(35, 10, 4.8, '#eaf2b4', 'none', 0) + ci(35, 10, 3.8, '#c5e06a', 'none', 0) +
+    l('M35 6 V14 M31.5 8 L38.5 12 M31.5 12 L38.5 8', '#eaf2b4', 1));
+  I.tilapia_frita = plate() + g('translate(2,6) scale(.9)',
+    fish('#c8862e', '#9a5a1a', '#e2a84a',
+      l('M18 19 q2 2 0 4 M23 19 q2 2 0 4 M28 19 q2 2 0 4 M20.5 25 q2 2 0 4 M25.5 25 q2 2 0 4 M30 24 q2 2 0 4', '#8a4a14', 1.2) +
+      hi('M14 17 Q20 15.5 26 16', 1.8))) +
+    p('M30 34 Q36 26 43 31 Q38 38 30 34 Z', '#f2e05a', '#6a6a10', 1.6) + l('M32 33 Q37 30 41 31', '#fff8b0', 1.2) +
+    leaf('M6 34 Q10 30 14 33 Q10 36 6 34 Z', '#4f9a33');
+  I.moqueca = sh(21, 44) + e(4, 28, 3.4, 2.4, '#3a2a24', '#1a100c', 1.6) + e(44, 28, 3.4, 2.4, '#3a2a24', '#1a100c', 1.6) +
+    p('M5 26 Q6 41 24 41 Q42 41 43 26 Z', '#4a3a32', '#1a100c') + f0('M32 39 Q41 36 42 28 L43 26 Q42 41 24 41 Z', '#000', 0.25) +
+    e(24, 26, 19.5, 7, '#5a4a40', '#1a100c') + e(24, 26.5, 16.5, 5.4, '#e0682a', '#8a3410', 1.2) +
+    `<rect x="11" y="22.5" width="7" height="5" rx="2" fill="#f6efe4" stroke="#8a6a5a" stroke-width="1"/>` +
+    `<rect x="24" y="21.5" width="7" height="5" rx="2" fill="#f6efe4" stroke="#8a6a5a" stroke-width="1"/>` +
+    ci(20, 28, 2.6, 'none', '#4f9a33', 1.6) + ci(33, 28, 2.6, 'none', '#f2c230', 1.6) + ci(37, 24, 2.2, 'none', '#d6301f', 1.6) +
+    ci(16, 29, 1.8, 'none', '#d6301f', 1.4) + dot(28, 28.5, 1.2, '#3f8a2a') + dot(14, 25.5, 1.1, '#3f8a2a') + dot(33, 23.5, 1.1, '#3f8a2a') + dot(24, 29.5, 1.1, '#3f8a2a') +
+    steam(24, 16);
+  I.queijo_cabra = board() + g('translate(0,-4)',
+    p('M6 22 H30 Q36 22 36 29 Q36 36 30 36 H6 Q2 36 2 29 Q2 22 6 22 Z', '#f8f6ee', '#5a5040') +
+    e(30, 29, 5, 7, '#fefcf6', '#5a5040') +
+    [[7, 25], [12, 27], [17, 24.5], [22, 28], [10, 32], [16, 33], [24, 33], [20, 25]].map(([x, y]) => `<rect x="${x}" y="${y}" width="2.4" height="1.2" rx=".6" fill="#4f8a33" transform="rotate(${x * 7} ${x} ${y})"/>`).join('') +
+    dot(28, 26, 0.7, '#c8c0a8') + dot(31, 31, 0.7, '#c8c0a8') +
+    l('M38 34 Q41 24 45 18', '#4a6a2a', 1.6) + leaf('M40 28 l-3 -3 l3 1 Z', '#5a8a3a') + leaf('M42 24 l3 -3 l-1 3 Z', '#5a8a3a') + leaf('M43 21 l-3 -2 l3 0 Z', '#5a8a3a') +
+    hi('M7 24.5 H22', 1.6));
+  I.conserva_codorna = jar('#efe6b0', 16,
+    `<rect x="9" y="8" width="30" height="8" rx="2.5" fill="#9aa3ab" stroke="${K}" stroke-width="2"/>` + l('M12 12 H36', '#6b7780', 1.4) + hi('M12 10 H20', 1.4),
+    [[17, 22], [27, 21], [33, 27], [20, 30], [29, 33], [16, 37], [24, 38], [33, 38]].map(([x, y]) =>
+      e(x, y, 4, 5, '#f4ead0', '#8a7a50', 1.2) + dot(x - 1, y - 1, 0.9, '#6a4a2a', 0.8) + dot(x + 1.6, y + 1.5, 0.7, '#6a4a2a', 0.8)).join('') +
+    leaf('M12 30 Q13 24 18 25 Q16 30 12 30 Z', '#6a9a3a') + dot(36, 22, 1, '#c0392b'));
+  I.tilapia_defumada = sh(18, 44) +
+    rod(4, 10, 44, 10, 2.2, '#8a5a2e') + l('M34 10 Q38 14 41 20', '#d9b46a', 1.6) +
+    g('translate(1,8)', fish('#c8902e', '#7a4a14', '#e8b850',
+      l('M18 19 Q22 22 18 27 M24 18 Q28 22 24 28 M30 19 Q33 22 30 27', '#9a5a1a', 1.2) + hi('M12 17 Q18 15 26 16', 1.8))) +
+    '';
+  I.marmita = sh(20, 44.5) +
+    g('rotate(-10 24 12)', `<rect x="8" y="5" width="30" height="12" rx="4" fill="#b8c0c6" stroke="#2b3034" stroke-width="2"/>` + l('M11 9 H35', '#e6eaee', 1.4)) +
+    p('M4 22 H44 L41 39 Q40 42 36 42 H12 Q8 42 7 39 Z', '#c5ccd1', '#2b3034') + f0('M36 22 H44 L41 39 Q40 42 36 42 Z', '#8d969d', 0.6) +
+    `<rect x="3" y="18" width="42" height="7" rx="3" fill="#dfe4e8" stroke="#2b3034" stroke-width="2"/>` +
+    p('M7 20 H24 V23 H7 Z', '#fbfaf6', 'none', 0) + p('M24 20 H41 V23 H24 Z', '#5a3020', 'none', 0) +
+    p('M7 21 Q9 15 15 16 Q20 14 23 17 L24 22 Z', '#fbfaf6', '#a8a090', 1.2) +
+    p('M24 22 L25 17 Q30 14 35 16 Q40 15 41 21 Z', '#5a3020', '#2a1408', 1.2) +
+    [[11, 18.5], [15, 17.5], [19, 18.5], [13, 20.5], [17, 20]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="1.2" ry=".6" fill="#e2dccc"/>`).join('') +
+    [[28, 18], [32, 17], [36, 18.5], [30, 20.5], [34, 20]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="1.3" ry=".8" fill="#8a4a32"/>`).join('') +
+    hi('M10 28 H30', 1.6) + l('M10 34 H38', '#8d969d', 1.2);
+  I.cafe = sh(15, 44) +
+    p('M33 20 Q43 19 43 27 Q43 35 33 34', 'none', K, 6) + p('M33 20 Q43 19 43 27 Q43 35 33 34', 'none', '#f4f2ec', 3) +
+    p('M8 15 V38 Q8 43 14 43 H30 Q36 43 36 38 V15 Z', '#f4f2ec', '#2a3a5a') +
+    f0('M29 16 H35 V38 Q35 42 30 42 H28 Q31 38 29 16 Z', '#c8ccd4', 0.8) +
+    e(22, 15, 14, 4, '#3a2014', '#2a3a5a') + e(22, 15, 14, 4, 'none', '#2f5a9a', 2.6) + e(20, 14.3, 5, 1.2, '#7a4a2a', 'none', 0) +
+    l('M8.5 39 Q22 45 35.5 39', '#2f5a9a', 2.6) + dot(14, 25, 0.9, '#2a3a5a', 0.5) + dot(27, 33, 0.9, '#2a3a5a', 0.5) + dot(19, 37, 0.7, '#2a3a5a', 0.5) +
+    hi('M12 21 V35', 2.2) + steamDark(22, 9);
+
+  // ---------- sementes / mudas ----------
+  for (const c of ['alface', 'cenoura', 'feijao', 'milho', 'tomate', 'abobora', 'trigo', 'capim', 'morango', 'pimenta', 'melancia']) I['sem_' + c] = packet(A[c]);
+  // ramas de mandioca: feixe de manivas
+  I.sem_mandioca = sh(17, 44) +
+    [[8, 38, 34, 10], [12, 41, 38, 14], [16, 42, 41, 19], [6, 33, 30, 8]].map(([x1, y1, x2, y2]) => {
+      const nx = (t) => [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t];
+      return rod(x1, y1, x2, y2, 3.4, '#9a7a52') + [0.25, 0.5, 0.75].map(t => { const [x, y] = nx(t); return ci(x, y, 1.6, '#6a4a2a', 'none', 0) + dot(x + 0.5, y - 0.5, 0.6, '#d9c8a0'); }).join('') +
+        e(x2, y2, 2.2, 2.2, '#e8f0c8', '#4a3418', 1.2);
+    }).join('') + twine('M14 20 Q20 26 26 32') + leaf('M34 10 Q38 3 44 4 Q41 10 35 11 Z', '#5aa83a');
+  const fr = (c, c2) => (x, y) => ci(x, y, 2.4, c, K, 1.4) + dot(x - 0.8, y - 0.8, 0.7, '#fff', 0.6);
+  const crownTree = (fruit, leafC = '#4f9a33') => rod(24, 30, 24, 14, 1.8, '#7a5a2a') +
+    leaf('M24 16 Q14 14 11 7 Q19 6 24 14 Z', leafC, 'M24 15 Q17 11 12 8') + leaf('M24 14 Q32 10 37 5 Q38 13 25 17 Z', '#3f8a2a', 'M25 16 Q31 12 36 6') +
+    leaf('M24 24 Q15 25 11 19 Q19 18 24 22 Z', '#3f8a2a') + leaf('M24 21 Q33 22 37 16 Q30 15 24 20 Z', leafC) +
+    leaf('M24 14 Q22 6 25 1 Q28 7 25 13 Z', '#6cbb44') + fruit;
+  I.muda_laranja = sapling(crownTree(fr('#f39a1f')(15, 21) + fr('#f39a1f')(33, 11)));
+  I.muda_limao = sapling(crownTree(fr('#6fb83a')(15, 21) + fr('#6fb83a')(33, 11), '#5aa83a'));
+  I.muda_manga = sapling(crownTree(`<ellipse cx="15" cy="22" rx="2.4" ry="3" fill="#f4b23a" stroke="${K}" stroke-width="1.4"/>` + `<ellipse cx="33" cy="12" rx="2.4" ry="3" fill="#e2553a" stroke="${K}" stroke-width="1.4"/>`));
+  I.muda_abacate = sapling(crownTree(`<path d="M15 18 Q17 18 17.4 21 Q18 25 15 25 Q12 25 12.6 21 Q13 18 15 18 Z" fill="#3f6b22" stroke="${K}" stroke-width="1.4"/>` + `<path d="M33 8 Q35 8 35.4 11 Q36 15 33 15 Q30 15 30.6 11 Q31 8 33 8 Z" fill="#3f6b22" stroke="${K}" stroke-width="1.4"/>`, '#5a9a3a'));
+  I.muda_banana = sapling(rod(24, 30, 24, 16, 3, '#8aa848') +
+    leaf('M24 18 Q10 20 4 10 Q8 5 14 8 Q20 11 24 17 Z', '#5aa83a', 'M23 17 Q14 13 6 9') +
+    leaf('M24 17 Q38 20 44 9 Q40 4 34 7 Q28 10 24 16 Z', '#4a9430', 'M25 16 Q34 12 42 8') +
+    leaf('M24 17 Q19 7 23 1 Q30 4 27 12 Z', '#6cbb44', 'M24 16 Q24 8 24 2') +
+    g('translate(30,20) scale(.5)', l('M0 0 Q4 6 10 4 M0 3 Q4 9 10 8', '#6a4a08', 4.4) + l('M0 0 Q4 6 10 4 M0 3 Q4 9 10 8', '#f2d03a', 2.6)));
+
+  // ---------- construções ----------
+  I.fogueira = sh(19, 43) +
+    [[8, 38], [14, 41], [22, 42.5], [30, 42], [37, 40], [41, 36], [6, 34]].map(([x, y]) => e(x, y, 4.2, 3, '#9a978e', '#3d3a33', 1.6)).join('') +
+    rod(10, 37, 36, 28, 3.6, '#8a5a2e') + rod(12, 28, 38, 37, 3.6, '#7a4a24') +
+    p('M24 6 Q30 14 32 20 Q35 16 34 12 Q40 20 38 28 Q36 35 24 35 Q12 35 10 28 Q9 21 15 16 Q15 21 18 22 Q16 13 24 6 Z', '#f08a24', '#7a2a08') +
+    p('M24 16 Q29 22 30 27 Q30 33 24 33 Q18 33 18 28 Q18 23 22 21 Q22 25 24 25 Q23 20 24 16 Z', '#f8d24a', '#c8641a', 1.2) +
+    e(24, 30, 3.6, 2.4, '#fff6c8', 'none', 0) + [[38, 8], [9, 12]].map(([x, y]) => dot(x, y, 1, '#f8a03a')).join('');
+  I.poco = sh(19, 44.5) +
+    rod(10, 34, 10, 10, 2.6, '#8a5a2e') + rod(38, 34, 38, 10, 2.6, '#8a5a2e') +
+    p('M4 14 L24 3 L44 14 L40 16 L24 7.5 L8 16 Z', '#b8392b', '#4a1410') + l('M6 14.5 L24 4.5 L42 14.5', '#d85a4a', 1.2) +
+    rod(10, 15, 38, 15, 1.6, '#a8743e') + l('M24 15 V24', K, 1.4) +
+    `<rect x="21" y="23" width="6" height="5" rx="1" fill="#9aa3ab" stroke="${K}" stroke-width="1.4"/>` +
+    p('M7 30 V40 Q24 47 41 40 V30 Z', '#a8a59a', '#3d3a33') +
+    l('M7 35 Q24 41 41 35 M15 32 V37 M24 33.5 V39 M33 32 V37 M11 37 V42 M19 38 V43.5 M29 38 V43.5 M37 37 V42', '#6e6b64', 1.2) +
+    e(24, 30, 17, 5.5, '#c4c0b2', '#3d3a33') + e(24, 30.5, 12.5, 3.4, '#2a4a6a', '#3d3a33', 1.4) + e(22, 30.5, 4, 1, '#5a8ab8', 'none', 0);
+  I.composteira = sh(19, 44.5) +
+    p('M10 14 L18 9 H42 L34 14 Z', '#3a2418', K, 2) +
+    p('M12 14 Q16 9 22 11 Q26 8 30 11 Q34 9 36 12 L34 14 Z', '#4a3020', K, 1.4) +
+    leaf('M18 11 Q20 6 25 7 Q23 11 18 11 Z', '#6cbb44') + p('M28 10 Q32 7 35 9 Q33 12 29 12 Z', '#f2c230', '#8a6a10', 1.2) +
+    box(6, 14, 28, 26, 8, 5, '#a8743e', '#7a4a24', 'none') +
+    l('M6 20.5 H34 M6 27 H34 M6 33.5 H34 M34 20.5 L42 15.5 M34 27 L42 22 M34 33.5 L42 28.5', K, 1.6) +
+    l('M7 17 H33 M7 23.5 H33 M7 30 H33 M7 36.5 H33', '#c8925a', 1.2, 0.8) +
+    `<rect x="5" y="13" width="3.6" height="29" rx="1" fill="#6a4020" stroke="${K}" stroke-width="1.6"/>` +
+    `<rect x="31.5" y="13" width="3.6" height="29" rx="1" fill="#6a4020" stroke="${K}" stroke-width="1.6"/>`;
+  I.cocho = sh(20, 44) +
+    rod(10, 33, 8, 42, 2.2, '#7a4a24') + rod(38, 33, 40, 42, 2.2, '#7a4a24') +
+    p('M3 20 H45 L40 34 H8 Z', '#a8743e') + f0('M38 21 H44.5 L39.5 34 H35 Z', '#000', 0.15) +
+    l('M5.5 27 H42.5', '#7a4a24', 1.4) + e(24, 20, 21, 4, '#5a3a20') + e(24, 20.4, 18.5, 2.6, '#d9b44a', 'none', 0) +
+    [[14, 20], [20, 19.5], [28, 20.5], [33, 19.6], [24, 21]].map(([x, y]) => dot(x, y, 0.9, '#8a6a1a')).join('') +
+    l('M8 15 Q12 10 14 18 M33 14 Q36 10 37 18', '#7cc44e', 1.6) + hi('M8 23 H20', 1.4);
+  I.galinheiro = sh(20, 45) +
+    rod(10, 36, 10, 43, 1.8, '#6a4020') + rod(30, 36, 30, 43, 1.8, '#6a4020') + rod(38, 32, 38, 40, 1.8, '#6a4020') +
+    house(7, 21, 26, 16, 9, 6, 11, '#d8a060', '#a8743e', '#8a3a2a', '#b8483a') +
+    l('M7 26 H33 M7 31 H33', '#a8743e', 1.2) + e(20, 27, 4, 4.4, '#3a2418', K, 1.6) +
+    rod(16, 36, 4, 44, 2.4, '#a8743e') + l('M8 41 l2 1.5 M11 38.5 l2 1.5', K, 1) +
+    g('translate(40,40)', e(0, 0, 4.4, 3.4, '#f6f2e8', K, 1.4) + ci(3, -3.4, 2.4, '#f6f2e8', K, 1.3) + p('M2 -6.2 l1 -1.6 l1 1.4 Z', '#d6301f', '#d6301f', 1) + p('M5.2 -3.6 l2 .6 l-2 .8 Z', '#f2c230', '#c88a18', .8));
+  I.viveiro = sh(20, 45) +
+    box(6, 18, 28, 22, 9, 7, '#e8eef0', '#d4dde0', '#c49a62') +
+    l('M6 23.5 H34 M6 29 H34 M6 34.5 H34 M11.6 18 V40 M17.2 18 V40 M22.8 18 V40 M28.4 18 V40', '#8d969d', 1) +
+    l('M34 24 L43 17 M34 30 L43 23 M34 36 L43 29 M37 16 V37.5 M40 13.6 V35', '#a8b0b6', 0.9) +
+    g('translate(19,34)', e(0, 0, 5, 3.6, '#8a6a42', K, 1.3) + ci(-4, -2.6, 2.4, '#8a6a42', K, 1.2) + l('M-2 -1 q2 1 4 0 M0 1 q2 1 4 0', '#f2e6c8', 0.8) + dot(-4.6, -3, 0.6, K)) +
+    `<rect x="4" y="16" width="32" height="3.4" rx="1" fill="#a8743e" stroke="${K}" stroke-width="1.6"/>` +
+    `<rect x="4" y="39" width="32" height="3.4" rx="1" fill="#a8743e" stroke="${K}" stroke-width="1.6"/>` + rod(42.5, 13, 42.5, 34, 1.4, '#a8743e');
+  // cerca vista de frente (trilhos + mourões)
+  const fenceF = (x1, x2, y, h, posts, col = '#b07a45') =>
+    rod(x1, y + h * 0.3, x2, y + h * 0.3, 1.8, col) + rod(x1, y + h * 0.7, x2, y + h * 0.7, 1.8, col) +
+    posts.map(x => `<rect x="${x - 1.8}" y="${y}" width="3.6" height="${h}" rx="1" fill="#8a5a2e" stroke="${K}" stroke-width="1.5"/>`).join('');
+  I.curral = sh(22, 43) + e(24, 32, 22, 11, '#c8a868', '#6a5028') + e(30, 36, 8, 2.5, '#b08c50', 'none', 0) +
+    fenceF(3, 45, 10, 16, [4, 14, 24, 34, 44]) +
+    box(20, 25, 14, 8, 5, 4, '#e2c060', '#c8a040', '#f2d880') + l('M20 29 H34', '#a8843a', 1.2) + l('M22 21 l2 -2 M28 21 l1 -3', '#e2c060', 1.2) +
+    fenceF(3, 18, 30, 14, [4, 11, 18]) + rod(29, 34, 44, 31, 1.6, '#c8925a') + rod(29, 39, 44, 36, 1.6, '#c8925a') +
+    `<rect x="42.2" y="29" width="3.6" height="14" rx="1" fill="#8a5a2e" stroke="${K}" stroke-width="1.5"/>`;
+  I.chiqueiro = sh(22, 43) + e(24, 32, 22, 11, '#8a5a34', '#4a2c14') + e(17, 37, 10, 4, '#5a3a22', 'none', 0) + e(15, 36, 4, 1.2, '#a8784a', 'none', 0) +
+    fenceF(3, 45, 10, 15, [4, 14, 24, 34, 44], '#9a6a3a') +
+    g('translate(26,29) scale(1.25)', e(0, 0, 8, 5.6, '#f2a8a8', '#6a3030', 1.6) + p('M-6 -3 l-2 -4 l4 2 Z M-2 -5 l0 -4 l3 3 Z', '#e88a8a', '#6a3030', 1.2) +
+      e(-8, 0.6, 2.6, 2, '#e88a8a', '#6a3030', 1.2) + dot(-8.8, 0.4, 0.5, '#6a3030') + dot(-7.2, 0.4, 0.5, '#6a3030') + dot(-5, -2, 0.7, K) +
+      l('M8 -1 q3 -1 2 2 q-1 2 1 2', '#6a3030', 1.2) + rod(-4, 5, -4, 7, 1.4, '#e88a8a', '#6a3030') + rod(4, 5, 4, 7, 1.4, '#e88a8a', '#6a3030') +
+      hi('M-3 -4 Q1 -5 4 -4', 1.2)) +
+    fenceF(30, 45, 31, 13, [32, 38.5, 44], '#9a6a3a');
+  I.tanque = sh(21, 43) +
+    e(24, 31, 21, 11, '#9a978e', '#3d3a33') +
+    [[6, 27], [12, 22], [20, 20.5], [29, 20.5], [37, 22.5], [42.5, 28], [41, 35], [33, 40], [24, 41.5], [14, 40], [6.5, 35]].map(([x, y]) => e(x, y, 4, 2.6, '#b3ae9f', '#3d3a33', 1.3)).join('') +
+    e(24, 31, 15.5, 7.4, '#3a8ac0', '#1f4a6a', 1.6) + f0('M10 31 Q12 25 24 24 Q36 25 38 30 Q30 27 24 27.5 Q14 28 10 31 Z', '#7ac0e8', 0.8) +
+    g('translate(22,32) scale(.32)', fish('#f08a2a', '#c8611a', '#f6b86a')) + l('M30 34 q2 1 4 0 M14 29 q2 1 4 0', '#bfe6fa', 1.2) +
+    leaf('M33 28 Q38 26 39 30 Q35 32 33 28 Z', '#4f9a33');
+  I.galpao = sh(22, 45) +
+    p('M33 22 L43 15 V36 L33 43 Z', '#8a2a20') + l('M33 29 L43 22 M33 36 L43 29', '#6a1a14', 1.2) +
+    p('M4 43 V22 L8 12 L18.5 5 L29 12 L33 22 V43 Z', '#b8392b', '#3a0a06') +
+    p('M18.5 5 L28 -1 L38.5 6 L43 15 L33 22 L29 12 Z', '#6b4a3a', '#2a1a10') + l('M29 12 L38.5 6', '#2a1a10', 1.4) +
+    l('M4 22 L8 12 L18.5 5 L29 12 L33 22', '#f4efe4', 2.2) +
+    `<rect x="11" y="27" width="15" height="16" fill="#8a2a20" stroke="#f4efe4" stroke-width="2"/>` + l('M11 27 L26 43 M26 27 L11 43', '#f4efe4', 2) +
+    `<rect x="15" y="14" width="7" height="6" fill="#3a2418" stroke="#f4efe4" stroke-width="1.6"/>` + l('M4 26 V40 M33 26 V40', '#d85a4a', 1, 0.6);
+  I.silo = sh(15, 45) +
+    p('M12 14 V40 Q24 46 36 40 V14 Z', '#a9b6bf', '#2b3034') + f0('M29 15 H35.5 V40 Q32 42.5 29 43 Z', '#7d8a93', 0.8) +
+    l('M12 20 Q24 24 36 20 M12 26 Q24 30 36 26 M12 32 Q24 36 36 32', '#6b7780', 1.4) +
+    p('M11 15 Q11 3 24 3 Q37 3 37 15 Q24 19 11 15 Z', '#c9d2d8', '#2b3034') + l('M17 6 L14.6 15.6 M24 3 V17 M31 6 L33.4 15.6', '#8d969d', 1.2) +
+    ci(24, 3, 1.6, '#6b7780', '#2b3034', 1.2) + rod(16, 18, 16, 41, 0.6, '#5b6268', '#2b3034') + rod(19.5, 18.5, 19.5, 42.5, 0.6, '#5b6268', '#2b3034') +
+    l('M16 22 H19.5 M16 26 H19.5 M16 30 H19.5 M16 34 H19.5 M16 38 H19.5', '#2b3034', 1.2) + hi('M14 17 V38', 2);
+  I.aspersor = sh(18, 43) + e(24, 40, 18, 5, '#6cbb44', '#2f5a1f') +
+    l('M10 40 l-1 -3 M14 42 l0 -3 M34 42 l1 -3 M38 39.5 l1 -3', '#2f5a1f', 1.4) +
+    rod(24, 40, 24, 22, 2.2, '#5b6268', '#2b3034') + `<rect x="20" y="17" width="8" height="6" rx="2" fill="#f2c230" stroke="${K}" stroke-width="1.8"/>` +
+    rod(18, 20, 30, 20, 1.2, '#9aa3ab', '#2b3034') +
+    l('M18 19 Q10 10 4 20 M30 19 Q38 10 44 20 M22 16 Q18 4 10 6 M26 16 Q30 4 38 6', '#4aa8e0', 1.8, 0.85) +
+    [[4, 23], [44, 23], [9, 9], [39, 9], [6, 28], [42, 28]].map(([x, y]) => p(`M${x} ${y - 2.4} Q${x + 1.6} ${y} ${x} ${y + 1.2} Q${x - 1.6} ${y} ${x} ${y - 2.4} Z`, '#8fd0ef', '#2a7aa8', 1)).join('');
+  I.moinho = sh(14, 45) +
+    p('M15 44 L19 16 H29 L33 44 Z', '#e2d0a4', '#4a3418') + f0('M27 17 H29 L33 44 H29 Z', '#000', 0.12) +
+    p('M17 17 L24 8 L31 17 Z', '#8a3a2a', '#3a1410') +
+    `<path d="M21 44 V37 Q24 33 27 37 V44 Z" fill="#7a4a24" stroke="${K}" stroke-width="1.6"/>` + `<rect x="22" y="23" width="4" height="4" fill="#3a2418" stroke="${K}" stroke-width="1.2"/>` +
+    [0, 90, 180, 270].map(a => g(`rotate(${a + 20} 24 14)`, rod(24, 14, 24, 0.5, 1.2, '#7a4a24') +
+      `<rect x="24.6" y="1" width="6" height="11" fill="#f4efe4" stroke="${K}" stroke-width="1.5"/>` + l('M24.6 4.6 H30.6 M24.6 8.2 H30.6 M27.6 1 V12', '#b8a888', 0.9))).join('') +
+    ci(24, 14, 2.4, '#5b6268', K, 1.6);
+  I.defumador = sh(19, 45) +
+    rod(33, 18, 33, 5, 4.6, '#8a8578', '#3d3a33') +
+    p('M6 43 V28 Q6 14 24 14 Q42 14 42 28 V43 Z', '#9a978e', '#3d3a33') + f0('M34 16 Q42 20 41.5 28 V42.5 H35 Q38 28 34 16 Z', '#000', 0.15) +
+    l('M6.5 24 H42 M6 32 H11 M37 32 H42 M6 38 H11 M37 38 H42 M13 17 L14 24 M24 14.5 V24 M33 17 L32 24 M9 24 V32 M39 24 V32', '#6e6b64', 1.3) +
+    p('M14 43 V33 Q14 26 24 26 Q34 26 34 33 V43 Z', '#2a1a14', '#3d3a33', 1.8) +
+    p('M18 43 Q17 37 21 34 Q21 38 24 38 Q23 34 26 31 Q31 36 30 43 Z', '#f08a24', '#c8441a', 1) + e(24, 41.5, 3.4, 1.4, '#f8d24a', 'none', 0) +
+    e(36, 4, 4, 3, '#c8c8c8', 'none', 0) + e(41, 2.5, 3, 2.2, '#dcdcdc', 'none', 0) + e(30.5, 3, 3, 2.2, '#b8b8b8', 'none', 0);
+  I.colmeia = sh(18, 45) +
+    rod(12, 38, 11, 44, 2, '#6a4020') + rod(34, 38, 35, 44, 2, '#6a4020') +
+    box(8, 28, 26, 11, 7, 5, '#e2b866', '#b8863a', '#f2d080') +
+    box(8, 17, 26, 11, 7, 5, '#ecc274', '#c49444', '#f2d080') +
+    p('M5 17 L13 9.5 H44 L37 17 Z', '#8a5a2e') + p('M5 17 H37 V19.5 H5 Z', '#6a4020') + p('M37 17 L44 9.5 V12 L37 19.5 Z', '#5a3418') +
+    `<rect x="16" y="35" width="10" height="2.2" rx="1" fill="#3a2418"/>` + l('M10 23 H32 M10 33 H32', '#c49444', 1.2) +
+    [[42, 26, -15], [39, 36, 10], [6, 30, 20]].map(([x, y, r]) => g(`translate(${x},${y}) rotate(${r})`,
+      e(-1, -3, 2, 1.4, '#ffffff', '#5a5a5a', 0.8) + e(1.6, -3, 2, 1.4, '#ffffff', '#5a5a5a', 0.8) +
+      e(0, 0, 3.2, 2.3, '#f2c230', K, 1.2) + l('M-0.8 -2 V2 M1.2 -2 V2', K, 1.1))).join('');
+  I.cerca = sh(20, 44) + l('M6 42 l1 -3 M15 42 l0 -3 M33 42 l1 -3 M42 42 l-1 -3', '#4f9a33', 1.6) +
+    [['M5 21 H43 V27 H5 Z'], ['M5 32 H43 V38 H5 Z']].map(([d]) => p(d, '#b07a45') + l(d.replace(/V\d+ H5 Z/, ''), '#d8a46a', 1.2, 0.8)).join('') +
+    [7, 24, 41].map(x => p(`M${x - 4} 42 V12 L${x} 7 L${x + 4} 12 V42 Z`, '#9a6233') + l(`M${x - 2} 13 V40`, '#c48a52', 1.2, 0.8) + dot(x, 24, 0.9, K) + dot(x, 35, 0.9, K)).join('');
+
+  // ---------- API ----------
+  const wrap = body => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="100%" height="100%">${body}</svg>`;
+  const cache = {}, imgs = {};
+  const svg = id => I[id] ? (cache[id] || (cache[id] = wrap(I[id]))) : null;
+  return {
+    ids: () => Object.keys(I),
+    has: id => !!I[id],
+    svg,
+    html: id => I[id] ? `<span class="itemic">${svg(id)}</span>` : null,
+    img: id => {
+      if (!I[id] || typeof Image === 'undefined') return null;
+      let im = imgs[id];
+      if (!im) { im = imgs[id] = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg(id)); }
+      return (im.complete && im.naturalWidth) ? im : null;
+    },
+  };
+})();

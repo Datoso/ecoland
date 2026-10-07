@@ -22,6 +22,34 @@ D.tools = [
   { id: 'item', n: 'Item na mão', i: '🎒', desc: 'Usar o item selecionado no inventário (Q troca)' },
 ];
 
+// ---------- Níveis das ferramentas (compra na loja, aba Ferramentas) ----------
+// area: 1 = um tile, 'line3' = 3 em linha, 3 = 3×3, 5 = 5×5
+D.toolLevels = {
+  enxada: [
+    { n: 'Enxada', area: 1 },
+    { n: 'Enxada de aço', area: 'line3', price: 800, desc: 'Ara 3 covas em linha de uma vez.' },
+    { n: 'Motocultivador', area: 3, price: 3500, icon: 'motocultivador', desc: 'Microtrator: ara uma área 3×3 de uma vez.' }],
+  regador: [
+    { n: 'Regador', area: 1, cap: 15 },
+    { n: 'Regador grande', area: 3, cap: 40, price: 900, desc: '40 L, rega uma área 3×3.' },
+    { n: 'Mangueira com carretel', area: 5, cap: 100, price: 3000, icon: 'mangueira', desc: '100 L, rega uma área 5×5.' }],
+  foice: [
+    { n: 'Foice', area: 1 },
+    { n: 'Foice de aço', area: 3, price: 700, desc: 'Roça e colhe uma área 3×3.' },
+    { n: 'Roçadeira a gasolina', area: 5, price: 2800, icon: 'rocadeira', desc: 'Roça e colhe uma área 5×5.' }],
+  machado: [
+    { n: 'Machado', dmg: 1 },
+    { n: 'Machado de aço', dmg: 2, price: 900, desc: 'Derruba árvores em 2 golpes.' },
+    { n: 'Motosserra', dmg: 3, bonus: 2, price: 3500, icon: 'motosserra', desc: 'Derruba árvores num golpe e rende +2 madeiras.' }],
+  picareta: [
+    { n: 'Picareta', dmg: 1, area: 1 },
+    { n: 'Picareta de aço', dmg: 2, area: 1, price: 800, desc: 'Quebra pedras num golpe.' },
+    { n: 'Rompedor elétrico', dmg: 2, area: 3, price: 3200, icon: 'rompedor', desc: 'Quebra todas as pedras numa área 3×3.' }],
+  faca: [
+    { n: 'Faca', bonus: 0 },
+    { n: 'Faca de aço inox', bonus: 1, price: 500, desc: '+1 carne em cada abate.' }],
+};
+
 // ---------- Culturas ----------
 // days = dias regados para amadurecer; regrow = dias para rebrotar após colheita
 D.crops = {
@@ -139,7 +167,8 @@ D.buildings = {
     { n: 'Colmeia', every: 3 },
     { n: 'Colmeia com melgueira', every: 2, cost: 900, desc: 'mel a cada 2 dias' },
     { n: 'Apiário', every: 1, cost: 2500, desc: 'mel todo dia e polinização mais forte' }] },
-  cerca:       { n: 'Cerca', w: 1, h: 1, i: '🚧', desc: 'Delimita pastos e protege canteiros.' },
+  cerca:       { n: 'Cerca', w: 1, h: 1, i: '🚧', desc: 'Delimita pastos e protege canteiros. Segure a cerca e arraste o mouse para cercar uma área.' },
+  porteira:    { n: 'Porteira', w: 1, h: 1, i: '🚪', desc: 'Passagem na cerca: você passa, os animais não.' },
 };
 
 // ---------- Itens ----------
@@ -246,6 +275,7 @@ D.recipes = [
   // construção
   { out: 'fogueira', q: 1, in: { madeira: 5, pedra: 3 }, st: null, cat: 'Construção' },
   { out: 'cerca', q: 4, in: { madeira: 2 }, st: null, cat: 'Construção' },
+  { out: 'porteira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
   { out: 'cocho', q: 1, in: { madeira: 10 }, st: null, cat: 'Construção' },
   { out: 'composteira', q: 1, in: { madeira: 15, pedra: 5 }, st: null, cat: 'Construção' },
   { out: 'poco', q: 1, in: { pedra: 25, madeira: 10, ferragens: 2 }, st: null, cat: 'Construção' },
@@ -309,7 +339,7 @@ D.shop = [
   { id: 'agua', price: 15, tab: 'Mercado' },
   { id: 'cafe', price: 25, tab: 'Mercado' },
   ...Object.entries(D.animals).map(([id, a]) => ({ animal: id, price: a.price, tab: 'Animais' })),
-  { upgrade: 'regador', n: 'Regador grande (40 L)', i: '🚿', price: 900, tab: 'Ferramentas', desc: 'Capacidade de 40 L e rega uma área 3×3 de uma vez.' },
+  ...Object.entries(D.toolLevels).flatMap(([tool, L]) => L.slice(1).map((l, i) => ({ tool, level: i + 2, n: l.n, price: l.price, desc: l.desc, tab: 'Ferramentas' }))),
   { upgrade: 'mochila', n: 'Cantil térmico', i: '🧴', price: 600, tab: 'Ferramentas', desc: 'A sede diminui 30% mais devagar.' },
   { upgrade: 'botas', n: 'Botas de trilha', i: '🥾', price: 700, tab: 'Ferramentas', desc: 'Anda 20% mais rápido.' },
   { upgrade: 'ferramentas', n: 'Ferramentas de aço', i: '🛠️', price: 1500, tab: 'Ferramentas', desc: 'Ferramentas gastam 40% menos energia.' },

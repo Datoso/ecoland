@@ -228,3 +228,9 @@ html, body { color: var(--ink); }
 .title-card .world .w-del { background: #f3e2bb; color: var(--ink); padding: 6px 8px; }
 .title-card .world .w-del.armed { background: #c0392b; color: #fff; }
 .title-card { max-height: 94vh; overflow-y: auto; }
+.itemic { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: middle; filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
+.card .ic .itemic { width: 40px; height: 40px; }
+.inv .it .itemic { width: 44px; height: 44px; }
+.slot .itemic { width: 40px; height: 40px; }
+body.modal-open #toasts { bottom: auto; top: 6px; flex-direction: column; }
+body.modal-open .toast { font-size: 13px; padding: 5px 12px; }
