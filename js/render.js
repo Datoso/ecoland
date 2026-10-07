@@ -412,7 +412,7 @@ window.R = (() => {
     const sig = chunkSig(cx, cy);
     if (ch && ch.sig === sig) return ch;
     if (!ch) {
-      const sc = Math.min(dpr, 1.5);
+      const sc = Math.round(CPX * Math.min(dpr, 1.5)) / CPX;
       const c = document.createElement('canvas'); c.width = c.height = Math.ceil(CPX * sc);
       ch = { cv: c, sc, sig: 0 }; chunks.set(key, ch);
     }
@@ -434,6 +434,74 @@ window.R = (() => {
       if (!ch || ch.sig !== chunkSig(cx, cy)) { ensureChunk(cx, cy); return; }
     }
   }
+
+
+  // ---------- vista de longe: chão + objetos estáticos pré-compostos por bloco ----------
+  const farChunks = new Map();
+  const FAR_ROWS = 5, FAR_COLS = 2;
+  function farSig(cx, cy, night, bById) {
+    let s = chunkSig(cx, cy) ^ (night ? 0x5bd1e995 : 0);
+    const x0 = cx * CH - FAR_COLS, x1 = cx * CH + CH - 1 + FAR_COLS, y0 = cy * CH, y1 = Math.min(G.H - 1, cy * CH + CH - 1 + FAR_ROWS);
+    for (let y = y0; y <= y1; y++) for (let x = Math.max(0, x0); x <= Math.min(G.W - 1, x1); x++) {
+      const tl = S.tiles[y * G.W + x], o = tl.o, c = tl.c;
+      let code = 0;
+      if (c) { const cr = D.crops[c.id]; code = 7 + (cr ? cropStage(c, cr) : 0) * 3 + (c.dead ? 1 : 0) + c.id.length * 31; }
+      if (o) {
+        if (o.t === 'b') { const b = bById.get(o.id); code += b ? b.id * 977 + (b.level | 0) * 13 + bVariant(b) * 7 + 1 : 3; }
+        else if (o.t === 'fruit') { const f = D.fruits[o.k]; code += 50 + o.k.length * 17 + (o.ready ? 5 : 0) + Math.round(clamp((o.timer || 0) / ((f && f.every) || 1), 0, 1) * 4) + Math.min(4, Math.floor((o.age || 0) / ((f && f.mature) || 1) * 4)) * 11; }
+        else code += (o.t.charCodeAt(0) * 3 + (o.v || 0) * 5 + (o.hp || 0));
+      }
+      s = (Math.imul(s, 31) + code) | 0;
+    }
+    return s;
+  }
+  function buildFar(cx, cy, fc, bById) {
+    const g = ensureChunk(cx, cy);
+    const c = fc.cv.getContext('2d');
+    c.setTransform(fc.sc, 0, 0, fc.sc, 0, 0);
+    c.clearRect(0, 0, CPX, CPX);
+    c.drawImage(g.cv, 0, 0, CPX, CPX);
+    const mainCtx = ctx, cx0 = cam.x, cy0 = cam.y, t0 = t;
+    ctx = c; cam.x = cx * CPX; cam.y = cy * CPX; t = 0;
+    try {
+      c.save(); c.beginPath(); c.rect(0, 0, CPX, CPX); c.clip();
+      const drawn = new Set();
+      const y0 = cy * CH, y1 = Math.min(G.H - 1, cy * CH + CH - 1 + FAR_ROWS), xa = Math.max(0, cx * CH - FAR_COLS), xb = Math.min(G.W - 1, cx * CH + CH - 1 + FAR_COLS);
+      for (let y = y0; y <= y1; y++) for (let x = xa; x <= xb; x++) {
+        const tile = S.tiles[y * G.W + x], px = x * TS - cam.x, py = y * TS - cam.y;
+        if (tile.c) drawCrop(px, py, tile.c, x, y);
+        const o = tile.o;
+        if (!o) continue;
+        if (o.t === 'weed') drawWeed(px, py, o, x, y);
+        else if (o.t === 'rock') drawRock(px, py, o, x);
+        else if (o.t === 'tree') drawTree(px, py, o, x, y);
+        else if (o.t === 'fruit') drawFruitTree(px, py, o, x, y);
+        else if (o.t === 'b' && !drawn.has(o.id)) {
+          const b = bById.get(o.id), def = b && D.buildings[b.type];
+          if (def && y === b.y + def.h - 1) { drawn.add(o.id); drawBuilding(b, true); }
+        }
+      }
+      c.restore();
+    } finally { ctx = mainCtx; cam.x = cx0; cam.y = cy0; t = t0; }
+  }
+  function drawFarLayer(bById) {
+    const ncx = Math.ceil(G.W / CH), ncy = Math.ceil(G.H / CH), night = G.isNight();
+    const cx0 = Math.max(0, Math.floor(cam.x / CPX)), cy0 = Math.max(0, Math.floor(cam.y / CPX));
+    const cx1 = Math.min(ncx - 1, Math.floor((cam.x + VW) / CPX)), cy1 = Math.min(ncy - 1, Math.floor((cam.y + VH) / CPX));
+    const sc = Math.round(CPX * Math.min(dpr, 1) * 0.6) / CPX; // tamanho inteiro: evita frestas entre blocos
+    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+      const key = cx + ',' + cy;
+      let fc = farChunks.get(key);
+      if (!fc || fc.scale !== sc) { const cvs = document.createElement('canvas'); cvs.width = cvs.height = Math.ceil(CPX * sc); fc = { cv: cvs, sc, scale: sc, sig: null }; farChunks.set(key, fc); }
+      // assinatura conferida em rodízio (um terço dos blocos por quadro) para poupar CPU
+      if (fc.sig === null || ((cx + cy + frameN) % 3 === 0)) {
+        const sig = farSig(cx, cy, night, bById);
+        if (sig !== fc.sig) { fc.sig = sig; buildFar(cx, cy, fc, bById); }
+      }
+      const ov = 1 / Z; ctx.drawImage(fc.cv, cx * CPX - cam.x, cy * CPX - cam.y, CPX + ov, CPX + ov);
+    }
+  }
+  let frameN = 0;
 
   // brilho animado da água
   function drawWaterFx(x0, y0, x1, y1) {
@@ -557,42 +625,182 @@ window.R = (() => {
   }
 
   // ----- árvores frutíferas -----
+  // ----- árvores frutíferas e trepadeiras -----
+  const FRUITC = {
+    laranja: ['#f28c1c', '#ffc46a'], limao: ['#86c43a', '#c6ef7a'], manga: ['#f2a83a', '#ffd88a', '#e0503a'], abacate: ['#3f6a26', '#7aa34a'],
+    banana: ['#f5d43a', '#fff1a0'], acerola: ['#e0202a', '#ff8a8a'], jabuticaba: ['#2a1630', '#8a6aa0'], coco: ['#b89a3a', '#e0cc7a'],
+    uva: ['#6a2a7a', '#b07ac0'], maracuja: ['#f0cc2a', '#fff2a0'],
+  };
+  function paintTrellis(c, cx, by, snow) {
+    for (const px of [cx - 18, cx + 18]) {
+      ell(c, px + 1, by + 1, 4, 1.6, 'rgba(10,25,5,0.25)');
+      c.fillStyle = '#6e4626'; c.fillRect(px - 2.5, by - 44, 5, 45); c.fillStyle = '#9a6a3a'; c.fillRect(px - 2.5, by - 44, 1.6, 45);
+      if (snow) { c.fillStyle = '#f4f8fb'; c.fillRect(px - 3, by - 46, 6, 2.5); }
+    }
+    c.fillStyle = '#8a5a30'; c.fillRect(cx - 22, by - 45, 44, 3.5); c.fillStyle = '#b07a44'; c.fillRect(cx - 22, by - 45, 44, 1);
+    c.strokeStyle = 'rgba(200,205,210,0.9)'; c.lineWidth = 0.9; c.beginPath();
+    for (const wy of [-12, -22, -32]) { c.moveTo(cx - 18, by + wy); c.lineTo(cx + 18, by + wy); }
+    c.stroke();
+  }
+  function trellisSprite(k, season, st) {
+    let pts = [];
+    const s = sprite(`vine|${k}|${season}|${st}`, 70, 70, 35, 62, c => {
+      paintTrellis(c, 0, 0, season === 3);
+      if (st < 0) return;
+      const r = rng(k.length * 7 + st), grape = k === 'uva';
+      const bare = grape && season === 3;
+      const lc = grape ? (season === 2 ? ['#b8862a', '#d8a83a', '#a8402a'] : ['#3f8a35', '#5aa845', '#7cc456']) : ['#2f7a2f', '#45983a', '#6cbf4a'];
+      const cover = [0.3, 0.6, 0.85, 1][st];
+      // troncos/ramos
+      c.strokeStyle = grape ? '#6b4a2a' : '#4f7a2a'; c.lineWidth = grape ? 2.6 : 1.6;
+      c.beginPath(); c.moveTo(-4, 0); c.quadraticCurveTo(-8, -14, -2, -22); c.stroke();
+      c.lineWidth = grape ? 1.6 : 1.2; c.beginPath();
+      for (const wy of [-12, -22, -32]) {
+        if (-wy / 34 > cover + 0.15) continue;
+        const ext = 17 * Math.min(1, cover * 1.3);
+        c.moveTo(-ext, wy); for (let x = -ext; x <= ext; x += 4) c.lineTo(x, wy + Math.sin(x * 0.6 + wy) * 1.5);
+      }
+      c.stroke();
+      if (!bare) {
+        const n = Math.round(30 * cover);
+        for (let i = 0; i < n; i++) {
+          const x = (r() - 0.5) * 38 * Math.min(1, cover * 1.3), y = -8 - r() * 30 * cover;
+          const col = lc[Math.floor(r() * 3)], rr = grape ? 3.4 + r() * 1.4 : 2.8 + r() * 1.2;
+          if (grape) { c.fillStyle = col; c.beginPath(); for (let q = 0; q < 3; q++) { const a = -1.57 + (q - 1) * 0.9; c.moveTo(x + Math.cos(a) * rr * 0.6 + rr * 0.7, y + Math.sin(a) * rr * 0.6); c.arc(x + Math.cos(a) * rr * 0.6, y + Math.sin(a) * rr * 0.6, rr * 0.7, 0, TAU); } c.fill(); }
+          else { for (let q = -1; q <= 1; q++) leaf(c, x, y, rr * 1.4, rr * 0.45, -1.57 + q * 0.8, col); }
+        }
+        if (!grape && st >= 2 && season < 3) for (let i = 0; i < 3; i++) {
+          const x = -12 + i * 12, y = -30 + (i % 2) * 8;
+          c.fillStyle = '#ffffff'; for (let q = 0; q < 8; q++) { const a = q / 8 * TAU; ell(c, x + Math.cos(a) * 2.6, y + Math.sin(a) * 2.6, 1.6, 1.6, '#ffffff'); }
+          c.strokeStyle = '#7a3aa0'; c.lineWidth = 0.8; c.beginPath(); for (let q = 0; q < 14; q++) { const a = q / 14 * TAU; c.moveTo(x + Math.cos(a) * 1.4, y + Math.sin(a) * 1.4); c.lineTo(x + Math.cos(a) * 3.6, y + Math.sin(a) * 3.6); } c.stroke();
+          circ(c, x, y, 1.2, '#d8e85a');
+        }
+      } else { c.strokeStyle = '#f4f8fb'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(-17, -33.5); c.lineTo(17, -33.5); c.stroke(); }
+      for (const wy of [-12, -22, -32]) if (-wy / 34 <= cover) for (const x of [-12, 0, 12]) pts.push([x + (wy % 3), wy + (grape ? 5 : 4)]);
+    });
+    if (pts.length) s.pts = pts;
+    return s;
+  }
   function fruitSprite(k, season) {
-    return sprite(`fruit|${k}|${season}`, 96, 110, 48, 102, c => {
+    let pts = null;
+    const s = sprite(`fruit|${k}|${season}`, 140, 160, 70, 150, c => {
       const r = rng(k.length * 13 + 5);
-      if (k === 'banana') {
-        ell(c, 0, -1, 16, 5, 'rgba(10,30,5,0.24)');
-        c.fillStyle = '#8a7a4a'; c.beginPath(); c.moveTo(-4, 0); c.lineTo(-3, -36); c.lineTo(3, -36); c.lineTo(5, 0); c.fill();
-        c.strokeStyle = 'rgba(60,40,20,0.35)'; c.lineWidth = 1; for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(-4, -i * 6); c.lineTo(4, -i * 6 - 2); c.stroke(); }
-        const cols = season === 3 ? ['#5f8a48', '#7ba75e'] : season === 2 ? ['#6f9a38', '#94b84e'] : ['#3f9a3c', '#62bd52'];
-        for (const [a, l] of [[-2.7, 30], [-0.45, 30], [-2.2, 26], [-0.95, 27], [-1.6, 22], [-3.0, 22], [-0.15, 22]]) {
-          const ex = Math.cos(a) * l, ey = -38 + Math.sin(a) * l * 0.8 + 6;
-          c.strokeStyle = cols[0]; c.lineWidth = 7; c.beginPath(); c.moveTo(0, -38); c.quadraticCurveTo(ex * 0.5, -38 + Math.sin(a) * l * 0.7 - 6, ex, ey); c.stroke();
-          c.strokeStyle = cols[1]; c.lineWidth = 3; c.beginPath(); c.moveTo(0, -38); c.quadraticCurveTo(ex * 0.5, -38 + Math.sin(a) * l * 0.7 - 7, ex, ey - 1); c.stroke();
-          c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(0, -38); c.quadraticCurveTo(ex * 0.5, -38 + Math.sin(a) * l * 0.7 - 6, ex, ey); c.stroke();
+      pts = [];
+      const winter = season === 3;
+      if (k === 'banana' || k === 'coco') {
+        const tall = k === 'coco' ? 104 : 60, lean = k === 'coco' ? 10 : 2;
+        ell(c, 0, -1, 18, 5.5, 'rgba(10,30,5,0.24)');
+        c.strokeStyle = k === 'coco' ? '#8a7a5a' : '#8a8a4a'; c.lineWidth = k === 'coco' ? 6 : 8; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(lean * 1.6, -tall * 0.5, lean, -tall); c.stroke();
+        c.strokeStyle = 'rgba(50,35,15,0.35)'; c.lineWidth = 1;
+        for (let i = 1; i < (k === 'coco' ? 14 : 7); i++) { const q = i / (k === 'coco' ? 14 : 7), x = lean * 1.6 * 2 * q * (1 - q) + lean * q * q; c.beginPath(); c.moveTo(x - 3, -tall * q); c.lineTo(x + 3, -tall * q - 1.5); c.stroke(); }
+        const hx = lean, hy = -tall;
+        if (k === 'coco') {
+          const fc = winter ? ['#4f7a48', '#6f9a5e'] : ['#2f7a2f', '#5aa845'];
+          for (const [a, l] of [[-2.9, 40], [-0.25, 40], [-2.3, 36], [-0.85, 36], [-1.57, 26], [-3.4, 30], [0.25, 30], [-1.2, 30], [-1.95, 30]]) {
+            const ex = hx + Math.cos(a) * l, ey = hy + Math.sin(a) * l * 0.55 + (Math.abs(Math.cos(a)) > 0.5 ? 12 : 0);
+            const cx2 = hx + Math.cos(a) * l * 0.5, cy2 = hy + Math.sin(a) * l * 0.5 - 8;
+            c.strokeStyle = fc[0]; c.lineWidth = 2.4; c.beginPath(); c.moveTo(hx, hy); c.quadraticCurveTo(cx2, cy2, ex, ey); c.stroke();
+            for (let q = 0.15; q < 1; q += 0.09) {
+              const t1 = q, bx = (1 - t1) * (1 - t1) * hx + 2 * (1 - t1) * t1 * cx2 + t1 * t1 * ex, by = (1 - t1) * (1 - t1) * hy + 2 * (1 - t1) * t1 * cy2 + t1 * t1 * ey;
+              const ln = 9 * (1 - q * 0.55);
+              c.strokeStyle = q % 0.18 < 0.09 ? fc[0] : fc[1]; c.lineWidth = 1.8; c.beginPath(); c.moveTo(bx, by); c.lineTo(bx + 1.5, by + ln); c.moveTo(bx, by); c.lineTo(bx - 1.5, by + ln); c.stroke();
+            }
+          }
+          for (const [dx, dy] of [[-4, 4], [3, 5], [-0.5, 8], [5, 1], [-6, 0]]) pts.push([hx + dx, hy + dy]);
+        } else {
+          const cols = winter ? ['#5f8a48', '#7ba75e'] : season === 2 ? ['#6f9a38', '#94b84e'] : ['#3f9a3c', '#62bd52'];
+          for (const [a, l] of [[-2.8, 38], [-0.35, 38], [-2.2, 32], [-0.95, 33], [-1.6, 26], [-3.1, 28], [-0.05, 28]]) {
+            const ex = hx + Math.cos(a) * l, ey = hy + Math.sin(a) * l * 0.8 + 8;
+            c.strokeStyle = cols[0]; c.lineWidth = 9; c.beginPath(); c.moveTo(hx, hy); c.quadraticCurveTo(hx + (ex - hx) * 0.5, hy + Math.sin(a) * l * 0.7 - 8, ex, ey); c.stroke();
+            c.strokeStyle = cols[1]; c.lineWidth = 4; c.beginPath(); c.moveTo(hx, hy); c.quadraticCurveTo(hx + (ex - hx) * 0.5, hy + Math.sin(a) * l * 0.7 - 9, ex, ey - 1); c.stroke();
+            c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(hx, hy); c.quadraticCurveTo(hx + (ex - hx) * 0.5, hy + Math.sin(a) * l * 0.7 - 8, ex, ey); c.stroke();
+          }
+          c.strokeStyle = '#6a7a3a'; c.lineWidth = 2; c.beginPath(); c.moveTo(hx + 3, hy + 2); c.quadraticCurveTo(hx + 9, hy + 6, hx + 8, hy + 22); c.stroke();
+          ell(c, hx + 8, hy + 25, 2.8, 4, '#7a2a4a');
+          for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) pts.push([hx + 4 + j * 3, hy + 8 + i * 4.5]);
         }
         return;
       }
-      trunk(c, 24, 3.5, '#80552e');
-      const base = { laranja: '#2f7f34', limao: '#3b8f3a', manga: '#1f6a30', abacate: '#2a6b2c' }[k] || '#2f7f34';
-      let pal = [shade(base, -0.35), base, shade(base, 0.25), shade(base, 0.55)];
-      if (season === 3) pal = ['#3f6448', '#557e5c', '#79a07c', '#b4d0b4'];
-      const blobs = canopy(c, 0, -38, 19, pal, r, 1.05, 9);
-      if (season === 0 && (k === 'laranja' || k === 'limao')) for (let i = 0; i < 14; i++) { const b = blobs[Math.floor(r() * blobs.length)]; circ(c, b[0] + (r() - 0.5) * b[2], b[1] + (r() - 0.5) * b[2], 1.5, '#ffffff'); }
-      if (season === 3) for (const b of blobs) if (b[1] < -42) ell(c, b[0] - 1, b[1] - b[2] * 0.6, b[2] * 0.6, 2.2, 'rgba(250,252,255,0.9)');
+      if (k === 'jabuticaba') {
+        ell(c, 0, -1, 20, 6, 'rgba(10,30,5,0.24)');
+        const trunks = [[-8, -0.35], [-3, -0.12], [3, 0.1], [8, 0.38]];
+        for (const [bx, a] of trunks) {
+          const ex = bx + Math.sin(a) * 40, ey = -44;
+          c.strokeStyle = '#8f877a'; c.lineWidth = 6; c.beginPath(); c.moveTo(bx * 0.4, 0); c.quadraticCurveTo(bx, -22, ex, ey); c.stroke();
+          c.strokeStyle = '#c9c0b2'; c.lineWidth = 3; c.beginPath(); c.moveTo(bx * 0.4 - 1, 0); c.quadraticCurveTo(bx - 1, -22, ex - 1, ey); c.stroke();
+          for (let q = 0.2; q < 0.95; q += 0.14) { const t1 = q, x = (1 - t1) * (1 - t1) * bx * 0.4 + 2 * (1 - t1) * t1 * bx + t1 * t1 * ex, y = -44 * t1 + 2 * (1 - t1) * t1 * 0; pts.push([x + (r() - 0.5) * 3, y - 2 + (r() - 0.5) * 4]); if (r() < 0.5) ell(c, x + 1, y, 1.6, 2.4, 'rgba(120,100,80,0.45)'); }
+        }
+        const pal = winter ? ['#2f5034', '#41683f', '#5e8a5a', '#a7c8a4'] : ['#1f5a2a', '#2f7a33', '#4f9a45', '#8ac466'];
+        const blobs = canopy(c, 0, -62, 26, pal, r, 1.2, 12);
+        if (winter) for (const b of blobs) if (b[1] < -66) ell(c, b[0] - 1, b[1] - b[2] * 0.6, b[2] * 0.6, 2.2, 'rgba(250,252,255,0.9)');
+        return;
+      }
+      const cfg = {
+        laranja: { R: 32, cy: -66, sq: 1.05, tr: 40, base: '#2f7f34' }, limao: { R: 30, cy: -62, sq: 1.1, tr: 36, base: '#3b8f3a' },
+        manga: { R: 36, cy: -72, sq: 1.2, tr: 42, base: '#1f6a30' }, abacate: { R: 27, cy: -60, sq: 0.95, tr: 40, base: '#2f7a30', two: true },
+        acerola: { R: 25, cy: -44, sq: 1.3, tr: 24, base: '#3f9a3a', bush: true },
+      }[k] || { R: 24, cy: -50, sq: 1, tr: 30, base: '#2f7f34' };
+      ell(c, 0, -1, cfg.R * 0.8, 6, 'rgba(10,30,5,0.24)');
+      if (cfg.bush) {
+        for (const [bx, a] of [[-4, -0.4], [0, 0], [4, 0.4]]) { c.strokeStyle = '#7a5a3a'; c.lineWidth = 3.5; c.beginPath(); c.moveTo(bx * 0.3, 0); c.lineTo(bx + Math.sin(a) * 22, -cfg.tr); c.stroke(); }
+      } else trunk(c, cfg.tr, k === 'manga' ? 5.5 : 4.5, '#80552e');
+      let pal = [shade(cfg.base, -0.35), cfg.base, shade(cfg.base, 0.25), shade(cfg.base, 0.55)];
+      if (winter) pal = ['#3f6448', '#557e5c', '#79a07c', '#b4d0b4'];
+      let blobs = canopy(c, 0, cfg.cy, cfg.R, pal, r, cfg.sq, 12);
+      if (cfg.two) blobs = blobs.concat(canopy(c, 0, cfg.cy - 26, cfg.R * 0.75, pal, r, 1, 8));
+      if (season === 0 && (k === 'laranja' || k === 'limao' || k === 'acerola')) for (let i = 0; i < 18; i++) { const b = blobs[Math.floor(r() * blobs.length)]; circ(c, b[0] + (r() - 0.5) * b[2], b[1] + (r() - 0.5) * b[2], 1.5, k === 'acerola' ? '#ffc4dd' : '#ffffff'); }
+      if (winter) for (const b of blobs) if (b[1] < cfg.cy - 4) ell(c, b[0] - 1, b[1] - b[2] * 0.6, b[2] * 0.6, 2.2, 'rgba(250,252,255,0.9)');
+      const n = k === 'acerola' ? 14 : k === 'abacate' || k === 'manga' ? 7 : 10;
+      const rr = rng(k.length * 99);
+      for (let i = 0; i < n; i++) { const a = (i + rr() * 0.6) / n * TAU, d = cfg.R * (0.3 + rr() * 0.5); pts.push([Math.cos(a) * d * cfg.sq, cfg.cy + Math.sin(a) * d * 0.8 + 4]); }
+      if (cfg.two) for (let i = 0; i < 3; i++) pts.push([(i - 1) * 9, cfg.cy - 24 + (i % 2) * 6]);
     });
+    if (pts) s.pts = pts;
+    return s;
+  }
+  function drawFruit(k, x, y, prog, ready) {
+    const C = FRUITC[k] || ['#e0503a', '#ffa08a'];
+    const un = k === 'jabuticaba' ? '#5f7f3a' : k === 'uva' ? '#9ac45a' : '#7fb03a';
+    const col = ready ? C[0] : un, hl = ready ? C[1] : '#b8dc78', g = ready ? 1 : 0.45 + prog * 0.45;
+    switch (k) {
+      case 'uva': {
+        const R = 1.9 * g; c2Bunch(x, y, R, col, hl); ctx.strokeStyle = '#5a4a2a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x, y - 2); ctx.lineTo(x, y - 4); ctx.stroke(); break;
+      }
+      case 'banana': { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, 1.4 * g, 3.2 * g, -0.4, 0, TAU); ctx.fill(); break; }
+      case 'abacate': { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y + 1, 3.2 * g, 4.4 * g, 0, 0, TAU); ctx.fill(); circ(ctx, x, y - 2.2 * g, 2.3 * g); circ(ctx, x - 1, y - 0.5, 0.9 * g, hl); break; }
+      case 'manga': { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, 3 * g, 4 * g, 0.4, 0, TAU); ctx.fill(); if (ready) { ctx.fillStyle = 'rgba(224,80,58,0.65)'; ctx.beginPath(); ctx.ellipse(x - 1, y - 1.5, 1.8, 2, 0.4, 0, TAU); ctx.fill(); } circ(ctx, x + 1, y - 1.5, 0.8 * g, hl); break; }
+      case 'acerola': case 'jabuticaba': { const R = 2.1 * g; circ(ctx, x, y, R, col); circ(ctx, x - R * 0.35, y - R * 0.35, R * 0.38, hl); break; }
+      case 'coco': { const R = 4 * g; circ(ctx, x, y, R, ready ? C[0] : '#5a8a2a'); circ(ctx, x - R * 0.35, y - R * 0.35, R * 0.35, ready ? C[1] : '#8ab85a'); break; }
+      default: { const R = (k === 'maracuja' ? 3.6 : 3.1) * g; circ(ctx, x, y, R, col); circ(ctx, x - R * 0.35, y - R * 0.35, R * 0.35, hl); if (k === 'maracuja') { ctx.strokeStyle = '#4f7a2a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x, y - R); ctx.lineTo(x, y - R - 3); ctx.stroke(); } else if (k === 'laranja' || k === 'limao') circ(ctx, x + 0.5, y - R + 0.6, 0.7, '#3f6a20'); }
+    }
+  }
+  function c2Bunch(x, y, R, col, hl) {
+    ctx.fillStyle = col; ctx.beginPath();
+    for (const [dx, dy] of [[-1.5, 0], [1.5, 0], [0, 1.6], [-0.75, 3], [0.75, 3], [0, 4.5], [-2.6, -1.2], [2.6, -1.2]]) { ctx.moveTo(x + dx * R + R, y + dy * R); ctx.arc(x + dx * R, y + dy * R, R, 0, TAU); }
+    ctx.fill(); ctx.fillStyle = hl; for (const [dx, dy] of [[-1.5, 0], [0, 1.6], [0.75, 3]]) circ(ctx, x + dx * R - R * 0.3, y + dy * R - R * 0.3, R * 0.35);
   }
   function drawFruitTree(px, py, o, x, y) {
     const f = D.fruits[o.k];
-    const grown = Math.min(1, 0.35 + o.age / f.mature * 0.65);
+    if (!f) return;
+    const gp = Math.min(1, (o.age || 0) / f.mature), mature = gp >= 1;
     const cx = px + TS / 2, by = py + TS - 4;
+    const prog = o.ready ? 1 : clamp((o.timer || 0) / (f.every || 1), 0, 1);
+    if (f.climber || o.trellis) {
+      const st = gp < 0.35 ? 0 : gp < 0.7 ? 1 : gp < 1 ? 2 : 3;
+      const s = trellisSprite(o.k, S.season, st);
+      blit(s, cx, by);
+      if (mature && s.pts && (o.ready || prog > 0.05) && !(o.k === 'uva' && S.season === 3 && !o.ready)) for (const [fx, fy] of s.pts) drawFruit(o.k, cx + fx, by + fy, prog, o.ready);
+      return;
+    }
     const s = fruitSprite(o.k, S.season);
-    const sk = Math.sin(t * 1.2 + x) * 0.03;
-    if (grown >= 1) blitSway(s, cx, by, sk / 0.03, 0.03);
-    else { ctx.drawImage(s.cv, Math.round(cx - s.ox * grown), Math.round(by - s.oy * grown), s.w * grown, s.h * grown); }
-    if (o.ready) {
-      const sw = grown >= 1 ? -sk * 34 : 0;
-      for (const [dx, dy] of [[-9, -36], [8, -42], [2, -28]]) drawEmo(f.i, cx + dx * grown + sw, by + dy * grown, 13);
+    const sc = mature ? 1 : 0.38 + gp * 0.5;
+    const k = Math.sin(t * 1.1 + x * 0.7 + y * 0.4), amp = 0.03;
+    if (mature) blitSway(s, cx, by, k, amp);
+    else ctx.drawImage(s.cv, Math.round(cx - s.ox * sc), Math.round(by - s.oy * sc), s.w * sc, s.h * sc);
+    if (mature && s.pts && (o.ready || prog > 0.05)) {
+      const fi = Math.round((clamp(k, -1, 1) + 1) / 2 * (SWF - 1)), sk = (fi / ((SWF - 1) / 2) - 1) * amp;
+      for (const [fx, fy] of s.pts) drawFruit(o.k, cx + fx + sk * fy, by + fy, prog, o.ready);
     }
   }
 
@@ -735,6 +943,26 @@ window.R = (() => {
           }
         }
         if (!gold) { leaf(c, 0, -3, 10 * s + 4, 1.8, -Math.PI / 2 - 0.6, col); leaf(c, 0, -3, 10 * s + 4, 1.8, -Math.PI / 2 + 0.6, dk); }
+        break;
+      }
+      case 'abacaxi': {
+        const n = 7 + st * 2, L = 8 + 14 * s;
+        for (let i = 0; i < n; i++) {
+          const a = -Math.PI / 2 + (i / (n - 1) - 0.5) * 2.6, l = L * (0.7 + (i % 3) * 0.15);
+          leaf(c, 0, -2, l, 1.8, a, i % 2 ? col : dk); c.strokeStyle = 'rgba(200,230,180,0.5)'; c.lineWidth = 0.5; c.beginPath(); c.moveTo(0, -2); c.lineTo(Math.cos(a) * l * 0.8, -2 + Math.sin(a) * l * 0.8); c.stroke();
+        }
+        if (st >= 3) {
+          const big = st === 4, fh = big ? 13 : 6, fw = big ? 5.5 : 3, fy = -4 - fh * 0.5;
+          ell(c, 0, fy, fw, fh * 0.55, big ? '#e8a23a' : '#c46a6a');
+          if (big) {
+            c.save(); c.beginPath(); c.ellipse(0, fy, fw, fh * 0.55, 0, 0, TAU); c.clip();
+            c.strokeStyle = '#8a5a1a'; c.lineWidth = 0.8; c.beginPath();
+            for (let k = -3; k <= 3; k++) { c.moveTo(k * 3 - 6, fy - 8); c.lineTo(k * 3 + 6, fy + 8); c.moveTo(k * 3 + 6, fy - 8); c.lineTo(k * 3 - 6, fy + 8); }
+            c.stroke(); c.restore();
+            ell(c, -1.8, fy - 2, 1.2, 2.5, 'rgba(255,240,180,0.45)');
+          }
+          for (let i = 0; i < 7; i++) leaf(c, 0, fy - fh * 0.5, (big ? 7 : 4) - Math.abs(i - 3) * 0.6, 1.1, -Math.PI / 2 + (i - 3) * 0.32, i % 2 ? '#4f8f3a' : '#6faf4a');
+        }
         break;
       }
       case 'abobora': case 'melancia': {
@@ -1258,53 +1486,44 @@ window.R = (() => {
         c.fillStyle = shade('#b5652f', -0.45); c.fillRect(-3, 16, w + 6, 3);
         break;
       }
-      case 'curral': {
-        c.fillStyle = 'rgba(120,85,45,0.32)'; rrect(c, 8, 10, w - 16, h - 18, 10); c.fill();
-        const r = rng(57);
-        c.fillStyle = 'rgba(90,60,30,0.35)'; for (let i = 0; i < 14; i++) ell(c, 20 + r() * (w - 40), 60 + r() * (h - 76), 3 + r() * 4, 1.5 + r() * 1.5, c.fillStyle);
-        c.fillStyle = '#e3c25a'; for (let i = 0; i < 24; i++) c.fillRect(20 + r() * 70, 64 + r() * 20, 5, 1.2);
-        // galpãozinho
-        shadowRect(c, 10, 58, 82, 10);
-        siding(c, 10, 20, 78, 40, '#a3352a', true, 8, 71);
-        c.fillStyle = '#2a1a10'; c.fillRect(22, 30, 54, 30); c.fillStyle = '#e3c25a'; c.fillRect(24, 50, 50, 10);
-        c.fillStyle = '#efe6d8'; c.fillRect(10, 20, 3, 40); c.fillRect(85, 20, 3, 40); c.fillRect(22, 28, 54, 3);
-        roofPoly(c, [[2, 26], [16, -12], [82, -12], [96, 26]], '#6e5a48', snow);
-        c.fillStyle = '#3a2d22'; c.fillRect(1, 24, 96, 4);
-        // fardo de feno
-        c.fillStyle = '#d9b44a'; rrect(c, 100, 26, 26, 18, 3); c.fill(); c.fillStyle = '#b8902a'; c.fillRect(106, 26, 2, 18); c.fillRect(118, 26, 2, 18);
-        c.fillStyle = '#efd070'; c.fillRect(100, 27, 26, 2);
-        // bebedouro
-        c.fillStyle = '#8f989e'; rrect(c, w - 52, h - 36, 34, 14, 4); c.fill(); c.fillStyle = '#4f8fbf'; c.fillRect(w - 49, h - 34, 28, 5); c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(w - 46, h - 34, 10, 1.5);
-        // cerca do perímetro
-        const post = (x, y) => { c.fillStyle = '#6e4626'; c.fillRect(x - 3, y - 16, 6, 18); c.fillStyle = '#8a5a30'; c.fillRect(x - 3, y - 16, 2, 18); if (snow) { c.fillStyle = '#f4f8fb'; c.fillRect(x - 3.5, y - 18, 7, 3); } };
-        const hrail = (x0, x1, y) => { for (const dy of [-12, -5]) { c.fillStyle = '#9a6a3a'; c.fillRect(x0, y + dy, x1 - x0, 3.5); c.fillStyle = '#c08a50'; c.fillRect(x0, y + dy, x1 - x0, 1); } };
-        const vrail = (x, y0, y1) => { c.fillStyle = '#9a6a3a'; c.fillRect(x - 2, y0, 4, y1 - y0); c.fillStyle = '#c08a50'; c.fillRect(x - 2, y0, 1.2, y1 - y0); };
-        hrail(96, w - 6, 14); vrail(6, 30, h - 8); vrail(w - 6, 14, h - 8);
-        hrail(6, w / 2 - 16, h - 4); hrail(w / 2 + 16, w - 6, h - 4);
-        for (let x = 96; x <= w - 6; x += 26) post(x, 14);
-        for (let y = 40; y < h - 8; y += 26) { post(6, y); post(w - 6, y); }
-        for (const x of [6, 32, w / 2 - 16, w / 2 + 16, w - 32, w - 6]) post(x, h - 4);
-        // porteira aberta
-        c.strokeStyle = '#9a6a3a'; c.lineWidth = 3; c.beginPath(); c.moveTo(w / 2 + 16, h - 16); c.lineTo(w / 2 + 30, h + 6); c.moveTo(w / 2 + 16, h - 9); c.lineTo(w / 2 + 30, h + 12); c.moveTo(w / 2 + 16, h - 16); c.lineTo(w / 2 + 30, h + 12); c.stroke();
+      case 'curral': { // estábulo aberto (o pasto é feito com cercas de verdade)
+        shadowRect(c, 6, h - 12, w - 2, 16);
+        siding(c, 8, 26, w - 16, h - 34, '#8a5a34', true, 9, 71);
+        c.fillStyle = '#2a1a10'; c.fillRect(20, 40, w - 40, h - 48);
+        const ig = c.createLinearGradient(0, 40, 0, h - 8); ig.addColorStop(0, 'rgba(0,0,0,0.5)'); ig.addColorStop(1, 'rgba(60,40,20,0)'); c.fillStyle = ig; c.fillRect(20, 40, w - 40, h - 48);
+        c.fillStyle = '#c9a24a'; c.fillRect(20, h - 22, w - 40, 14); const r = rng(57);
+        for (let i = 0; i < 40; i++) { c.fillStyle = i % 2 ? '#e3c25a' : '#a8802a'; c.fillRect(22 + r() * (w - 48), h - 24 + r() * 14, 5, 1.2); }
+        // fardos, cocho de feno e bebedouro dentro
+        for (const [hx, hy] of [[26, h - 40], [40, h - 40], [33, h - 54]]) { c.fillStyle = '#d9b44a'; rrect(c, hx, hy, 16, 13, 2); c.fill(); c.fillStyle = '#b8902a'; c.fillRect(hx + 4, hy, 1.5, 13); c.fillRect(hx + 11, hy, 1.5, 13); c.fillStyle = '#efd070'; c.fillRect(hx, hy, 16, 1.5); }
+        c.fillStyle = '#6b4423'; c.fillRect(w - 64, 48, 40, 4); c.strokeStyle = '#6b4423'; c.lineWidth = 1.6; c.beginPath(); for (let x = w - 62; x < w - 24; x += 5) { c.moveTo(x, 52); c.lineTo(x, 66); } c.stroke();
+        c.fillStyle = '#e3c25a'; c.fillRect(w - 62, 44, 36, 4);
+        c.fillStyle = '#8f989e'; rrect(c, w - 66, h - 30, 40, 12, 4); c.fill(); c.fillStyle = '#4f8fbf'; c.fillRect(w - 63, h - 28, 34, 4); c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(w - 60, h - 28, 10, 1.2);
+        // pilares
+        for (const x of [8, w / 2 - 3, w - 14]) { c.fillStyle = '#5e3a20'; c.fillRect(x, 30, 6, h - 36); c.fillStyle = '#8a5a30'; c.fillRect(x, 30, 2, h - 36); }
+        c.fillStyle = '#5e3a20'; c.fillRect(6, 34, w - 12, 6); c.fillStyle = '#8a5a30'; c.fillRect(6, 34, w - 12, 2);
+        roofPoly(c, [[-4, 38], [12, -16], [w - 12, -16], [w + 4, 38]], '#6e5a48', snow);
+        c.fillStyle = '#3a2d22'; c.fillRect(-5, 35, w + 10, 4);
+        c.fillStyle = '#efe6d8'; c.fillRect(w / 2 - 18, -4, 36, 22); c.fillStyle = '#2a1a10'; c.fillRect(w / 2 - 15, -1, 30, 16); c.fillStyle = '#e3c25a'; c.fillRect(w / 2 - 14, 9, 28, 6);
         break;
       }
-      case 'chiqueiro': {
-        c.fillStyle = 'rgba(110,75,40,0.4)'; rrect(c, 6, 8, w - 12, h - 14, 10); c.fill();
-        ell(c, w / 2 + 14, h / 2 + 10, 30, 13, '#6a4a2a'); ell(c, w / 2 + 12, h / 2 + 8, 26, 10, '#7d5a34'); ell(c, w / 2 + 4, h / 2 + 5, 9, 3, 'rgba(255,255,255,0.22)');
-        // abrigo
-        siding(c, w - 54, 6, 46, 26, '#a0703f', true, 7, 81); c.fillStyle = '#2a1a10'; c.fillRect(w - 46, 14, 30, 18);
-        roofPoly(c, [[w - 60, 14], [w - 50, -10], [w - 4, -10], [w + 4, 14]], '#7a4a28', snow);
-        // cocho embutido
-        c.fillStyle = '#9a948a'; rrect(c, 12, h - 30, 40, 14, 3); c.fill(); c.fillStyle = '#3a3026'; c.fillRect(15, h - 28, 34, 7);
-        if (variant) { c.fillStyle = '#d9b44a'; c.fillRect(15, h - 28 + (4 - variant) * 1.5, 34, 7 - (4 - variant) * 1.5); }
-        c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(12, h - 30, 40, 1.5);
-        // cerca baixa
-        const post = (x, y) => { c.fillStyle = '#6e4626'; c.fillRect(x - 2.5, y - 11, 5, 13); c.fillStyle = '#8a5a30'; c.fillRect(x - 2.5, y - 11, 1.6, 13); };
-        c.fillStyle = '#9a6a3a'; c.fillRect(4, h - 12, w - 8, 3); c.fillRect(4, h - 6, w - 8, 3); c.fillRect(3, 10, 3, h - 14); c.fillRect(w - 6, 18, 3, h - 22); c.fillRect(4, 8, w - 62, 3);
-        for (let x = 4; x <= w - 4; x += 22) post(x, h - 2);
-        post(4, 12); post(4, h / 2 + 6); post(w - 4, h / 2 + 6);
+      case 'chiqueiro': { // pocilga coberta com cocho
+        shadowRect(c, 6, h - 10, w - 4, 14);
+        stones(c, 6, h - 30, w - 12, 24, '#a29b90', 81);
+        siding(c, 6, 18, w - 12, h - 46, '#b07a44', false, 6, 82);
+        c.fillStyle = '#2a1a10'; rrect(c, 16, h - 44, 30, 36, 3); c.fill();
+        c.fillStyle = 'rgba(110,70,40,0.6)'; ell(c, 31, h - 10, 13, 3.5, c.fillStyle);
+        c.fillStyle = '#e3c25a'; for (let i = 0; i < 8; i++) c.fillRect(18 + i * 3.4, h - 14 - (i % 2), 4, 1.2);
+        // cocho embutido na frente
+        c.fillStyle = '#8a8378'; rrect(c, w - 64, h - 22, 50, 14, 3); c.fill(); c.fillStyle = '#3a3026'; c.fillRect(w - 61, h - 20, 44, 7);
+        if (variant) { c.fillStyle = '#d9b44a'; c.fillRect(w - 61, h - 20 + (4 - variant) * 1.5, 44, 7 - (4 - variant) * 1.5); const r = rng(3); for (let i = 0; i < variant * 4; i++) { c.fillStyle = i % 2 ? '#b8902a' : '#f0d070'; c.fillRect(w - 60 + r() * 40, h - 19 + (4 - variant) * 1.5 + r() * 3, 2, 1.2); } }
+        c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(w - 64, h - 22, 50, 1.5);
+        c.fillStyle = '#4a2c16'; c.fillRect(w - 44, 26, 18, 10); c.fillStyle = '#2a1a10'; c.fillRect(w - 42, 28, 14, 6);
+        ell(c, w - 22, h - 4, 12, 3, 'rgba(100,70,40,0.45)');
+        roofPoly(c, [[-2, 26], [10, -8], [w - 10, -8], [w + 2, 26]], '#a0503a', snow);
+        c.fillStyle = shade('#a0503a', -0.45); c.fillRect(-3, 23, w + 6, 4);
         break;
       }
+      case 'espaldeira': paintTrellis(c, w / 2, h - 5, snow); break;
       case 'tanque': {
         shadowRect(c, 4, h - 12, w - 2, 16);
         rrect(c, 2, 6, w - 4, h - 10, 16); c.fillStyle = '#8f8a82'; c.fill();
@@ -1428,13 +1647,13 @@ window.R = (() => {
       circ(ctx, x + Math.sin(k * 5 + i) * 4 + k * 6, y - k * rise, size * (0.5 + k));
     }
   }
-  function drawBuilding(b) {
+  function drawBuilding(b, noFx) {
     const def = D.buildings[b.type];
     if (!def) return;
     const px = b.x * TS - cam.x, py = b.y * TS - cam.y, w = def.w * TS, h = def.h * TS;
     const night = G.isNight();
     blit(buildingSprite(b, night), px, py);
-    buildingFx(b, px, py, w, h);
+    if (!noFx) buildingFx(b, px, py, w, h);
     const lv = b.level | 0;
     if (lv >= 2) { // selo de nível
       const txt = lv >= 3 ? '★★★' : '★★', bw = lv >= 3 ? 34 : 25, bx = px + w - bw - 2, by = py - 6;
@@ -1526,7 +1745,7 @@ window.R = (() => {
   // =============================================================
   // ----- animais procedurais (corpo inteiro, de perfil, virados à direita) -----
   const AN = {
-    galinha: { w: 10, h: 26, bob: 2 }, codorna: { w: 7, h: 16, bob: 1.5 }, vaca: { w: 25, h: 44, bob: 1 },
+    galinha: { w: 10, h: 26, bob: 2 }, codorna: { w: 5.5, h: 12, bob: 1.2 }, vaca: { w: 25, h: 44, bob: 1 },
     porco: { w: 17, h: 28, bob: 1.2 }, ovelha: { w: 16, h: 32, bob: 1.2 }, cabra: { w: 15, h: 36, bob: 1.4 },
   };
   function legLine(c, x, y0, sw, len, col, wd, hoof) {
@@ -1567,7 +1786,7 @@ window.R = (() => {
         break;
       }
       case 'codorna': {
-        const b0 = baby ? '#cfae78' : '#9a7148', b1 = baby ? '#b08f5a' : '#6e4e2e', sc = baby ? 0.7 : 1;
+        const b0 = baby ? '#cfae78' : '#9a7148', b1 = baby ? '#b08f5a' : '#6e4e2e', sc = baby ? 0.55 : 0.75;
         c.save(); c.scale(sc, sc);
         legLine(c, -1.5, -3, sw * 1.4, 3, '#d88a4a', 1.1); legLine(c, 1.5, -3, -sw * 1.4, 3, '#d88a4a', 1.1);
         ell(c, -0.5, -6.5, 7, 5, b0);
@@ -2055,8 +2274,10 @@ window.R = (() => {
     const x0 = Math.max(0, Math.floor(cam.x / TS) - 1), y0 = Math.max(0, Math.floor(cam.y / TS) - 1);
     const x1 = Math.min(G.W - 1, Math.ceil((cam.x + VW) / TS) + 1), y1 = Math.min(G.H - 1, Math.ceil((cam.y + VH) / TS) + 2);
 
-    drawGroundChunks();
-    if (!far) drawWaterFx(x0, y0, x1, y1);
+    frameN++;
+    const bById = new Map(); for (const b of S.buildings) bById.set(b.id, b);
+    if (far) drawFarLayer(bById);
+    else { drawGroundChunks(); drawWaterFx(x0, y0, x1, y1); }
 
     // alvo
     if (target) {
@@ -2076,9 +2297,8 @@ window.R = (() => {
     const animalsByRow = new Map();
     for (const a of S.animals) { if (a.inside) continue; const r = Math.floor(a.y); if (!animalsByRow.has(r)) animalsByRow.set(r, []); animalsByRow.get(r).push(a); }
     const prow = Math.floor(p.y);
-    const bById = new Map(); for (const b of S.buildings) bById.set(b.id, b);
     for (let y = y0; y <= y1; y++) {
-      for (let x = x0; x <= x1; x++) {
+      if (!far) for (let x = x0; x <= x1; x++) {
         const tile = S.tiles[y * G.W + x], px = x * TS - cam.x, py = y * TS - cam.y;
         if (tile.c) drawCrop(px, py, tile.c, x, y);
         const o = tile.o;
@@ -2096,7 +2316,8 @@ window.R = (() => {
       if (y === prow) drawPlayer();
     }
     // construções que começam acima da tela
-    for (const b of S.buildings) if (!drawn.has(b.id)) { const def = D.buildings[b.type]; if (def && b.y + def.h - 1 > y1 && b.y <= y1 + 3) drawBuilding(b); }
+    if (!far) { for (const b of S.buildings) if (!drawn.has(b.id)) { const def = D.buildings[b.type]; if (def && b.y + def.h - 1 > y1 && b.y <= y1 + 3) drawBuilding(b); } }
+    else for (const b of S.buildings) { const def = D.buildings[b.type]; if (def) buildingFx(b, b.x * TS - cam.x, b.y * TS - cam.y, def.w * TS, def.h * TS); }
 
     // fantasma de construção
     if (ghost) {
