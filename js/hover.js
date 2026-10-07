@@ -41,7 +41,7 @@
 
   function update() {
     requestAnimationFrame(update);
-    const run = window.INPUT && INPUT.isRunning() && S && !UI.isOpen();
+    const run = window.INPUT && INPUT.isRunning() && S && !UI.isOpen() && !S.indoors;
     if (!run) { tip.style.display = 'none'; cur = null; return; }
     if (!overTip) {
       let found = null;

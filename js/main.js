@@ -204,6 +204,7 @@
   }
 
   function hintFor(tg) {
+    if (S.indoors) return G.houseHint(tg.x, tg.y);
     const t = G.tile(tg.x, tg.y);
     if (!t) return '';
     if (!G.owned(tg.x, tg.y)) return '🔒 Terra à venda (T)';

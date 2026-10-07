@@ -162,10 +162,10 @@
   UI.openChest = b => {
     if (!b && !(G.nearStation('casa', 2) || S.creative)) { UI.toast('Vá até a casa ou até um baú para abrir.'); return; }
     const store = b ? (b.data.items = b.data.items || {}) : S.chest;
-    const title = b ? `📦 Baú${b.data.label ? ' — ' + b.data.label : ''}` : '🏠 Depósito da casa';
+    const title = b ? (b.data.title || `📦 Baú${b.data.label ? ' — ' + b.data.label : ''}`) : '🏠 Depósito da casa';
     const ids = Object.keys(store).filter(k => store[k] > 0).sort((a, c) => D.items[a].cat.localeCompare(D.items[c].cat));
     UI.show('chest', `<h2>${title}</h2><p><small>Clique num item do baú para levar a pilha para a mochila; clique num item da mochila para guardar. A mochila tem ${SLOTS} slots (${G.freeSlots()} livres).${b ? ' Cada baú tem o seu próprio conteúdo.' : ' O que não cabe na mochila vem para cá.'}</small></p>
-      ${b ? `<div class="row" style="margin:0 0 6px"><input id="chest-label" maxlength="20" placeholder="Nome do baú (ex.: Leite do curral)" value="${(b.data.label || '').replace(/"/g, '&quot;')}" style="flex:1;padding:6px;border:2px solid #c99a5e;border-radius:8px;font-family:inherit"><button class="btn alt" id="chest-all">⬇️ Guardar a produção</button></div>` : ''}
+      ${b && !b.data.title ? `<div class="row" style="margin:0 0 6px"><input id="chest-label" maxlength="20" placeholder="Nome do baú (ex.: Leite do curral)" value="${(b.data.label || '').replace(/"/g, '&quot;')}" style="flex:1;padding:6px;border:2px solid #c99a5e;border-radius:8px;font-family:inherit"><button class="btn alt" id="chest-all">⬇️ Guardar a produção</button></div>` : ''}
       <div class="chest-cols"><div><h3>🎒 Mochila</h3><div class="inv bag-mini">${S.slots.map(id => `<div class="it ${id ? '' : 'empty'}" data-put="${id || ''}" title="${id ? info(id) : ''}">${id ? ii(id) + `<span class="q">${fmtN(S.inv[id])}</span>` : ''}</div>`).join('')}</div></div>
       <div><h3>📦 Conteúdo (${ids.length} tipos)</h3><div class="inv">${ids.map(id => `<div class="it" data-get="${id}" title="${info(id)}">${ii(id)}<span class="q">${fmtN(store[id])}</span></div>`).join('') || '<p>Vazio.</p>'}</div></div></div>`);
     document.querySelectorAll('#panel [data-put]').forEach(el => el.onclick = () => { if (el.dataset.put) { G.chestPut(el.dataset.put, store); UI.openChest(b); } });
