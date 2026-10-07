@@ -18,7 +18,7 @@ window.UI = (() => {
   // ---------- HUD ----------
   ui.buildHotbar = () => {
     const hb = $('#hotbar');
-    hb.innerHTML = D.tools.map((t, i) => `<div class="slot" data-i="${i}" title="${t.n}: ${t.desc}"><span class="k">${i + 1}</span><span class="ic">${t.i}</span><span class="q"></span><span class="badge"></span></div>`).join('');
+    hb.innerHTML = D.tools.map((t, i) => `<div class="slot" data-i="${i}" title="${t.n}: ${t.desc}"><span class="k">${i + 1}</span><span class="ic">${ICONS.html(t.id) || t.i}</span><span class="q"></span><span class="badge"></span></div>`).join('');
     hb.querySelectorAll('.slot').forEach(el => el.addEventListener('click', () => { S.tool = +el.dataset.i; play('ui'); ui.hud(true); }));
   };
 
@@ -34,13 +34,14 @@ window.UI = (() => {
     const sun = $('#c-sun');
     sun.textContent = G.isNight() ? '🌙' : S.weather === 'chuva' ? '🌦️' : '☀️';
     sun.style.left = (6 + dayP * 138) + 'px'; sun.style.top = (26 - Math.sin(dayP * Math.PI) * 18) + 'px';
-    $('#c-money').textContent = `💰 ${S.money.toLocaleString('pt-BR')}`;
+    $('#c-money').innerHTML = S.creative ? '💰 <span class="creative-badge">∞ modo teste</span>' : `💰 ${S.money.toLocaleString('pt-BR')}`;
     const q = D.quests[S.quest];
     $('#quest').innerHTML = q ? `<small>📗 Manual · etapa ${S.quest + 1}/${D.quests.length}</small><b>${q.t}</b>${q.goal}<br><small>${G.questProgress(q)}</small>` : '<b>🏆 Fazenda autossuficiente!</b>Continue expandindo seu sistema.';
     document.querySelectorAll('#hotbar .slot').forEach((el, i) => {
       el.classList.toggle('sel', i === S.tool);
       if (D.tools[i].id === 'item') {
-        el.querySelector('.ic').textContent = S.held ? D.items[S.held].i : '🎒';
+        const ic = el.querySelector('.ic'), want = S.held || '_bag';
+        if (ic.dataset.v !== want) { ic.dataset.v = want; ic.innerHTML = S.held ? D.items[S.held].i : ICONS.html('item'); }
         el.querySelector('.q').textContent = S.held ? S.inv[S.held] || '' : '';
         el.querySelector('.badge').textContent = S.held && D.items[S.held].seed ? '🌱' : '';
         el.title = S.held ? D.items[S.held].n : 'Item na mão (escolha no inventário)';
@@ -248,9 +249,10 @@ window.UI = (() => {
   ui.pause = () => {
     ui.show('pause', `<h2>⚙️ ${S.farmName}</h2>
       <p>Dinheiro ganho com vendas: 💰 ${(S.stats.earned || 0).toLocaleString('pt-BR')} · Animais: ${S.animals.length} · Cultivos: ${G.countCrops()}</p>
-      <div class="row"><button class="btn" id="p-save">💾 Salvar</button><button class="btn alt" id="p-help">❓ Controles</button><button class="btn red" id="p-new">🆕 Novo jogo</button></div>
+      <div class="row"><button class="btn" id="p-save">💾 Salvar</button><button class="btn alt" id="p-creative">🧪 Modo teste: ${S.creative ? 'LIGADO' : 'desligado'}</button><button class="btn alt" id="p-help">❓ Controles</button><button class="btn red" id="p-new">🆕 Novo jogo</button></div>
       <div id="p-extra"></div>`);
     $('#p-save').onclick = () => { if (G.save()) ui.toast('Jogo salvo.', 'good'); };
+    $('#p-creative').onclick = () => { G.setCreative(!S.creative); ui.pause(); };
     $('#p-help').onclick = () => { $('#p-extra').innerHTML = document.querySelector('.controls p').outerHTML + '<p><small>Dormir salva automaticamente. A loja abre das 7h às 20h. Depois das 2h você desmaia.</small></p>'; };
     $('#p-new').onclick = () => ui.confirm('Começar um novo jogo? O progresso salvo será substituído quando você salvar.', () => { location.reload(); try { localStorage.removeItem('ecoland_save_v1'); } catch (e) { /* */ } });
   };

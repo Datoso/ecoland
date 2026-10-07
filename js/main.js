@@ -177,6 +177,7 @@
   btnNew.onclick = () => {
     audioInit();
     G.newGame(document.getElementById('farm-name').value.trim());
+    if (document.getElementById('creative').checked) G.setCreative(true);
     start(); UI.intro();
   };
   btnCont.onclick = () => {

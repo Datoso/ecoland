@@ -61,7 +61,7 @@ const G = window.G = {
         const v = rnd(0, 3);
         switch (lot.biome) {
           case 'sede':
-            if (r < 0.10) t.o = { t: 'weed', v }; else if (r < 0.13) t.o = { t: 'tree', hp: 3, v }; else if (r < 0.155) t.o = { t: 'rock', hp: 2, v };
+            if (r < 0.11) t.o = { t: 'weed', v }; else if (r < 0.21) t.o = { t: 'tree', hp: 3, v }; else if (r < 0.26) t.o = { t: 'rock', hp: 2, v };
             break;
           case 'pasto':
             if (r < 0.06) t.o = { t: 'weed', v }; else if (r < 0.075) t.o = { t: 'tree', hp: 3, v }; else if (r < 0.085) t.o = { t: 'rock', hp: 2, v };
@@ -85,8 +85,14 @@ const G = window.G = {
     // sede: casa, loja e lagoinha
     const s = D.lots[0];
     const clear = (x0, y0, w, h) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { const t = this.tile(x, y); if (t) { t.o = null; t.g = 'grass'; } } };
-    clear(s.x + 1, s.y + 1, 18, 8);
-    clear(s.x + 4, s.y + 9, 10, 4);
+    clear(s.x + 2, s.y + 1, 7, 6);    // em volta da casa
+    clear(s.x + 12, s.y + 1, 5, 5);   // em volta da loja
+    clear(s.x + 3, s.y + 6, 9, 4);    // área inicial de plantio
+    // bosque no canto sudoeste da sede: lenha garantida para as primeiras missões
+    for (let y = s.y + 10; y < s.y + 15; y++) for (let x = s.x + 1; x < s.x + 8; x++) {
+      const t = this.tile(x, y);
+      if (Math.random() < 0.55) t.o = { t: 'tree', hp: 3, v: rnd(0, 3) };
+    }
     this.addBuilding('casa', s.x + 3, s.y + 2, true);
     this.addBuilding('loja', s.x + 13, s.y + 2, true);
     for (let y = s.y + 10; y < s.y + 14; y++) for (let x = s.x + 14; x < s.x + 19; x++) {
@@ -185,6 +191,13 @@ const G = window.G = {
   },
 
   stat(k, n = 1) { S.stats[k] = (S.stats[k] || 0) + n; this.checkQuests(); },
+
+  setCreative(on) {
+    S.creative = !!on;
+    if (on) S.money = Math.max(S.money, 999999);
+    toast(on ? '🧪 Modo teste ligado: dinheiro infinito!' : 'Modo teste desligado.', 'good');
+  },
+  spend(n) { if (!S.creative) S.money -= n; else S.money = Math.max(S.money, 999999); },
 
   energyCost(base) { return S.upgrades.ferramentas ? base * 0.6 : base; },
   useEnergy(base) {
@@ -613,12 +626,12 @@ const G = window.G = {
   // ---------------- Economia ----------------
   buy(entry, qty = 1) {
     const cost = entry.price * qty;
-    if (S.money < cost) { toast('Dinheiro insuficiente.', 'bad'); sfx('error'); return false; }
+    if (!S.creative && S.money < cost) { toast('Dinheiro insuficiente.', 'bad'); sfx('error'); return false; }
     if (entry.animal) {
       for (let i = 0; i < qty; i++) {
         const home = this.homeWithSpace(entry.animal);
         if (!home) { toast(`Sem espaço! ${D.animals[entry.animal].n} precisa de um(a) ${D.buildings[D.animals[entry.animal].home].n} com vaga.`, 'bad'); sfx('error'); return i > 0; }
-        S.money -= entry.price;
+        this.spend(entry.price);
         this.spawnAnimal(entry.animal, home, 0);
       }
       sfx('buy'); toast(`${qty > 1 ? 'Chegaram' : 'Chegou'} ${qty} ${D.animals[entry.animal].baby.toLowerCase()}(s)! Estão perto do(a) ${D.buildings[D.animals[entry.animal].home].n}.`);
@@ -627,12 +640,12 @@ const G = window.G = {
     }
     if (entry.upgrade) {
       if (S.upgrades[entry.upgrade]) return false;
-      S.money -= cost; S.upgrades[entry.upgrade] = true;
+      this.spend(cost); S.upgrades[entry.upgrade] = true;
       if (entry.upgrade === 'regador') { S.player.waterMax = 40; S.player.water = 40; }
       sfx('buy'); toast(`Você comprou: ${entry.n}!`);
       return true;
     }
-    S.money -= cost; this.add(entry.id, qty, true); sfx('buy');
+    this.spend(cost); this.add(entry.id, qty, true); sfx('buy');
     return true;
   },
   sell(id, qty) {
@@ -652,8 +665,8 @@ const G = window.G = {
   },
   buyLot(lot) {
     if (S.lots[lot.id] || !this.lotAdjacent(lot)) return false;
-    if (S.money < lot.cost) { toast('Dinheiro insuficiente.', 'bad'); sfx('error'); return false; }
-    S.money -= lot.cost; S.lots[lot.id] = true;
+    if (!S.creative && S.money < lot.cost) { toast('Dinheiro insuficiente.', 'bad'); sfx('error'); return false; }
+    this.spend(lot.cost); S.lots[lot.id] = true;
     sfx('unlock'); toast(`🎉 ${lot.n} agora é seu!`, 'good');
     this.stat('lots');
     return true;
