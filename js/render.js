@@ -8,6 +8,8 @@ window.R = (() => {
   const TS = 44; // tamanho do tile em pixels
   const TAU = Math.PI * 2;
   let cv, ctx, light, lctx, W = 0, H = 0, dpr = 1, cacheDpr = 0;
+  // zoom: Z atual, ZT alvo; VW/VH = área visível em pixels de mundo
+  let Z = 1, ZT = 1, zAnchor = null, VW = 0, VH = 0;
   const cam = { x: 0, y: 0 }, camF = { x: 0, y: 0 };
   const emojiCache = new Map();
   let t = 0, lastCam = null;
@@ -200,7 +202,7 @@ window.R = (() => {
     ambReady = false;
   }
 
-  function screenToWorld(sx, sy) { return { x: (sx + cam.x) / TS, y: (sy + cam.y) / TS }; }
+  function screenToWorld(sx, sy) { return { x: (sx / Z + cam.x) / TS, y: (sy / Z + cam.y) / TS }; }
 
   // =============================================================
   // CHÃO — blocos de 8x8 tiles pré-renderizados
@@ -420,7 +422,7 @@ window.R = (() => {
   function drawGroundChunks() {
     const ncx = Math.ceil(G.W / CH), ncy = Math.ceil(G.H / CH);
     const cx0 = Math.max(0, Math.floor(cam.x / CPX)), cy0 = Math.max(0, Math.floor(cam.y / CPX));
-    const cx1 = Math.min(ncx - 1, Math.floor((cam.x + W) / CPX)), cy1 = Math.min(ncy - 1, Math.floor((cam.y + H) / CPX));
+    const cx1 = Math.min(ncx - 1, Math.floor((cam.x + VW) / CPX)), cy1 = Math.min(ncy - 1, Math.floor((cam.y + VH) / CPX));
     for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
       const ch = ensureChunk(cx, cy);
       ctx.drawImage(ch.cv, cx * CPX - cam.x, cy * CPX - cam.y, CPX, CPX);
@@ -1869,14 +1871,14 @@ window.R = (() => {
     const p = S.player, plx = p.x * TS - cam.x, ply = p.y * TS - cam.y - 20;
     const warmGlows = [];
     if (nk) {
-      const q = lw / W;
+      const q = Z;
       lctx.globalCompositeOperation = 'destination-out';
       const hole = (x, y, r, a) => glowOn(lctx, '0,0,0', x * q, y * q, r * q, a * nk);
       hole(plx, ply, TS * 2.8, 0.8);
       for (const b of S.buildings) {
         const def = D.buildings[b.type];
         const bx = (b.x + def.w / 2) * TS - cam.x, by = (b.y + def.h / 2) * TS - cam.y;
-        if (bx < -300 || by < -300 || bx > W + 300 || by > H + 300) continue;
+        if (bx < -300 || by < -300 || bx > VW + 300 || by > VH + 300) continue;
         if (def.light) { const r = TS * def.light * (0.95 + Math.sin(t * 9 + b.id) * 0.05); hole(bx, by, r, 0.97); warmGlows.push([bx, by + 4, r * 0.62, b.type === 'fogueira' ? 0.5 : 0.35]); }
         if (b.type === 'casa') {
           hole(bx, by + 26, TS * 2.6, 0.75);
@@ -1892,8 +1894,8 @@ window.R = (() => {
     ctx.drawImage(light, 0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
     if (nk) {
-      for (const [x, y, r, al] of warmGlows) glowOn(ctx, '255,140,50', x, y, r * (0.97 + Math.sin(t * 8 + x) * 0.03), al * nk);
-      glowOn(ctx, '255,190,110', plx, ply + 6, TS * 1.3, 0.16 * nk);
+      for (const [x, y, r, al] of warmGlows) glowOn(ctx, '255,140,50', x * Z, y * Z, r * Z * (0.97 + Math.sin(t * 8 + x) * 0.03), al * nk);
+      glowOn(ctx, '255,190,110', plx * Z, (ply + 6) * Z, TS * 1.3 * Z, 0.16 * nk);
     }
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
@@ -2003,7 +2005,7 @@ window.R = (() => {
     for (let i = 0; i < 4; i++) {
       const wx = ((t * 14 + i * span / 4) % span) - 600, wy = (i * 0.29 % 1) * G.H * TS + Math.sin(t * 0.05 + i) * 60;
       const x = wx - cam.x, y = wy - cam.y;
-      if (x > W || y > H || x + 640 < 0 || y + 400 < 0) continue;
+      if (x > VW || y > VH || x + 640 < 0 || y + 400 < 0) continue;
       ctx.drawImage(cloudSpr, Math.round(x), Math.round(y));
     }
     ctx.globalAlpha = 1;
@@ -2012,36 +2014,55 @@ window.R = (() => {
   // =============================================================
   // QUADRO
   // =============================================================
+  function zMin() { return Math.max(0.2, Math.min(1, W / (G.W * TS), H / (G.H * TS))); }
+  function setZoom(z, sx, sy) {
+    ZT = clamp(z, zMin(), 1.6);
+    zAnchor = sx != null && sy != null ? { sx, sy, wx: sx / Z + cam.x, wy: sy / Z + cam.y } : null;
+    return ZT;
+  }
+  function zoomBy(f, sx, sy) { return setZoom(ZT * f, sx, sy); }
+  function getZoom() { return ZT; }
+  function tileSize() { return TS * Z; }
+
   function frame(dt, target, ghost) {
     t += dt;
     const p = S.player;
-    let tx = p.x * TS - W / 2, ty = p.y * TS - H / 2;
-    tx = Math.max(-TS * 2, Math.min(G.W * TS - W + TS * 2, tx));
-    ty = Math.max(-TS * 2, Math.min(G.H * TS - H + TS * 2, ty));
-    camF.x += (tx - camF.x) * Math.min(1, dt * 8); camF.y += (ty - camF.y) * Math.min(1, dt * 8);
+    // zoom suave
+    ZT = clamp(ZT, zMin(), 1.6);
+    if (Math.abs(ZT - Z) > 0.0005) Z += (ZT - Z) * Math.min(1, dt * 12); else { Z = ZT; zAnchor = null; }
+    VW = W / Z; VH = H / Z;
+    const mw = G.W * TS, mh = G.H * TS;
+    const fitX = (v, mapS, view) => mapS + TS * 4 <= view ? (mapS - view) / 2 : Math.max(-TS * 2, Math.min(mapS - view + TS * 2, v));
+    let tx = fitX(p.x * TS - VW / 2, mw, VW), ty = fitX(p.y * TS - VH / 2, mh, VH);
+    if (zAnchor) { // mantém o ponto sob o cursor fixo durante o zoom
+      camF.x = fitX(zAnchor.wx - zAnchor.sx / Z, mw, VW); camF.y = fitX(zAnchor.wy - zAnchor.sy / Z, mh, VH);
+    } else { camF.x += (tx - camF.x) * Math.min(1, dt * 8); camF.y += (ty - camF.y) * Math.min(1, dt * 8); }
     cam.x = camF.x; cam.y = camF.y;
     if (G.shake > 0) { G.shake -= dt; cam.x += (Math.random() - 0.5) * 4; cam.y += (Math.random() - 0.5) * 4; }
 
-    cam.x = Math.round(cam.x); cam.y = Math.round(cam.y);
+    cam.x = Math.round(cam.x * Z) / Z; cam.y = Math.round(cam.y * Z) / Z;
     if (!ambReady) ambInit();
-    if (lastCam) { const dx = cam.x - lastCam.x, dy = cam.y - lastCam.y; if (Math.abs(dx) < W && Math.abs(dy) < H) updAmb(dt, dx, dy); }
+    if (lastCam) { const dx = (cam.x - lastCam.x) * Z, dy = (cam.y - lastCam.y) * Z; if (Math.abs(dx) < W && Math.abs(dy) < H) updAmb(dt, dx, dy); }
     lastCam = { x: cam.x, y: cam.y };
+    const far = Z < 0.55; // vista de longe: pula detalhes miúdos
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
     ctx.fillStyle = '#22331d'; ctx.fillRect(0, 0, W, H);
+    // ---- passo do mundo (escala = zoom) ----
+    ctx.setTransform(dpr * Z, 0, 0, dpr * Z, 0, 0);
     const x0 = Math.max(0, Math.floor(cam.x / TS) - 1), y0 = Math.max(0, Math.floor(cam.y / TS) - 1);
-    const x1 = Math.min(G.W - 1, Math.ceil((cam.x + W) / TS) + 1), y1 = Math.min(G.H - 1, Math.ceil((cam.y + H) / TS) + 2);
+    const x1 = Math.min(G.W - 1, Math.ceil((cam.x + VW) / TS) + 1), y1 = Math.min(G.H - 1, Math.ceil((cam.y + VH) / TS) + 2);
 
     drawGroundChunks();
-    drawWaterFx(x0, y0, x1, y1);
+    if (!far) drawWaterFx(x0, y0, x1, y1);
 
     // alvo
     if (target) {
       const px = target.x * TS - cam.x, py = target.y * TS - cam.y, k = 2 + Math.sin(t * 6) * 1.2, L = 10;
       ctx.fillStyle = 'rgba(255,255,255,0.12)'; rrect(ctx, px + 2, py + 2, TS - 4, TS - 4, 6); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath();
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = 2.5 / Math.min(1, Z); ctx.lineCap = 'round'; ctx.beginPath();
       const a = px + k, b = py + k, c = px + TS - k, d = py + TS - k;
       ctx.moveTo(a, b + L); ctx.lineTo(a, b); ctx.lineTo(a + L, b);
       ctx.moveTo(c - L, b); ctx.lineTo(c, b); ctx.lineTo(c, b + L);
@@ -2055,9 +2076,10 @@ window.R = (() => {
     const animalsByRow = new Map();
     for (const a of S.animals) { if (a.inside) continue; const r = Math.floor(a.y); if (!animalsByRow.has(r)) animalsByRow.set(r, []); animalsByRow.get(r).push(a); }
     const prow = Math.floor(p.y);
+    const bById = new Map(); for (const b of S.buildings) bById.set(b.id, b);
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
-        const tile = S.tiles[G.idx(x, y)], px = x * TS - cam.x, py = y * TS - cam.y;
+        const tile = S.tiles[y * G.W + x], px = x * TS - cam.x, py = y * TS - cam.y;
         if (tile.c) drawCrop(px, py, tile.c, x, y);
         const o = tile.o;
         if (!o) continue;
@@ -2066,15 +2088,15 @@ window.R = (() => {
         else if (o.t === 'tree') drawTree(px, py, o, x, y);
         else if (o.t === 'fruit') drawFruitTree(px, py, o, x, y);
         else if (o.t === 'b' && !drawn.has(o.id)) {
-          const b = G.getBuilding(o.id);
-          if (b && y === b.y + D.buildings[b.type].h - 1) { drawn.add(o.id); drawBuilding(b); }
+          const b = bById.get(o.id);
+          if (b && D.buildings[b.type] && y === b.y + D.buildings[b.type].h - 1) { drawn.add(o.id); drawBuilding(b); }
         }
       }
       (animalsByRow.get(y) || []).sort((a, b) => a.y - b.y).forEach(drawAnimal);
       if (y === prow) drawPlayer();
     }
     // construções que começam acima da tela
-    for (const b of S.buildings) if (!drawn.has(b.id)) { const def = D.buildings[b.type]; if (b.y + def.h - 1 > y1 && b.y <= y1 + 3) drawBuilding(b); }
+    for (const b of S.buildings) if (!drawn.has(b.id)) { const def = D.buildings[b.type]; if (def && b.y + def.h - 1 > y1 && b.y <= y1 + 3) drawBuilding(b); }
 
     // fantasma de construção
     if (ghost) {
@@ -2090,35 +2112,39 @@ window.R = (() => {
     }
 
     drawClouds();
+    // partículas
+    for (const q of G.particles) { ctx.fillStyle = q.color; ctx.globalAlpha = Math.max(0, Math.min(1, q.life)); ctx.beginPath(); ctx.arc(q.x * TS - cam.x, q.y * TS - cam.y, 2.3, 0, TAU); ctx.fill(); }
+    ctx.globalAlpha = 1;
+
+    // ---- passo de tela ----
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawAmbient(dt);
 
     // terras não compradas
     for (const lot of D.lots) {
       if (S.lots[lot.id]) continue;
-      const lx = lot.x * TS - cam.x, ly = lot.y * TS - cam.y, lw = lot.w * TS, lh = lot.h * TS;
+      const lx = (lot.x * TS - cam.x) * Z, ly = (lot.y * TS - cam.y) * Z, lw = lot.w * TS * Z, lh = lot.h * TS * Z;
       if (lx > W || ly > H || lx + lw < 0 || ly + lh < 0) continue;
       ctx.fillStyle = 'rgba(15,20,30,0.55)'; ctx.fillRect(lx, ly, lw, lh);
-      ctx.strokeStyle = 'rgba(255,230,150,0.55)'; ctx.lineWidth = 3; ctx.setLineDash([12, 8]); ctx.strokeRect(lx + 2, ly + 2, lw - 4, lh - 4); ctx.setLineDash([]);
-      const cx = Math.max(lx + 120, Math.min(lx + lw - 120, W / 2)), cy = Math.max(ly + 50, Math.min(ly + lh - 50, H / 2));
-      ctx.fillStyle = 'rgba(40,26,14,0.82)'; rrect(ctx, cx - 112, cy - 31, 224, 62, 12); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,215,130,0.75)'; ctx.lineWidth = 2; rrect(ctx, cx - 108, cy - 27, 216, 54, 9); ctx.stroke();
-      ctx.fillStyle = '#ffe9a8'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('🔒 ' + lot.n, cx, cy - 6);
-      ctx.fillStyle = '#fff'; ctx.font = '13px sans-serif';
-      ctx.fillText(`À venda: 💰 ${lot.cost} · tecla T`, cx, cy + 16);
+      ctx.strokeStyle = 'rgba(255,230,150,0.55)'; ctx.lineWidth = far ? 2 : 3; ctx.setLineDash([12, 8]); ctx.strokeRect(lx + 2, ly + 2, lw - 4, lh - 4); ctx.setLineDash([]);
+      const sc = clamp(Math.min(lw / 250, lh / 90), 0.55, 1), bw = 224 * sc, bh = 62 * sc;
+      const cx = Math.max(lx + bw / 2 + 4, Math.min(lx + lw - bw / 2 - 4, W / 2)), cy = Math.max(ly + bh / 2 + 4, Math.min(ly + lh - bh / 2 - 4, H / 2));
+      ctx.fillStyle = 'rgba(40,26,14,0.82)'; rrect(ctx, cx - bw / 2, cy - bh / 2, bw, bh, 12 * sc); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,215,130,0.75)'; ctx.lineWidth = 2; rrect(ctx, cx - bw / 2 + 4, cy - bh / 2 + 4, bw - 8, bh - 8, 9 * sc); ctx.stroke();
+      ctx.fillStyle = '#ffe9a8'; ctx.font = `bold ${Math.round(16 * sc)}px sans-serif`; ctx.textAlign = 'center';
+      ctx.fillText('🔒 ' + lot.n, cx, cy - 6 * sc);
+      ctx.fillStyle = '#fff'; ctx.font = `${Math.round(13 * sc)}px sans-serif`;
+      ctx.fillText(`À venda: 💰 ${lot.cost} · tecla T`, cx, cy + 16 * sc);
     }
 
-    // partículas
-    for (const q of G.particles) { ctx.fillStyle = q.color; ctx.globalAlpha = Math.max(0, Math.min(1, q.life)); ctx.beginPath(); ctx.arc(q.x * TS - cam.x, q.y * TS - cam.y, 2.3, 0, TAU); ctx.fill(); }
-    ctx.globalAlpha = 1;
     drawAtmos(darkness());
     drawFireflies(dt);
     drawRain(dt);
-    if (S.creative) cropOverlay(x0, y0, x1, y1);
+    if (S.creative && Z >= 0.6) { ctx.setTransform(dpr * Z, 0, 0, dpr * Z, 0, 0); cropOverlay(x0, y0, x1, y1); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
     ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
     for (const f of G.popups) {
       ctx.globalAlpha = Math.max(0, Math.min(1, f.life * 1.5));
-      const x = f.x * TS - cam.x, y = f.y * TS - cam.y;
+      const x = (f.x * TS - cam.x) * Z, y = (f.y * TS - cam.y) * Z;
       ctx.strokeStyle = 'rgba(30,20,10,0.75)'; ctx.lineWidth = 3.5; ctx.strokeText(f.text, x, y);
       ctx.fillStyle = f.color; ctx.fillText(f.text, x, y);
     }
@@ -2142,7 +2168,7 @@ window.R = (() => {
     }
     ctx.lineJoin = 'miter';
   }
-  function worldToScreen(x, y) { return { x: x * TS - cam.x, y: y * TS - cam.y }; }
+  function worldToScreen(x, y) { return { x: (x * TS - cam.x) * Z, y: (y * TS - cam.y) * Z }; }
 
   // mini-mapa para o painel de terras
   function minimap(canvas) {
@@ -2163,5 +2189,5 @@ window.R = (() => {
     c.fillStyle = '#ff3'; c.beginPath(); c.arc(S.player.x * s, S.player.y * s, 3, 0, 7); c.fill();
   }
 
-  return { TS, init, frame, screenToWorld, worldToScreen, minimap, emo };
+  return { TS, init, frame, screenToWorld, worldToScreen, tileSize, setZoom: z => setZoom(z), getZoom, zoomBy, minimap, emo };
 })();
