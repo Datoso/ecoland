@@ -465,6 +465,7 @@ window.R = (() => {
     ctx = c; cam.x = cx * CPX; cam.y = cy * CPX; t = 0;
     try {
       c.save(); c.beginPath(); c.rect(0, 0, CPX, CPX); c.clip();
+      for (const b of S.buildings) if (b.type === 'ponte' && b.x >= cx * CH - 1 && b.x <= cx * CH + CH && b.y >= cy * CH - 1 && b.y <= cy * CH + CH) drawBuilding(b, true);
       const drawn = new Set();
       const y0 = cy * CH, y1 = Math.min(G.H - 1, cy * CH + CH - 1 + FAR_ROWS), xa = Math.max(0, cx * CH - FAR_COLS), xb = Math.min(G.W - 1, cx * CH + CH - 1 + FAR_COLS);
       for (let y = y0; y <= y1; y++) for (let x = xa; x <= xb; x++) {
@@ -478,7 +479,7 @@ window.R = (() => {
         else if (o.t === 'fruit') drawFruitTree(px, py, o, x, y);
         else if (o.t === 'b' && !drawn.has(o.id)) {
           const b = bById.get(o.id), def = b && D.buildings[b.type];
-          if (def && y === b.y + def.h - 1) { drawn.add(o.id); drawBuilding(b, true); }
+          if (def && b.type !== 'ponte' && y === b.y + def.h - 1) { drawn.add(o.id); drawBuilding(b, true); }
         }
       }
       c.restore();
@@ -1524,6 +1525,36 @@ window.R = (() => {
         break;
       }
       case 'espaldeira': paintTrellis(c, w / 2, h - 5, snow); break;
+      case 'ponte': {
+        const hor = variant & 1, endA = variant & 2, endB = variant & 4;
+        const r = rng(variant * 7 + 1), pc = ['#a8743f', '#9a6a38', '#b5804a', '#8f6234'];
+        if (hor) {
+          const x0 = endA ? -6 : 0, x1 = endB ? w + 6 : w;
+          c.fillStyle = 'rgba(0,30,60,0.32)'; c.fillRect(x0 + 2, 34, x1 - x0 - 2, 8);
+          if (endA) { c.fillStyle = '#8a8378'; rrect(c, -8, 8, 8, 30, 3); c.fill(); }
+          if (endB) { c.fillStyle = '#8a8378'; rrect(c, w, 8, 8, 30, 3); c.fill(); }
+          c.fillStyle = '#5e3a20'; c.fillRect(x0, 9, x1 - x0, 26);
+          for (let x = x0; x < x1; x += 5.5) { c.fillStyle = pc[Math.floor(r() * 4)]; c.fillRect(x + 0.5, 10 + (r() - 0.5), 4.5, 24); c.fillStyle = 'rgba(255,255,255,0.18)'; c.fillRect(x + 0.5, 10, 4.5, 1.2); c.fillStyle = 'rgba(40,25,10,0.5)'; c.fillRect(x + 2.2, 13, 1, 1); c.fillRect(x + 2.2, 30, 1, 1); }
+          for (const ry of [7, 33]) {
+            c.fillStyle = '#6e4626'; c.fillRect(x0, ry - 1, x1 - x0, 4); c.fillStyle = '#b07a44'; c.fillRect(x0, ry - 1, x1 - x0, 1.2);
+            for (const px of [x0 + 3, (x0 + x1) / 2, x1 - 3]) { c.fillStyle = '#5e3a20'; c.fillRect(px - 2, ry - 7, 4, 9); c.fillStyle = '#8a5a30'; c.fillRect(px - 2, ry - 7, 1.4, 9); }
+            c.fillStyle = '#8a5a30'; c.fillRect(x0, ry - 6, x1 - x0, 2.5);
+            if (snow) { c.fillStyle = '#f4f8fb'; c.fillRect(x0, ry - 7.5, x1 - x0, 2); }
+          }
+        } else {
+          const y0 = endA ? -6 : 0, y1 = endB ? h + 6 : h;
+          c.fillStyle = 'rgba(0,30,60,0.32)'; c.fillRect(36, y0 + 4, 7, y1 - y0 - 2);
+          if (endA) { c.fillStyle = '#8a8378'; rrect(c, 7, -8, 30, 8, 3); c.fill(); }
+          if (endB) { c.fillStyle = '#8a8378'; rrect(c, 7, h, 30, 8, 3); c.fill(); }
+          c.fillStyle = '#5e3a20'; c.fillRect(8, y0, 28, y1 - y0);
+          for (let y = y0; y < y1; y += 5.5) { c.fillStyle = pc[Math.floor(r() * 4)]; c.fillRect(9 + (r() - 0.5), y + 0.5, 26, 4.5); c.fillStyle = 'rgba(255,255,255,0.18)'; c.fillRect(9, y + 0.5, 26, 1.2); c.fillStyle = 'rgba(40,25,10,0.5)'; c.fillRect(12, y + 2.2, 1, 1); c.fillRect(32, y + 2.2, 1, 1); }
+          for (const rx of [6, 38]) {
+            c.fillStyle = '#6e4626'; c.fillRect(rx - 2, y0, 4, y1 - y0); c.fillStyle = '#b07a44'; c.fillRect(rx - 2, y0, 1.2, y1 - y0);
+            for (const py of [y0 + 4, (y0 + y1) / 2, y1 - 4]) { c.fillStyle = '#5e3a20'; c.fillRect(rx - 2.5, py - 8, 5, 10); c.fillStyle = '#8a5a30'; c.fillRect(rx - 2.5, py - 8, 1.6, 10); if (snow) { c.fillStyle = '#f4f8fb'; c.fillRect(rx - 2.5, py - 9.5, 5, 2); } }
+          }
+        }
+        break;
+      }
       case 'tanque': {
         shadowRect(c, 4, h - 12, w - 2, 16);
         rrect(c, 2, 6, w - 4, h - 10, 16); c.fillStyle = '#8f8a82'; c.fill();
@@ -1580,7 +1611,7 @@ window.R = (() => {
         if (def.i) drawEmo(def.i, w / 2, by + bh / 2, Math.min(26, bh * 0.6), false, 1, 1, c);
       }
     }
-    if (lv >= 2) levelExtras(c, type, w, h, lv, season, snow);
+    if (lv >= 2 && type !== 'ponte') levelExtras(c, type, w, h, lv, season, snow);
   }
   // melhorias visuais por nível (2: jardineiras e acabamento; 3: placa solar e cata-vento)
   const ROOF_AT = { casa: [0.26, 14], galinheiro: [0.32, 6], galpao: [0.27, 20], curral: [0.2, 2], viveiro: [0.3, 2], chiqueiro: [0.78, 0], loja: [0.22, 18], moinho: [0.5, 30], poco: [0.5, -4], silo: [0.5, 50] };
@@ -1627,6 +1658,16 @@ window.R = (() => {
         const def = D.buildings[b.type] || {}, cap = (G.feedCap && G.feedCap(b)) || (b.type === 'silo' ? 200 : 60);
         return Math.ceil(Math.min(1, ((b.data && b.data.feed) || 0) / cap) * 4);
       }
+      case 'ponte': {
+        const t0 = (dx, dy) => { const o = G.tile(b.x + dx, b.y + dy); return o; };
+        const isP = (dx, dy) => { const o = t0(dx, dy); if (!o || !o.o || o.o.t !== 'b') return false; const ob = G.getBuilding(o.o.id); return !!ob && ob.type === 'ponte'; };
+        const land = (dx, dy) => { const o = t0(dx, dy); return !!o && o.g !== 'water' && !isP(dx, dy); };
+        let hor;
+        if (isP(-1, 0) || isP(1, 0)) hor = true; else if (isP(0, -1) || isP(0, 1)) hor = false;
+        else hor = land(-1, 0) || land(1, 0) || !(land(0, -1) || land(0, 1));
+        const a = hor ? land(-1, 0) : land(0, -1), z = hor ? land(1, 0) : land(0, 1);
+        return (hor ? 1 : 0) | (a ? 2 : 0) | (z ? 4 : 0);
+      }
       case 'cerca': case 'porteira': {
         const has = (dx, dy) => { const o = G.tile(b.x + dx, b.y + dy); if (!o || !o.o || o.o.t !== 'b') return false; const ob = G.getBuilding(o.o.id); return ob && (ob.type === 'cerca' || ob.type === 'porteira'); };
         return (b.data && b.data.open ? 16 : 0) | (b.id < 0 ? 3 : (has(1, 0) ? 1 : 0) | (has(-1, 0) ? 2 : 0) | (has(0, 1) ? 4 : 0) | (has(0, -1) ? 8 : 0));
@@ -1655,7 +1696,7 @@ window.R = (() => {
     blit(buildingSprite(b, night), px, py);
     if (!noFx) buildingFx(b, px, py, w, h);
     const lv = b.level | 0;
-    if (lv >= 2) { // selo de nível
+    if (lv >= 2 && b.type !== 'ponte') { // selo de nível
       const txt = lv >= 3 ? '★★★' : '★★', bw = lv >= 3 ? 34 : 25, bx = px + w - bw - 2, by = py - 6;
       ctx.fillStyle = 'rgba(50,32,16,0.88)'; rrect(ctx, bx, by, bw, 13, 6.5); ctx.fill();
       ctx.strokeStyle = '#e8c35a'; ctx.lineWidth = 1; ctx.stroke();
@@ -2277,7 +2318,10 @@ window.R = (() => {
     frameN++;
     const bById = new Map(); for (const b of S.buildings) bById.set(b.id, b);
     if (far) drawFarLayer(bById);
-    else { drawGroundChunks(); drawWaterFx(x0, y0, x1, y1); }
+    else {
+      drawGroundChunks(); drawWaterFx(x0, y0, x1, y1);
+      for (const b of S.buildings) if (b.type === 'ponte' && b.x >= x0 - 1 && b.x <= x1 + 1 && b.y >= y0 - 1 && b.y <= y1 + 1) drawBuilding(b, true);
+    }
 
     // alvo
     if (target) {
@@ -2309,14 +2353,14 @@ window.R = (() => {
         else if (o.t === 'fruit') drawFruitTree(px, py, o, x, y);
         else if (o.t === 'b' && !drawn.has(o.id)) {
           const b = bById.get(o.id);
-          if (b && D.buildings[b.type] && y === b.y + D.buildings[b.type].h - 1) { drawn.add(o.id); drawBuilding(b); }
+          if (b && b.type !== 'ponte' && D.buildings[b.type] && y === b.y + D.buildings[b.type].h - 1) { drawn.add(o.id); drawBuilding(b); }
         }
       }
       (animalsByRow.get(y) || []).sort((a, b) => a.y - b.y).forEach(drawAnimal);
       if (y === prow) drawPlayer();
     }
     // construções que começam acima da tela
-    if (!far) { for (const b of S.buildings) if (!drawn.has(b.id)) { const def = D.buildings[b.type]; if (def && b.y + def.h - 1 > y1 && b.y <= y1 + 3) drawBuilding(b); } }
+    if (!far) { for (const b of S.buildings) if (!drawn.has(b.id)) { const def = D.buildings[b.type]; if (def && b.type !== 'ponte' && b.y + def.h - 1 > y1 && b.y <= y1 + 3) drawBuilding(b); } }
     else for (const b of S.buildings) { const def = D.buildings[b.type]; if (def) buildingFx(b, b.x * TS - cam.x, b.y * TS - cam.y, def.w * TS, def.h * TS); }
 
     // fantasma de construção
