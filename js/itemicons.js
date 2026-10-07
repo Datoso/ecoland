@@ -783,6 +783,67 @@ window.ITEMICONS = (() => {
       p('M1 -5 Q7 -12 10 -20 Q3 -13 0 -5 Z', '#4a9430', '#24501a', 1.2))).join('') +
     p('M10 28 Q24 33 38 28 L37.5 32.5 Q24 37.5 10.5 32.5 Z', '#e2c060', '#7a5a14', 1.4) + l('M14 30 l0.6 4 M20 31 l0.4 4 M27 31 l-0.4 4 M33 30 l-0.6 4', '#b8942a', 1)) + criMark;
 
+  // ---------- adubação verde / defensivos naturais ----------
+  const marigold = (x, y, r) => Array.from({ length: 12 }, (_, i) => {
+      const a = i * Math.PI / 6; return ci(x + Math.cos(a) * r * 0.78, y + Math.sin(a) * r * 0.78, r * 0.36, '#e0701a', '#6a2a08', 1.2); }).join('') +
+    ci(x, y, r * 0.78, '#f08a1f', 'none', 0) +
+    Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4 + 0.3; return ci(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45, r * 0.28, '#f6a52a', '#b8561a', 0.9); }).join('') +
+    ci(x, y, r * 0.3, '#f8c040', '#b8561a', 0.9) + dot(x - r * 0.3, y - r * 0.4, r * 0.15, '#fff', 0.5);
+  A.cravo = sh(15, 44) +
+    l('M24 42 L14 20 M24 42 L24 16 M24 42 L34 21', '#2f5a1f', 3.4) + l('M24 42 L14 20 M24 42 L24 16 M24 42 L34 21', '#5aa83a', 1.8) +
+    leaf('M18 30 Q9 30 6 25 Q13 23 18 28 Z', '#4f9a33', 'M17 29 Q11 27 7 25') + leaf('M29 31 Q38 31 42 26 Q35 24 29 29 Z', '#3f8a2a', 'M30 30 Q36 28 41 26') +
+    marigold(14, 18, 7) + marigold(34, 19, 7) + marigold(24, 12, 7.6) +
+    twine('M19 36 Q24 39 29 36');
+  A.crotalaria = sh(13, 44) + l('M24 44 V6', '#2f5a1f', 3.2) + l('M24 44 V6', '#6aa83a', 1.6) +
+    leaf('M24 36 Q14 38 9 33 Q16 30 24 34 Z', '#4f9a33', 'M23 35 Q15 34 10 33') + leaf('M24 34 Q34 36 39 31 Q32 28 24 32 Z', '#3f8a2a') +
+    leaf('M24 30 Q20 24 13 25 Q17 30 24 31 Z', '#5aa83a') +
+    [[6, 0], [10, 1], [14, 0], [18, 1], [22, 0], [26, 1]].map(([y, sd], i) => {
+      const dx = sd ? 1 : -1, x = 24 + dx * 3.6;
+      return p(`M${x} ${y + 3} Q${x + dx * 6} ${y - 1} ${x + dx * 2} ${y + 6} Q${x + dx * 6} ${y + 9} ${x} ${y + 5} Z`, '#f6c62a', '#8a6a08', 1.2) +
+        l(`M${x} ${y + 4} q${dx * 2} -.4 ${dx * 3} -1`, '#c8961a', 0.8) + l(`M24 ${y + 5} L${x} ${y + 4}`, '#4f8a2a', 1);
+    }).join('');
+  A.feijao_porco = sh(17, 44) +
+    p('M5 30 Q8 14 26 9 Q38 6 43 10 Q42 14 34 16 Q16 20 9 33 Z', '#8ac04a', '#2f5a1f') +
+    l('M8 29 Q14 16 30 11.5 Q38 9.5 42 10.5', '#5a8a2a', 1.3) + f0('M9 32 Q16 20 34 16 Q24 22 12 33 Z', '#5a8a2a', 0.5) +
+    [[14, 36, -20], [24, 38, 10], [34, 34, 30], [30, 26, -10]].map(([x, y, r]) => g(`translate(${x},${y}) rotate(${r})`,
+      e(0, 0, 6, 4.2, '#f6f0e0', '#6a5a40', 1.6) + `<rect x="-2.6" y="-4.2" width="5.2" height="1.6" rx=".8" fill="#8a5a2a"/>` + `<ellipse cx="-2" cy="1" rx="1.8" ry="1" fill="#fff" opacity=".7"/>`)).join('');
+  I.cravo = A.cravo;
+  I.sem_cravo = packet(A.cravo); I.sem_crotalaria = packet(A.crotalaria); I.sem_feijao_porco = packet(A.feijao_porco);
+  I.cri_cravo = pouch(A.cravo, '#3a2a1a', '#000');
+  I.calda = sh(13, 45) +
+    p('M14 17 H31 V20 Q36 24 36 30 V41 Q36 44 33 44 H12 Q9 44 9 41 V30 Q9 24 14 20 Z', '#e8f2f4') +
+    f0('M10 27 H35 V41 Q35 43 33 43 H12 Q10 43 10 41 Z', '#e0561f', 0.9) + f0('M10 27 H35 V29 H10 Z', '#f8b070', 0.8) +
+    dot(15, 33, 1, '#fff', 0.7) + dot(29, 37, 1.3, '#fff', 0.7) + dot(22, 31, 0.8, '#fff', 0.7) +
+    p('M14 17 H31 V20 Q36 24 36 30 V41 Q36 44 33 44 H12 Q9 44 9 41 V30 Q9 24 14 20 Z', 'none') +
+    `<rect x="14" y="31" width="17" height="9" rx="2" fill="#f6efdc" stroke="${K}" stroke-width="1.3"/>` +
+    g('translate(22.5,35.5) rotate(-40) scale(.32)', p('M-6 4 Q0 -1 6 4 Q9 20 -4 35 Q-1 22 -6 4 Z', '#d6301f', '#5a1008', 3) + p('M-6 4 Q0 0 6 4 Q0 8 -6 4 Z', '#4f9a33', '#24501a', 2)) +
+    `<rect x="15" y="11" width="15" height="6.5" rx="1.5" fill="#f4f2ec" stroke="${K}" stroke-width="1.8"/>` +
+    p('M16 5 H32 Q34 5 34 7 V11 H15 V7 Q15 5 16 5 Z', '#f4f2ec') + p('M34 6.5 H41 V9.5 H34 Z', '#d8d4c8', K, 1.6) +
+    p('M28 11 L27 17 Q25 18 24 16 L25 11 Z', '#4a8ac0', K, 1.4) + hi('M12.5 30 V40', 1.8) +
+    l('M43 6 l3 -2 M43.5 8 l3.5 0 M43 10 l3 2', '#e0561f', 1.2, 0.8);
+  I.neem = sh(12, 45) +
+    p('M18 15 V18 Q12 20 12 26 V40 Q12 44 16 44 H32 Q36 44 36 40 V26 Q36 20 30 18 V15 Z', '#a8641a', '#3a1a04') +
+    f0('M29 19 Q35 22 35 27 V40 Q35 43 31 43 H29 Q32 30 29 19 Z', '#5a2a08', 0.5) +
+    `<rect x="15" y="27" width="18" height="12" rx="2" fill="#f2e8cc" stroke="${K}" stroke-width="1.4"/>` +
+    l('M18 37 Q24 34 30 29', '#2f6a20', 1) +
+    [[20, 34.6, -40], [23, 32.8, -40], [26, 30.8, -40]].map(([x, y, r]) => g(`translate(${x},${y}) rotate(${r})`,
+      `<ellipse cx="-1.8" cy="-1.6" rx="1.2" ry="2.4" fill="#4f9a33" transform="rotate(-50 -1.8 -1.6)"/><ellipse cx="1.8" cy="1.6" rx="1.2" ry="2.4" fill="#4f9a33" transform="rotate(-50 1.8 1.6)"/>`)).join('') +
+    `<rect x="17.5" y="9" width="13" height="7" rx="1.5" fill="#2b2b2b" stroke="${K}" stroke-width="1.6"/>` +
+    p('M20 9 Q20 2 24 2 Q28 2 28 9 Z', '#f4f0e8', K, 1.6) + hi('M15 23 Q14 30 15 38', 2) + `<ellipse cx="17" cy="21.5" rx="1.6" ry="1" fill="#f8c060" opacity=".7"/>` +
+    leaf('M33 15 Q38 8 45 9 Q42 16 34 17 Z', '#4f9a33', 'M34 16 Q39 12 44 10');
+  I.bau = sh(20, 45) +
+    box(5, 24, 30, 18, 8, 6, '#a8743e', '#7a4a24', '#b07a45') +
+    p('M5 24 V18 Q5 10 15 10 H25 Q35 10 35 18 V24 Z', '#b8824a') +
+    p('M35 24 L43 18 V12 Q43 4.5 33 4.5 L25 10 Q35 10 35 18 Z', '#8a5a2e') +
+    p('M15 10 L23 4.5 H33 L25 10 Z', '#c48a52') +
+    l('M6 17 H34 M6 31 H34 M6 37 H34', '#7a4a24', 1.2, 0.8) + l('M36 26 L42 21.5 M36 33 L42 28.5', '#5a3418', 1.1, 0.8) +
+    [9, 31].map(x => `<rect x="${x - 1.8}" y="${x < 20 ? 11 : 11}" width="3.6" height="31" fill="#5b6268" stroke="#2b3034" stroke-width="1.4"/>`).join('') +
+    p('M5 24 H35 V27 H5 Z', '#5b6268', '#2b3034', 1.4) + p('M35 24 L43 18 V21 L35 27 Z', '#4a5258', '#2b3034', 1.4) +
+    p('M5.5 18 Q5.5 10.5 15 10.5 H25 Q34.5 10.5 34.5 18', 'none', '#2b3034', 2) +
+    [[9, 14], [31, 14], [9, 34], [31, 34], [9, 40], [31, 40]].map(([x, y]) => dot(x, y, 0.8, '#c8d0d6')).join('') +
+    `<rect x="17" y="21" width="6" height="9" rx="1.4" fill="#e2b84a" stroke="${K}" stroke-width="1.6"/>` + dot(20, 26.5, 1.1, K) + l('M20 26.5 V28.5', K, 1) +
+    hi('M8 14 Q10 11.5 15 11.5', 1.6);
+
   // ---------- construções ----------
   I.fogueira = sh(19, 43) +
     [[8, 38], [14, 41], [22, 42.5], [30, 42], [37, 40], [41, 36], [6, 34]].map(([x, y]) => e(x, y, 4.2, 3, '#9a978e', '#3d3a33', 1.6)).join('') +

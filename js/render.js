@@ -1655,6 +1655,33 @@ window.R = (() => {
         break;
       }
       case 'espaldeira': paintTrellis(c, w / 2, h - 5, snow); break;
+      case 'bau': {
+        const full = variant === 1, lift = full ? 2 : 0;
+        ell(c, w / 2 + 2, h - 5, 18, 4.5, 'rgba(10,25,5,0.28)');
+        // corpo
+        siding(c, 6, 18, w - 12, h - 24, '#a8703a', true, 6, 7);
+        c.strokeStyle = '#4a2c16'; c.lineWidth = 1.5; c.strokeRect(6.5, 18.5, w - 13, h - 25);
+        c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(6, 18, w - 12, 3);
+        if (full) { // conteúdo aparecendo pela fresta
+          c.fillStyle = '#e3c25a'; c.fillRect(10, 15, 6, 4); c.fillStyle = '#c0392b'; circ(c, 20, 16.5, 2.2); c.fillStyle = '#8fbf3a'; c.fillRect(25, 14.5, 7, 3); circ(c, 33, 16.5, 1.8, '#f2d36a');
+        }
+        // tampa
+        c.save(); c.translate(0, -lift);
+        c.fillStyle = '#b07a44'; c.beginPath(); c.moveTo(5, 18); c.lineTo(5, 12); c.quadraticCurveTo(w / 2, 2, w - 5, 12); c.lineTo(w - 5, 18); c.closePath(); c.fill();
+        c.fillStyle = 'rgba(255,255,255,0.18)'; c.beginPath(); c.moveTo(7, 12); c.quadraticCurveTo(w / 2, 4, w - 7, 12); c.lineTo(w - 7, 13.5); c.quadraticCurveTo(w / 2, 6, 7, 13.5); c.fill();
+        c.strokeStyle = 'rgba(60,35,15,0.5)'; c.lineWidth = 1; c.beginPath(); c.moveTo(5, 15); c.lineTo(w - 5, 15); c.stroke();
+        c.strokeStyle = '#4a2c16'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(5, 18); c.lineTo(5, 12); c.quadraticCurveTo(w / 2, 2, w - 5, 12); c.lineTo(w - 5, 18); c.stroke();
+        if (snow) { c.fillStyle = '#f4f8fb'; c.beginPath(); c.moveTo(7, 11); c.quadraticCurveTo(w / 2, 1, w - 7, 11); c.quadraticCurveTo(w / 2, 6, 7, 11); c.fill(); }
+        c.restore();
+        // cintas de ferro, rebites e fecho
+        for (const bx of [11, w - 14]) {
+          c.fillStyle = '#5a5f66'; c.fillRect(bx, 8 - lift, 3.5, h - 14 + lift); c.fillStyle = '#8a9098'; c.fillRect(bx, 8 - lift, 1.2, h - 14 + lift);
+          for (const ry of [13 - lift, 24, 33]) circ(c, bx + 1.75, ry, 0.9, '#c8ccd0');
+        }
+        c.fillStyle = '#d4a93a'; rrect(c, w / 2 - 4, 15 - lift, 8, 9 + lift, 1.5); c.fill(); c.fillStyle = '#8a6a1a'; c.fillRect(w / 2 - 1, 19, 2, 3);
+        c.fillStyle = '#f2d36a'; c.fillRect(w / 2 - 3, 16 - lift, 2, 1);
+        break;
+      }
       case 'cisterna': {
         const top = [38, 30, 22][lv - 1], ins = [10, 6, 3][lv - 1], x0 = ins, x1 = w - ins, cx = w / 2, rx = (x1 - x0) / 2, bot = h - 10;
         ell(c, cx + 4, bot + 3, rx + 6, 8, 'rgba(10,25,5,0.25)');
@@ -2013,6 +2040,7 @@ window.R = (() => {
         const def = D.buildings[b.type] || {}, cap = (G.feedCap && G.feedCap(b)) || (b.type === 'silo' ? 200 : 60);
         return Math.ceil(Math.min(1, ((b.data && b.data.feed) || 0) / cap) * 4);
       }
+      case 'bau': { const it = b.data && b.data.items; return it && Object.values(it).some(n => n > 0) ? 1 : 0; }
       case 'cisterna': { const L = (G.lvl && G.lvl(b)) || {}; return Math.round(clamp(((b.data && b.data.water) || 0) / (L.store || 400), 0, 1) * 4); }
       case 'biodigestor': { const L = (G.lvl && G.lvl(b)) || {}; return Math.round(clamp(((b.data && b.data.gas) || 0) / (L.gasCap || 30), 0, 1) * 4); }
       case 'ponte': {
@@ -2052,6 +2080,16 @@ window.R = (() => {
     const night = G.isNight();
     blit(buildingSprite(b, night), px, py);
     if (!noFx) buildingFx(b, px, py, w, h);
+    if (b.type === 'bau' && !noFx && b.data && b.data.label && Z >= 0.7) { // plaquinha pendurada com o nome
+      const txt = String(b.data.label).slice(0, 12);
+      blit(sprite('tag|' + txt, 60, 26, 30, 2, c => {
+        c.strokeStyle = '#c9b48a'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(-3, 0); c.lineTo(-8, 6); c.moveTo(3, 0); c.lineTo(8, 6); c.stroke();
+        c.font = 'bold 6.5px sans-serif'; const tw = Math.min(46, c.measureText(txt).width + 8);
+        c.fillStyle = '#c99a5a'; rrect(c, -tw / 2, 5, tw, 10, 2); c.fill(); c.strokeStyle = '#6b4423'; c.lineWidth = 1; c.stroke();
+        c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(-tw / 2 + 1, 6, tw - 2, 1);
+        c.fillStyle = '#3a2410'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 0, 10.5, tw - 4);
+      }, false), px + w / 2, py + 21);
+    }
     const lv = b.level | 0;
     if (lv >= 2 && b.type !== 'ponte') { // selo de nível
       const txt = lv >= 3 ? '★★★' : '★★', bw = lv >= 3 ? 34 : 25, bx = px + w - bw - 2, by = py - 6;
