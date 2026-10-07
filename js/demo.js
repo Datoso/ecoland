@@ -77,7 +77,8 @@ G.newDemoWorld = function () {
   herd(viv, 'codorna', 28, 5); viv.data.store = { ovo_codorna: 24 }; viv.data.manure = 6;
   build('silo', n.x + 4, n.y + 7, 3); build('silo', n.x + 7, n.y + 7, 2);
   build('cocho', n.x + 10, n.y + 7, 3); build('cocho', n.x + 13, n.y + 7, 2); build('cocho', n.x + 16, n.y + 7, 1);
-  for (let x = n.x + 1; x < n.x + 19; x++) if (G.canPlace('cerca', x, n.y + 11)) build('cerca', x, n.y + 11, 1);
+  clear(n.x, n.y + 10, n.w, 5);
+  G.fenceRect(n.x, n.y + 1, n.x + n.w - 1, n.y + 13);   // pasto todo cercado, com porteira embaixo
 
   // ---------- Várzea do Lago: piscicultura com aquaponia ----------
   const v = D.lots.find(l => l.id === 'sul');
