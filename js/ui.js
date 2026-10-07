@@ -154,29 +154,32 @@ window.UI = (() => {
       const list = D.shop.filter(e => e.tab === shopTab);
       body = `<div class="tabs">${tabs.map(t => `<button data-t="${t}" class="${t === shopTab ? 'on' : ''}">${t}</button>`).join('')}</div><div class="grid">${list.map(e => {
         const idx = D.shop.indexOf(e);
-        let ic, name, sub = '', dis = S.money < e.price;
+        let ic, name, sub = '', dis = !S.creative && S.money < e.price, state = '';
         if (e.animal) {
           const a = D.animals[e.animal]; ic = a.bi; name = a.baby + ` (${a.n})`;
           const home = G.homeWithSpace(e.animal);
           sub = `${home ? '✔ há vaga' : `✘ precisa de ${G.homeNames(e.animal)} com vaga`} · adulto em ${a.adult} dias · come ${a.eat}/dia${a.grazer ? ' (pasta)' : ''}`;
-          dis = dis || !home;
+          dis = dis || !home; if (!home) state = 'locked';
         } else if (e.tool) {
           ic = ICONS.html(D.toolLevels[e.tool][e.level - 1].icon || e.tool); name = e.n;
           const cur = G.toolLvl(e.tool);
           sub = e.desc + (cur >= e.level ? ' · <b>✔ você já tem</b>' : cur < e.level - 1 ? ` · precisa antes: ${D.toolLevels[e.tool][e.level - 2].n}` : '');
-          dis = dis || cur !== e.level - 1;
+          dis = dis || cur !== e.level - 1; state = cur >= e.level ? 'owned' : cur < e.level - 1 ? 'locked' : state;
         } else if (e.upgrade) {
-          ic = e.i; name = e.n; sub = e.desc; if (S.upgrades[e.upgrade]) { dis = true; sub = '✔ já comprado'; }
+          ic = e.i; name = e.n; sub = e.desc; if (S.upgrades[e.upgrade]) { dis = true; sub = '✔ já comprado'; state = 'owned'; }
         } else {
           const it = D.items[e.id]; ic = icon(e.id); name = it.n;
-          if (it.seed) { const c = D.crops[it.seed]; const inS = c.seasons.includes(S.season); sub = `${D.families[c.fam] || ''} · ${c.days} dias · ${c.seasons.map(s => D.SEASONS[s]).join(', ')}${inS ? '' : ' · <b style="color:#c0392b">fora de época</b>'}${c.regrow ? ' · rebrota' : ''}${c.desc ? '<br>' + c.desc : ''}`; }
+          if (it.seed) { const c = D.crops[it.seed]; const inS = c.seasons.includes(S.season); if (!inS) state = 'season'; sub = `${D.families[c.fam] || ''} · ${c.days} dias · ${c.seasons.map(s => D.SEASONS[s]).join(', ')}${inS ? '' : ' · <b style="color:#c0392b">fora de época</b>'}${c.regrow ? ' · rebrota' : ''}${c.desc ? '<br>' + c.desc : ''}`; }
           else if (it.sapling) { const f = D.fruits[it.sapling]; sub = `produz em ${f.mature} dias · ${f.seasons.map(s => D.SEASONS[s]).join(', ')}`; }
           else if (it.e) sub = `+${it.e.fome || 0}🍖 +${it.e.sede || 0}💧 +${it.e.energia || 0}⚡`;
           else if (it.feed) sub = `alimento animal: ${it.feed} un.`;
         }
         const multi = !e.upgrade && !e.tool;
-        return `<div class="card ${dis ? 'off' : ''}"><div class="ic">${ic}</div><div class="info"><b>${name}</b>💰 ${e.price}<small>${sub}</small></div>
-          <div style="display:flex;flex-direction:column;gap:3px"><button data-b="${idx}" data-q="1" ${dis ? 'disabled' : ''}>Comprar</button>${multi ? `<button data-b="${idx}" data-q="5" ${S.money < e.price * 5 ? 'disabled' : ''}>×5</button>` : ''}</div></div>`;
+        if (!state && dis) state = 'poor';
+        const label = state === 'owned' ? '✔ Comprado' : state === 'locked' ? '🔒 Bloqueado' : 'Comprar';
+        const tag = { owned: '<span class="stag owned">JÁ É SEU</span>', locked: '<span class="stag locked">BLOQUEADO</span>', season: '<span class="stag season">FORA DE ÉPOCA</span>', poor: '<span class="stag poor">SEM DINHEIRO</span>' }[state] || '';
+        return `<div class="card shop-${state || 'ok'}"><div class="ic">${ic}</div><div class="info">${tag}<b>${name}</b>💰 ${e.price}<small>${sub}</small></div>
+          <div style="display:flex;flex-direction:column;gap:3px"><button data-b="${idx}" data-q="1" ${dis ? 'disabled' : ''}>${label}</button>${multi ? `<button data-b="${idx}" data-q="5" ${S.money < e.price * 5 ? 'disabled' : ''}>×5</button>` : ''}</div></div>`;
       }).join('')}</div>`;
     } else {
       const ids = Object.keys(S.inv).filter(k => S.inv[k] > 0 && D.items[k].sell > 0);

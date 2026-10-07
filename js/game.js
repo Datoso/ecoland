@@ -98,6 +98,8 @@ const G = window.G = {
     }
     this.addBuilding('casa', s.x + 3, s.y + 2, true);
     this.addBuilding('loja', s.x + 13, s.y + 2, true);
+    clear(s.x, s.y + 3, 3, 3);
+    this.addBuilding('cozinha_externa', s.x, s.y + 3);   // dois tijolinhos e uma grelha de ferro
     for (let y = s.y + 10; y < s.y + 14; y++) for (let x = s.x + 14; x < s.x + 19; x++) {
       const d = ((x + 0.5 - (s.x + 16.5)) / 2.6) ** 2 + ((y + 0.5 - (s.y + 12)) / 1.9) ** 2;
       const t = this.tile(x, y);
@@ -168,7 +170,8 @@ const G = window.G = {
 
   nearStation(type, range = 3) {
     if (!type) return true;
-    if (type === 'fogueira' && this.nearStation('fogao_biogas', range)) return true;
+    if (type === 'fogueira' && (this.nearStation('fogao_biogas', range) || this.nearStation('cozinha_externa', range))) return true;
+    if (type === 'forno') return S.buildings.some(b => b.type === 'cozinha_externa' && (b.level || 1) >= 3) && this.nearStation('cozinha_externa', range);
     const px = S.player.x, py = S.player.y;
     return S.buildings.some(b => {
       if (b.type !== type) return false;
@@ -459,6 +462,7 @@ const G = window.G = {
         const b = t.o && t.o.t === 'b' ? this.getBuilding(t.o.id) : null;
         const p = S.player;
         if (t.g === 'water' || (b && (b.type === 'poco' || b.type === 'tanque'))) {
+          if (p.water >= p.waterMax) { toast('🚿 O regador já está cheio.'); return; }
           p.water = p.waterMax;
           p.nutri = !!(b && b.type === 'tanque' && S.animals.some(a => a.home === b.id));
           sfx('refill'); this.popup(cx, cy, p.nutri ? '💧 água nutritiva do tanque!' : '💧 cheio!', p.nutri ? '#b6f5a0' : '#9fd8ff'); return;
@@ -629,9 +633,17 @@ const G = window.G = {
       return;
     }
     if (t.g === 'water') {
-      p.sede = Math.min(100, p.sede + 25); sfx('drink');
-      this.popup(tx + 0.5, ty, '+25 💧', '#9fd8ff');
-      if (chance(0.25)) { p.sick = 180; p.energy = Math.max(0, p.energy - 10); toast('Água do lago não tratada... dor de barriga! Construa um poço.', 'bad'); sfx('hurt'); }
+      // água do lago não é potável: pede confirmação e o risco cresce a cada gole no mesmo dia
+      const n = p.lakeDrinks || 0, risk = Math.min(90, Math.round((0.2 + 0.2 * n) * 100));
+      UI.confirm(`⚠️ <b>Água não potável.</b> Beber água do lago pode dar dor de barriga e deixar você doente.<br><small>Chance de passar mal agora: ${risk}%${n ? ` (você já bebeu ${n}× hoje)` : ''}. Prefira o poço, a cisterna ou água fervida.</small><br><br>Beber mesmo assim?`, () => {
+        p.lakeDrinks = n + 1;
+        p.sede = Math.min(100, p.sede + 25); sfx('drink');
+        this.popup(tx + 0.5, ty, '+25 💧', '#9fd8ff');
+        if (chance(risk / 100)) {
+          p.sick = 180 + n * 120; p.energy = Math.max(0, p.energy - 10 - n * 5); p.hp = Math.max(5, p.hp - n * 8);
+          toast(n >= 2 ? '🤢 Você ficou doente de verdade! Descanse e beba água limpa.' : '🤢 Dor de barriga! Construa um poço ou uma cisterna.', 'bad'); sfx('hurt');
+        }
+      });
       return;
     }
   },
@@ -685,6 +697,7 @@ const G = window.G = {
       case 'fogueira': return UI.openCraft('Cozinha');
       case 'moinho': return UI.openCraft('Moinho');
       case 'defumador': return UI.openCraft('Defumador');
+      case 'cozinha_externa': return UI.openCraft((b.level || 1) >= 3 ? 'Forno e brasa' : 'Cozinha');
       case 'poco':
         p.sede = Math.min(100, p.sede + 40); p.water = p.waterMax; p.nutri = false; sfx('drink');
         this.popup(b.x + 1, b.y, '+40 💧 · regador cheio', '#9fd8ff');
@@ -874,6 +887,11 @@ const G = window.G = {
     if (!this.canCraft(r)) return false;
     if (this.gasCooking(r)) this.useGas();
     for (const [k, n] of Object.entries(this.recipeIn(r))) this.take(k, n);
+    // fogão a lenha economiza lenha
+    if ((r.st === 'fogueira' || r.st === 'forno') && r.in.madeira && !this.gasCooking(r)) {
+      const k = S.buildings.find(b => b.type === 'cozinha_externa' && this.nearStation('cozinha_externa'));
+      if (k && chance(this.lvl(k).save || 0)) { this.add('madeira', r.in.madeira, true); this.popup(S.player.x, S.player.y - 1.2, '🪵 lenha economizada', '#ffd27a'); }
+    }
     if (r.out === 'racao') this.ecoAdd('rOwn', r.q);
     this.add(r.out, r.q);
     sfx(r.cat === 'Cozinha' ? 'cook' : 'craft');
@@ -983,7 +1001,7 @@ const G = window.G = {
     const late = S.time > 1440;
     p.energy = slept ? (late ? p.maxEnergy * 0.75 : p.maxEnergy) : p.maxEnergy * 0.5;
     p.fome = Math.max(0, p.fome - 15); p.sede = Math.max(0, p.sede - 20);
-    p.hp = Math.min(100, p.hp + (slept ? 25 : 0)); p.sick = 0;
+    p.hp = Math.min(100, p.hp + (slept ? 25 : 0)); p.sick = 0; p.lakeDrinks = 0;
     if (p.fome <= 5 || p.sede <= 5) R.push('⚠️ Você acordou com muita fome/sede. Coma e beba logo!');
 
     // lavoura: crescimento e saúde das plantas

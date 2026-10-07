@@ -309,3 +309,16 @@ body.touch #bag { right: 8px; bottom: auto; top: 50%; transform: translateY(-50%
 .perks li { margin: 6px 0; opacity: .6; }
 .perks li.got { opacity: 1; }
 @media (max-width: 640px) { .sk-wrap { grid-template-columns: 1fr; } #xpdrops { right: 12px; top: 90px; } }
+
+/* loja: estados dos itens */
+.card.shop-owned { background: linear-gradient(#eefbe0, #d9f2c4); border-color: #8cc56e; box-shadow: 0 2px 0 #8cc56e; }
+.card.shop-owned button:disabled { background: #6aa84f; color: #fff; box-shadow: 0 3px 0 #3f7a2e; border-color: #3f7a2e; }
+.card.shop-locked { background: repeating-linear-gradient(135deg, #ece6da 0 10px, #e2dbcc 10px 20px); border-color: #b9ab8e; opacity: .75; }
+.card.shop-locked .ic { filter: grayscale(1); }
+.card.shop-season { background: linear-gradient(#fff5e0, #fde6bf); border-color: #e8b33c; }
+.card.shop-poor { opacity: .7; }
+.stag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; padding: 1px 6px; border-radius: 6px; margin-bottom: 2px; }
+.stag.owned { background: #4f9a3a; color: #fff; }
+.stag.locked { background: #8f8268; color: #fff; }
+.stag.season { background: #e8b33c; color: #3b2a1a; }
+.stag.poor { background: #c0392b; color: #fff; }

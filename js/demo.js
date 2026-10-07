@@ -69,7 +69,8 @@ G.newDemoWorld = function () {
   build('defumador', s.x + 11, s.y + 4);
   build('banco_sementes', s.x + 11, s.y, 3);
   for (const id of Object.keys(D.crops)) S.seedBank[id] = { gen: rnd(1, 5), saved: rnd(20, 120), fresh: chance(0.4) ? rnd(1, 4) : 0 };
-  const comp = build('composteira', s.x + 1, s.y + 3);
+  S.buildings.find(b => b.type === 'cozinha_externa').level = 3;   // cozinha caipira completa
+  const comp = build('composteira', s.x + 11, s.y + 14);
   comp.data.ready = 6; comp.data.batches = [{ d: 1, q: 1 }]; comp.data.load = 2;
   // PAIS: galinheiro no centro, cercado, com canteiros em anel ao redor
   const gx0 = s.x + 5, gy0 = s.y + 7, gx1 = s.x + 12, gy1 = s.y + 12;
