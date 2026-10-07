@@ -52,7 +52,7 @@
   function openPanel(name) {
     if (!running) return;
     if (UI.isOpen()) { UI.close(); return; }
-    ({ inv: UI.openInventory, craft: () => UI.openCraft(), manual: UI.openManual, lands: UI.openLands, pause: UI.pause })[name]?.();
+    ({ inv: UI.openInventory, craft: () => UI.openCraft(), manual: UI.openManual, lands: UI.openLands, pause: UI.pause, dev: UI.openDev })[name]?.();
   }
 
   function toggleSound() {
@@ -70,6 +70,7 @@
     if (k === 'j') { openPanel('manual'); return; }
     if (k === 't') { openPanel('lands'); return; }
     if (k === 'm') { toggleSound(); return; }
+    if (k === 'k') { openPanel('dev'); return; }
     if (UI.isOpen()) return;
     keys.add(k);
     if (k >= '1' && k <= '8') { S.tool = +k - 1; UI.hud(true); }
@@ -119,9 +120,11 @@
     if (!G.owned(tg.x, tg.y)) return '🔒 Terra à venda (T)';
     const a = G.animalAt(tg.wx, tg.wy);
     if (a) { const d = D.animals[a.type]; return `${a.name} · ${a.age >= d.adult ? d.n : d.baby}${a.ready ? ' · <b>E</b> coletar' : ' · <b>E</b> acariciar'}`; }
-    if (t.o && t.o.t === 'b') { const b = G.getBuilding(t.o.id); return `${D.buildings[b.type].n} · <b>E</b> interagir`; }
+    if (t.o && t.o.t === 'b') { const b = G.getBuilding(t.o.id); return `${G.bname(b)}${b.level > 1 ? ' ' + '★'.repeat(b.level) : ''} · <b>E</b> interagir`; }
     if (t.o && t.o.t === 'fruit') return `${D.fruits[t.o.k].n}${t.o.ready ? ' · <b>E</b> colher' : ''}`;
     if (G.cropReady(t)) return `${D.crops[t.c.id].n} pronto! · <b>E</b> colher`;
+    if (t.c && !t.c.dead) { const c = D.crops[t.c.id]; return `${c.n} · faltam ${Math.max(0, c.days - t.c.g)} dia(s) regado(s) · saúde ${Math.round(t.c.hp ?? 100)}%${t.wet ? ' · 💧 regado' : ' · <b>precisa de água</b>'}`; }
+    if (t.c && t.c.dead) return 'Planta morta · use a enxada ou a foice para limpar';
     if (t.g === 'water') return 'Lago · <b>E</b> beber · regador enche';
     return '';
   }

@@ -104,6 +104,23 @@ const G = window.G = {
 
   // ---------------- Construções ----------------
   getBuilding(id) { return S.buildings.find(b => b.id === id); },
+  lvl(b) { const L = D.buildings[b.type].levels; return L ? L[Math.min(b.level || 1, L.length) - 1] : {}; },
+  bname(b) { return this.lvl(b).n || D.buildings[b.type].n; },
+  cap(b) { return this.lvl(b).cap || 0; },
+  perk(b, p) { return (this.lvl(b).perks || []).includes(p); },
+  feedCap(b) { return this.lvl(b).feedCap || (this.perk(b, 'feeder') ? 200 : 0); },
+  nextLevel(b) { const L = D.buildings[b.type].levels; return L && (b.level || 1) < L.length ? L[b.level || 1] : null; },
+  upgrade(b) {
+    const nx = this.nextLevel(b);
+    if (!nx) return false;
+    if (!S.creative && S.money < nx.cost) { toast('Dinheiro insuficiente para evoluir.', 'bad'); sfx('error'); return false; }
+    this.spend(nx.cost); b.level = (b.level || 1) + 1;
+    if (this.feedCap(b) && b.data.feed == null) b.data.feed = 0;
+    sfx('unlock'); toast(`🏗️ Evoluído para ${nx.n}!`, 'good');
+    const def = D.buildings[b.type];
+    this.burst(b.x + def.w / 2, b.y + def.h / 2, '#ffe066', 20);
+    return true;
+  },
   countBuildings(type) { return S.buildings.filter(b => b.type === type).length; },
   countAnimals(type) { return S.animals.filter(a => a.type === type).length; },
   countCrops() { let n = 0; for (const t of S.tiles) if (t.c && !t.c.dead) n++; return n; },
@@ -122,10 +139,10 @@ const G = window.G = {
 
   addBuilding(type, x0, y0, fixed) {
     const def = D.buildings[type];
-    const b = { id: S.nextId++, type, x: x0, y: y0, data: {} };
-    if (type === 'cocho') b.data.feed = 0;
+    const b = { id: S.nextId++, type, x: x0, y: y0, level: 1, data: {} };
+    if (this.feedCap(b)) b.data.feed = 0;
+    if (def.houses) { b.data.manure = 0; b.data.store = {}; }
     if (type === 'composteira') { b.data.load = 0; b.data.batches = []; b.data.ready = 0; }
-    if (type === 'galinheiro' || type === 'galpao') { b.data.manure = 0; b.data.eggs = 0; }
     if (type === 'colmeia') { b.data.t = 0; b.data.mel = 0; }
     for (let y = y0; y < y0 + def.h; y++) for (let x = x0; x < x0 + def.w; x++) {
       const t = this.tile(x, y); t.o = { t: 'b', id: b.id }; t.g = t.g === 'tilled' ? 'grass' : t.g; t.c = null;
@@ -159,9 +176,10 @@ const G = window.G = {
 
   homeWithSpace(animalType) {
     const def = D.animals[animalType];
-    return S.buildings.find(b => b.type === def.home &&
-      S.animals.filter(a => a.home === b.id).length < D.buildings[b.type].cap);
+    return S.buildings.find(b => def.homes.includes(b.type) &&
+      S.animals.filter(a => a.home === b.id).length < this.cap(b));
   },
+  homeNames(animalType) { return D.animals[animalType].homes.map(h => D.buildings[h].n).join(' ou '); },
 
   nearBee(x, y, r = 6) {
     return S.buildings.some(b => b.type === 'colmeia' && Math.abs(b.x - x) <= r && Math.abs(b.y - y) <= r);
@@ -239,6 +257,12 @@ const G = window.G = {
       S = JSON.parse(raw);
       this.buildLotGrid();
       S.animals.forEach(a => { a.tx = null; });
+      for (const b of S.buildings) {
+        b.level = b.level || 1;
+        if (D.buildings[b.type].houses && !b.data.store) b.data.store = {};
+        if (b.data.eggs) { b.data.store.ovo = (b.data.store.ovo || 0) + b.data.eggs; b.data.eggs = 0; }
+        if (this.feedCap(b) && b.data.feed == null) b.data.feed = 0;
+      }
       return true;
     } catch (e) { return false; }
   },
@@ -284,6 +308,7 @@ const G = window.G = {
       const def = D.animals[a.type];
       const home = this.getBuilding(a.home);
       if (!home) continue;
+      if (def.aquatic) { a.inside = true; continue; }
       if (S.time >= ANIMALS_IN) { a.inside = true; continue; }
       if (a.inside) { const d0 = this.buildingDoor(home); a.inside = false; a.x = d0.x; a.y = d0.y; a.tx = null; }
       const door = this.buildingDoor(home);
@@ -317,7 +342,7 @@ const G = window.G = {
     const names = ['Mimosa', 'Pintada', 'Estrela', 'Malhada', 'Bolota', 'Florzinha', 'Tico', 'Pipoca', 'Fubá', 'Canjica', 'Paçoca', 'Jabuticaba', 'Cocada', 'Pitanga', 'Marrom', 'Nevada'];
     const a = {
       id: S.nextId++, type, name: names[rnd(0, names.length - 1)], age, home: home.id,
-      x: d.x, y: d.y, hungry: 0, happy: 60, ready: false, prodDays: 0, petted: false, inside: S.time >= ANIMALS_IN,
+      x: d.x, y: d.y, hungry: 0, happy: 60, ready: false, prodDays: 0, petted: false, inside: !!def.aquatic || S.time >= ANIMALS_IN,
     };
     S.animals.push(a);
     return a;
@@ -354,13 +379,27 @@ const G = window.G = {
         return;
       case 'regador': {
         const b = t.o && t.o.t === 'b' ? this.getBuilding(t.o.id) : null;
-        if (t.g === 'water' || (b && b.type === 'poco')) {
-          S.player.water = S.player.waterMax; sfx('refill'); this.popup(cx, cy, '💧 cheio!', '#9fd8ff'); return;
+        if (t.g === 'water' || (b && (b.type === 'poco' || b.type === 'tanque'))) {
+          const p = S.player;
+          p.water = p.waterMax;
+          p.nutri = !!(b && b.type === 'tanque' && S.animals.some(a => a.home === b.id));
+          sfx('refill'); this.popup(cx, cy, p.nutri ? '💧 água nutritiva do tanque!' : '💧 cheio!', p.nutri ? '#b6f5a0' : '#9fd8ff'); return;
         }
         if (t.g === 'tilled') {
-          if (S.player.water <= 0) { toast('Regador vazio! Encha no lago ou no poço.'); sfx('error'); return; }
-          if (!this.useEnergy(1)) return;
-          S.player.water--; t.wet = true; sfx('water'); this.burst(cx, cy, '#6cc4ff', 6); this.stat('water');
+          const p = S.player;
+          if (p.water <= 0) { toast('Regador vazio! Encha no lago, poço ou tanque.'); sfx('error'); return; }
+          const r = S.upgrades.regador ? 1 : 0;   // regador grande rega 3×3
+          let n = 0;
+          for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+            const tt = this.tile(tx + dx, ty + dy);
+            if (!tt || tt.g !== 'tilled' || tt.wet || !this.owned(tx + dx, ty + dy) || p.water <= 0) continue;
+            if (n === 0 && !this.useEnergy(r ? 2 : 1)) return;
+            tt.wet = true; p.water--; n++;
+            if (p.nutri && chance(0.25)) { if (tt.c) tt.c.fert = true; else tt.fert = true; }
+            this.burst(tx + dx + 0.5, ty + dy + 0.5, '#6cc4ff', 4);
+          }
+          if (!n) { toast('Já está regado.'); return; }
+          sfx('water'); this.stat('water', n);
           return;
         }
         return;
@@ -421,6 +460,7 @@ const G = window.G = {
     const t = this.tile(tx, ty), c = t.c, crop = D.crops[c.id];
     let n = rnd(crop.yield[0], crop.yield[1]);
     if (c.fert && chance(0.6)) n++;
+    if ((c.hp ?? 100) < 50) n = Math.max(1, n - 1);
     if (this.nearBee(tx, ty) && chance(0.3)) n++;
     this.add(c.id, n);
     sfx('harvest'); this.burst(tx + 0.5, ty + 0.5, '#ffe066', 10);
@@ -450,7 +490,7 @@ const G = window.G = {
     if (this.cropReady(t)) return this.harvest(tx, ty);
     if (t.c && !t.c.dead) {
       const crop = D.crops[t.c.id];
-      toast(`${crop.n}: ${Math.max(0, crop.days - t.c.g)} dia(s) regado(s) para colher${t.wet ? ' · regado hoje ✔' : ' · precisa de água'}${t.c.fert ? ' · adubado' : ''}`);
+      toast(`${crop.n}: ${Math.max(0, crop.days - t.c.g)} dia(s) regado(s) para colher · saúde ${Math.round(t.c.hp ?? 100)}%${t.wet ? ' · regado hoje ✔' : ' · precisa de água'}${t.c.fert ? ' · adubado' : ''}`);
       return;
     }
     if (t.g === 'water') {
@@ -503,58 +543,73 @@ const G = window.G = {
       case 'casa': return UI.sleepDialog();
       case 'loja': {
         const h = S.time / 60;
-        if (h < 7 || h >= 20) { toast('A loja está fechada. Funciona das 7h às 20h.'); sfx('error'); return; }
+        if (!S.creative && (h < 7 || h >= 20)) { toast('A loja está fechada. Funciona das 7h às 20h.'); sfx('error'); return; }
         return UI.openShop();
       }
       case 'fogueira': return UI.openCraft('Cozinha');
       case 'moinho': return UI.openCraft('Moinho');
       case 'defumador': return UI.openCraft('Defumador');
       case 'poco':
-        p.sede = Math.min(100, p.sede + 40); p.water = p.waterMax; sfx('drink');
+        p.sede = Math.min(100, p.sede + 40); p.water = p.waterMax; p.nutri = false; sfx('drink');
         this.popup(b.x + 1, b.y, '+40 💧 · regador cheio', '#9fd8ff');
-        return;
-      case 'cocho':
-        if (held && held.feed) return this.deposit(b, S.held);
-        toast(`Cocho: ${b.data.feed} unidade(s) de alimento. Segure ração, grãos ou capim para abastecer.`);
         return;
       case 'composteira':
         if (b.data.ready > 0) { this.add('adubo', b.data.ready); this.stat('compost', b.data.ready); b.data.ready = 0; sfx('pickup'); return; }
         if (held && held.organic) return this.deposit(b, S.held);
-        toast(`Composteira: carga ${b.data.load}/4 · ${b.data.batches.length} lote(s) compostando. Segure esterco, capim ou restos.`);
-        return;
-      case 'galinheiro':
-      case 'galpao': {
-        let got = false;
-        if (b.data.eggs > 0) { this.add('ovo', b.data.eggs); this.stat('eggs', b.data.eggs); b.data.eggs = 0; got = true; }
-        const m = Math.floor(b.data.manure);
-        if (m > 0) { setTimeout(() => this.add('esterco', m), got ? 250 : 0); b.data.manure -= m; got = true; }
-        if (got) { sfx('pickup'); return; }
-        return UI.openAnimals(b);
-      }
+        return UI.openBuilding(b);
       case 'colmeia':
         if (b.data.mel > 0) { this.add('mel', b.data.mel); b.data.mel = 0; sfx('harvest'); return; }
-        toast(S.season === 3 ? 'As abelhas estão recolhidas no inverno.' : `Colmeia trabalhando... mel em ${3 - b.data.t} dia(s).`);
-        return;
+        return UI.openBuilding(b);
       case 'cerca': return;
     }
+    if (held && held.feed && this.feedCap(b)) return this.deposit(b, S.held);
+    if (def.houses && this.collectHouse(b)) return;
+    return UI.openBuilding(b);
+  },
+
+  collectHouse(b) {
+    let delay = 0, got = false;
+    const later = (k, n) => { setTimeout(() => this.add(k, n), delay); delay += 220; got = true; };
+    for (const [k, n] of Object.entries(b.data.store || {})) {
+      if (n > 0) { later(k, n); if (k === 'ovo' || k === 'ovo_codorna') this.stat('eggs', n); else this.stat('animalProd', n); }
+    }
+    b.data.store = {};
+    const m = Math.floor(b.data.manure || 0);
+    if (m > 0) { later('esterco', m); b.data.manure -= m; }
+    if (got) sfx('pickup');
+    return got;
+  },
+
+  harvestFish(b) {
+    const fish = S.animals.filter(a => a.home === b.id && a.age >= D.animals[a.type].adult);
+    if (!fish.length) { toast('Nenhum peixe adulto ainda.'); return 0; }
+    const tot = {};
+    for (const a of fish) for (const [k, n] of Object.entries(D.animals[a.type].slaughter)) tot[k] = (tot[k] || 0) + n;
+    S.animals = S.animals.filter(a => !fish.includes(a));
+    let delay = 0;
+    for (const [k, n] of Object.entries(tot)) { setTimeout(() => this.add(k, n), delay); delay += 220; }
+    sfx('water'); this.stat('slaughter', fish.length);
+    return fish.length;
   },
 
   deposit(b, id) {
     const it = D.items[id], n = S.inv[id] || 0;
     if (!n) return;
-    if (b.type === 'cocho') {
-      if (b.data.feed >= 60) { toast('Cocho cheio (60).'); return; }
-      const qty = Math.min(n, Math.ceil((60 - b.data.feed) / it.feed));
-      this.take(id, qty); b.data.feed = Math.min(60, b.data.feed + qty * it.feed);
+    const cap = this.feedCap(b);
+    if (cap && it.feed) {
+      if (b.data.feed >= cap) { toast(`${this.bname(b)} cheio (${cap}).`); return; }
+      const qty = Math.min(n, Math.ceil((cap - b.data.feed) / it.feed));
+      this.take(id, qty); b.data.feed = Math.min(cap, b.data.feed + qty * it.feed);
       sfx('place'); this.popup(b.x + 1, b.y, `+${qty * it.feed} 🍽️`); this.stat('feed', qty * it.feed);
       return;
     }
     if (b.type === 'composteira') {
+      const L = this.lvl(b);
       this.take(id, n); b.data.load += n * it.organic;
       let made = 0;
-      while (b.data.load >= 4) { b.data.load -= 4; b.data.batches.push({ d: 2, q: 1 }); made++; }
+      while (b.data.load >= L.per) { b.data.load -= L.per; b.data.batches.push({ d: L.days, q: 1 }); made++; }
       sfx('place'); this.popup(b.x + 1, b.y, `+${n} ${it.i}`);
-      toast(made ? `${made} lote(s) de adubo compostando (2 noites).` : `Composteira: carga ${b.data.load}/4.`);
+      toast(made ? `${made} lote(s) de adubo compostando (${L.days} noite(s)).` : `Composteira: carga ${b.data.load}/${L.per}.`);
     }
   },
 
@@ -563,12 +618,12 @@ const G = window.G = {
     if (!it || !this.has(id)) { toast('Nenhum item na mão. Abra o inventário (I) e escolha um.'); return; }
     const t = this.tile(tx, ty);
     const b = t.o && t.o.t === 'b' ? this.getBuilding(t.o.id) : null;
-    if (b && ((b.type === 'cocho' && it.feed) || (b.type === 'composteira' && it.organic))) return this.deposit(b, id);
+    if (b && ((this.feedCap(b) && it.feed) || (b.type === 'composteira' && it.organic))) return this.deposit(b, id);
     if (it.seed) {
       if (t.g !== 'tilled' || t.c) { toast('Plante em terra arada e vazia (use a enxada).'); return; }
       const crop = D.crops[it.seed];
       if (!crop.seasons.includes(S.season)) { toast(`${crop.n} não cresce no(a) ${D.SEASONS[S.season]}. Épocas: ${crop.seasons.map(s => D.SEASONS[s]).join(', ')}.`); sfx('error'); return; }
-      this.take(id); t.c = { id: it.seed, g: 0, fert: !!t.fert, dead: false }; t.fert = false;
+      this.take(id); t.c = { id: it.seed, g: 0, fert: !!t.fert, dead: false, hp: 100 }; t.fert = false;
       sfx('plant'); this.stat('plant');
       return;
     }
@@ -630,11 +685,11 @@ const G = window.G = {
     if (entry.animal) {
       for (let i = 0; i < qty; i++) {
         const home = this.homeWithSpace(entry.animal);
-        if (!home) { toast(`Sem espaço! ${D.animals[entry.animal].n} precisa de um(a) ${D.buildings[D.animals[entry.animal].home].n} com vaga.`, 'bad'); sfx('error'); return i > 0; }
+        if (!home) { toast(`Sem espaço! ${D.animals[entry.animal].n} precisa de ${this.homeNames(entry.animal)} com vaga.`, 'bad'); sfx('error'); return i > 0; }
         this.spend(entry.price);
         this.spawnAnimal(entry.animal, home, 0);
       }
-      sfx('buy'); toast(`${qty > 1 ? 'Chegaram' : 'Chegou'} ${qty} ${D.animals[entry.animal].baby.toLowerCase()}(s)! Estão perto do(a) ${D.buildings[D.animals[entry.animal].home].n}.`);
+      sfx('buy'); toast(`${qty > 1 ? 'Chegaram' : 'Chegou'} ${qty} ${D.animals[entry.animal].baby.toLowerCase()}(s)! Estão no(a) ${this.homeNames(entry.animal)}.`);
       this.checkQuests();
       return true;
     }
@@ -718,16 +773,28 @@ const G = window.G = {
     p.hp = Math.min(100, p.hp + (slept ? 25 : 0)); p.sick = 0;
     if (p.fome <= 5 || p.sede <= 5) R.push('⚠️ Você acordou com muita fome/sede. Coma e beba logo!');
 
-    // lavoura
-    let grew = 0;
+    // lavoura: crescimento e saúde das plantas
+    let grew = 0, wilted = 0;
     S.tiles.forEach((t, i) => {
       const x = i % this.W, y = Math.floor(i / this.W);
       if (t.c && !t.c.dead) {
+        const c = t.c, crop = D.crops[c.id];
+        if (c.hp == null) c.hp = 100;
+        const mature = c.g >= crop.days;
         if (t.wet) {
-          t.c.g++; grew++;
-          if (t.c.fert && chance(0.5)) t.c.g++;
-          if (this.nearBee(x, y) && chance(0.2)) t.c.g++;
-        }
+          c.hp = Math.min(100, c.hp + 10);
+          if (!mature) {
+            c.g++; grew++;
+            if (c.fert && chance(0.5)) c.g++;
+            if (this.nearBee(x, y) && chance(0.2)) c.g++;
+          }
+        } else if (!mature) c.hp -= 25;          // seca
+        if (mature) c.hp -= 4;                   // passando do ponto
+        let weeds = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const n = this.tile(x + dx, y + dy); if (n && n.o && n.o.t === 'weed') weeds++; }
+        c.hp -= Math.min(15, weeds * 5);         // competição com o mato
+        if (c.fert) c.hp = Math.min(100, c.hp + 5);
+        if (c.hp <= 0) { c.dead = true; wilted++; }
       } else if (t.g === 'tilled' && !t.c && !t.wet && !t.fert && chance(0.06)) t.g = 'grass';
       t.wet = false;
       if (t.o && t.o.t === 'fruit') {
@@ -740,18 +807,19 @@ const G = window.G = {
       }
     });
     if (grew) R.push(`🌱 ${grew} plantas regadas cresceram.`);
+    if (wilted) R.push(`🥀 ${wilted} planta(s) morreram por falta de água ou cuidado.`);
 
     // construções
     for (const b of S.buildings) {
       if (b.type === 'composteira') {
         b.data.batches.forEach(x => x.d--);
         const done = b.data.batches.filter(x => x.d <= 0);
-        if (done.length) { b.data.ready += done.reduce((s, x) => s + x.q, 0); R.push(`♻️ A composteira produziu ${done.length} adubo.`); }
+        if (done.length) { b.data.ready += done.reduce((s, x) => s + x.q, 0) * (b.level >= 3 ? 2 : 1); R.push(`♻️ A composteira produziu adubo.`); }
         b.data.batches = b.data.batches.filter(x => x.d > 0);
       }
       if (b.type === 'colmeia' && S.season !== 3) {
         b.data.t++;
-        if (b.data.t >= 3) { b.data.t = 0; b.data.mel = Math.min(5, b.data.mel + 1); R.push('🍯 A colmeia tem mel!'); }
+        if (b.data.t >= this.lvl(b).every) { b.data.t = 0; b.data.mel = Math.min(10, b.data.mel + 1); R.push('🍯 A colmeia tem mel!'); }
       }
     }
 
@@ -782,6 +850,7 @@ const G = window.G = {
       for (const t of S.tiles) if (t.g === 'tilled') t.wet = true;
       R.push('🌧️ Está chovendo: a lavoura foi regada pela natureza.');
     }
+    this.morningIrrigation(R);
     S.time = DAY_START;
     for (const a of S.animals) {
       a.inside = false; a.tx = null;
@@ -795,10 +864,27 @@ const G = window.G = {
     if (window.UI) UI.morning(R.splice(0));
   },
 
+  morningIrrigation(R) {
+    let n = 0;
+    const wet = (x, y, fert) => { const t = this.tile(x, y); if (t && t.g === 'tilled' && this.owned(x, y)) { if (!t.wet) n++; t.wet = true; if (fert && chance(0.15)) { if (t.c) t.c.fert = true; else t.fert = true; } } };
+    for (const b of S.buildings) {
+      if (b.type === 'aspersor') {
+        const L = this.lvl(b);
+        for (let dy = -L.range; dy <= L.range; dy++) for (let dx = -L.range; dx <= L.range; dx++) {
+          if ((dx || dy) && (!L.cross || !dx || !dy)) wet(b.x + dx, b.y + dy);
+        }
+      }
+      if (b.type === 'tanque' && this.perk(b, 'aquaponia')) {
+        for (let dy = -3; dy <= 5; dy++) for (let dx = -3; dx <= 5; dx++) wet(b.x + dx, b.y + dy, true);
+      }
+    }
+    if (n) R.push(`💦 Irrigação automática regou ${n} canteiro(s).`);
+  },
+
   feedAnimals(R) {
     if (!S.animals.length) return;
-    const troughs = S.buildings.filter(b => b.type === 'cocho');
-    let pool = troughs.reduce((s, b) => s + b.data.feed, 0);
+    const troughs = S.buildings.filter(b => b.type === 'cocho' || b.type === 'silo');
+    let pool = troughs.reduce((s, b) => s + (b.data.feed || 0), 0);
     const takeFeed = n => {
       for (const b of troughs) { const k = Math.min(n, b.data.feed); b.data.feed -= k; n -= k; if (!n) break; }
     };
@@ -809,45 +895,93 @@ const G = window.G = {
     }
     let grazeCap = Math.floor(pasture / 12 * (S.season === 3 ? 0.3 : 1));
     const order = S.animals.slice().sort(() => Math.random() - 0.5);
-    let hungry = 0, dead = [], eggs = 0;
+    let hungry = 0, dead = [], produced = {}, grown = 0;
     for (const a of order) {
       const def = D.animals[a.type];
+      const home = this.getBuilding(a.home);
       let fed = false;
       if (def.grazer && grazeCap > 0) { grazeCap--; fed = true; }
-      else if (pool >= def.eat) { pool -= def.eat; takeFeed(def.eat); fed = true; }
-      const home = this.getBuilding(a.home);
+      else if (home && this.perk(home, 'feeder') && home.data.feed >= def.eat) { home.data.feed -= def.eat; fed = true; }
+      else if (!def.aquatic && pool >= def.eat) { pool -= def.eat; takeFeed(def.eat); fed = true; }
+      const comfort = home && this.perk(home, 'comfort');
       if (fed) {
         a.hungry = 0; a.age++;
-        a.happy = Math.min(100, a.happy + 5 + (a.petted ? 8 : 0));
+        a.happy = Math.min(100, a.happy + 5 + (a.petted ? 8 : 0) + (comfort ? 6 : 0));
         if (a.age >= def.adult && def.produce && (a.happy >= 30 || chance(0.5))) {
-          if (def.produce.where === 'home') { if (home) { home.data.eggs = Math.min(40, (home.data.eggs || 0) + 1); eggs++; } }
-          else if (!a.ready) { a.prodDays++; if (a.prodDays >= def.produce.every) { a.ready = true; a.prodDays = 0; } }
+          const item = def.produce.item;
+          if (def.produce.where === 'home') {
+            if (home) { home.data.store[item] = Math.min(99, (home.data.store[item] || 0) + 1); produced[item] = (produced[item] || 0) + 1; }
+          } else if (!a.ready) {
+            a.prodDays++;
+            if (a.prodDays >= def.produce.every) {
+              a.prodDays = 0;
+              if (home && this.perk(home, 'auto')) { home.data.store[item] = (home.data.store[item] || 0) + 1; produced[item] = (produced[item] || 0) + 1; }
+              else a.ready = true;
+            }
+          }
         }
       } else {
         a.hungry++; hungry++;
         a.happy = Math.max(0, a.happy - 25);
         if (a.hungry >= 3) dead.push(a);
       }
-      if (a.age === def.adult && fed) R.push(`🎉 ${a.name} virou ${def.n.toLowerCase()} adulta!`);
+      if (a.age === def.adult && fed) { if (def.aquatic) grown++; else R.push(`🎉 ${a.name} virou ${def.n.toLowerCase()} adulta!`); }
       a.petted = false;
-      if (home) home.data.manure = Math.min(50, (home.data.manure || 0) + def.manure);
+      if (home && home.data.manure != null) home.data.manure = Math.min(99, home.data.manure + def.manure * (this.perk(home, 'biogas') ? 2 : 1));
     }
-    if (eggs) R.push(`🥚 ${eggs} ovo(s) no galinheiro.`);
-    if (hungry) R.push(`⚠️ ${hungry} animal(is) passaram fome! Abasteça o cocho ou libere pasto.`);
+    if (grown) R.push(`🐟 ${grown} tilápia(s) atingiram o peso de abate.`);
+    const prodTxt = Object.entries(produced).map(([k, n]) => `${n} ${D.items[k].i}`).join(' ');
+    if (prodTxt) R.push(`🧺 Produção guardada nas instalações: ${prodTxt}`);
+    if (hungry) R.push(`⚠️ ${hungry} animal(is) passaram fome! Abasteça cochos, silos ou comedouros.`);
     for (const a of dead) { R.push(`💀 ${a.name} (${D.animals[a.type].n}) morreu de fome.`); }
     S.animals = S.animals.filter(a => !dead.includes(a));
     // reprodução
     for (const b of S.buildings) {
       const def = D.buildings[b.type];
-      if (!def.cap) continue;
+      if (!def.houses) continue;
+      const cap = this.cap(b);
       for (const type of def.houses) {
         const ad = S.animals.filter(a => a.home === b.id && a.type === type && a.age >= D.animals[type].adult && !a.hungry && a.happy > 50);
-        const total = S.animals.filter(a => a.home === b.id).length;
-        if (ad.length >= 2 && total < def.cap && chance(0.12)) {
-          const baby = this.spawnAnimal(type, b, 0);
-          R.push(`🐣 Nasceu um(a) ${D.animals[type].baby.toLowerCase()}: ${baby.name}!`);
+        let total = S.animals.filter(a => a.home === b.id).length;
+        const p = (D.animals[type].breed || 0.12) * (this.perk(b, 'comfort') ? 1.5 : 1);
+        if (ad.length >= 2 && total < cap && chance(p)) {
+          const k = D.animals[type].aquatic ? Math.min(cap - total, rnd(2, 5)) : 1;
+          for (let i = 0; i < k; i++) this.spawnAnimal(type, b, 0);
+          R.push(`🐣 Nasceu ${k > 1 ? k + ' ' + D.animals[type].baby.toLowerCase() + 's' : 'um(a) ' + D.animals[type].baby.toLowerCase()} no(a) ${this.bname(b)}!`);
         }
       }
     }
+  },
+
+  // ---------------- Ferramentas de desenvolvimento (modo teste) ----------------
+  dev: {
+    hours(h) { S.time = Math.min(PASS_OUT - 5, S.time + h * 60); },
+    skipDay() { G.report.unshift('🧪 Dia pulado (modo teste).'); G.newDay(true); },
+    grow(n = 1) { for (const t of S.tiles) if (t.c && !t.c.dead) { t.c.g += n; t.c.hp = 100; } for (const t of S.tiles) if (t.o && t.o.t === 'fruit') t.o.age += n; },
+    ripen() {
+      for (const t of S.tiles) if (t.c && !t.c.dead) { t.c.g = Math.max(t.c.g, D.crops[t.c.id].days); t.c.hp = 100; }
+      for (const t of S.tiles) if (t.o && t.o.t === 'fruit') { t.o.age = Math.max(t.o.age, D.fruits[t.o.k].mature); t.o.ready = true; }
+    },
+    waterAll() { for (const t of S.tiles) if (t.g === 'tilled') t.wet = true; },
+    healAll() { for (const t of S.tiles) if (t.c) { t.c.dead = false; t.c.hp = 100; } },
+    ageAnimals(n = 1) {
+      for (const a of S.animals) {
+        const d = D.animals[a.type]; a.age += n; a.hungry = 0; a.happy = 100;
+        if (a.age >= d.adult && d.produce) {
+          const h = G.getBuilding(a.home);
+          if (d.produce.where === 'home' || (h && G.perk(h, 'auto'))) { if (h) h.data.store[d.produce.item] = (h.data.store[d.produce.item] || 0) + 1; }
+          else a.ready = true;
+        }
+      }
+    },
+    fillStats() { const p = S.player; p.hp = 100; p.energy = p.maxEnergy; p.fome = 100; p.sede = 100; p.water = p.waterMax; p.sick = 0; },
+    materials() { for (const [k, n] of Object.entries({ madeira: 200, pedra: 200, ferragens: 50, racao: 100, adubo: 30, capim: 50 })) G.add(k, n, true); },
+    seeds() { for (const id of Object.keys(D.crops)) G.add('sem_' + id, 20, true); for (const id of Object.keys(D.fruits)) G.add('muda_' + id, 3, true); },
+    season() {
+      S.season = (S.season + 1) % 4; S.day = 1;
+      for (const t of S.tiles) if (t.c && !t.c.dead && !D.crops[t.c.id].seasons.includes(S.season)) t.c.dead = true;
+    },
+    rain() { S.weather = S.weather === 'chuva' ? 'sol' : 'chuva'; if (S.weather === 'chuva') this.waterAll(); },
+    allLots() { for (const l of D.lots) S.lots[l.id] = true; },
   },
 };

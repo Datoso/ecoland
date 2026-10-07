@@ -51,24 +51,39 @@ D.fruits = {
 // ---------- Animais ----------
 D.animals = {
   galinha: {
-    n: 'Galinha', baby: 'Pintinho', i: '🐔', bi: '🐤', price: 80, home: 'galinheiro', adult: 4, eat: 1,
+    n: 'Galinha', baby: 'Pintinho', i: '🐔', bi: '🐤', price: 80, homes: ['galinheiro'], adult: 4, eat: 1,
     produce: { item: 'ovo', every: 1, where: 'home' }, manure: 0.5, grazer: false, sfx: 'chicken',
     slaughter: { carne_frango: 2, penas: 3 }, speed: 1.4,
   },
   porco: {
-    n: 'Porco', baby: 'Leitão', i: '🐖', bi: '🐖', price: 300, home: 'galpao', adult: 7, eat: 2,
+    n: 'Porco', baby: 'Leitão', i: '🐖', bi: '🐖', price: 300, homes: ['chiqueiro', 'galpao'], adult: 7, eat: 2,
     produce: null, manure: 1, grazer: false, sfx: 'pig',
     slaughter: { carne_porco: 6, banha: 2, couro: 1, ossos: 1 }, speed: 0.9,
   },
   vaca: {
-    n: 'Vaca', baby: 'Bezerro', i: '🐄', bi: '🐄', price: 700, home: 'galpao', adult: 10, eat: 3,
-    produce: { item: 'leite', every: 1, where: 'hand' }, manure: 2, grazer: true, sfx: 'cow',
+    n: 'Vaca', baby: 'Bezerro', i: '🐄', bi: '🐄', price: 700, homes: ['curral', 'galpao'], adult: 10, eat: 3,
+    produce: { item: 'leite_balde', every: 1, where: 'hand' }, manure: 2, grazer: true, sfx: 'cow',
     slaughter: { carne_boi: 10, couro: 2, ossos: 3 }, speed: 0.7,
   },
   ovelha: {
-    n: 'Ovelha', baby: 'Cordeiro', i: '🐑', bi: '🐑', price: 400, home: 'galpao', adult: 6, eat: 2,
+    n: 'Ovelha', baby: 'Cordeiro', i: '🐑', bi: '🐑', price: 400, homes: ['curral', 'galpao'], adult: 6, eat: 2,
     produce: { item: 'la', every: 3, where: 'hand' }, manure: 1, grazer: true, sfx: 'sheep',
     slaughter: { carne_cordeiro: 5, la: 1, couro: 1, ossos: 1 }, speed: 0.9,
+  },
+  cabra: {
+    n: 'Cabra', baby: 'Cabrito', i: '🐐', bi: '🐐', price: 450, homes: ['curral', 'galpao'], adult: 6, eat: 2,
+    produce: { item: 'leite_cabra', every: 1, where: 'hand' }, manure: 1, grazer: true, sfx: 'sheep',
+    slaughter: { carne_cabrito: 4, couro: 1, ossos: 1 }, speed: 1.0,
+  },
+  codorna: {
+    n: 'Codorna', baby: 'Filhote de codorna', i: '🐦', bi: '🐣', price: 40, homes: ['viveiro'], adult: 3, eat: 1,
+    produce: { item: 'ovo_codorna', every: 1, where: 'home' }, manure: 0.3, grazer: false, sfx: 'chicken',
+    slaughter: { carne_codorna: 1, penas: 1 }, speed: 1.6, breed: 0.25,
+  },
+  tilapia: {
+    n: 'Tilápia', baby: 'Alevino', i: '🐟', bi: '🐟', price: 15, homes: ['tanque'], adult: 8, eat: 1,
+    produce: null, manure: 0, grazer: false, sfx: 'water', aquatic: true,
+    slaughter: { file_tilapia: 2, residuo_peixe: 1 }, speed: 0, breed: 0.3,
   },
 };
 
@@ -78,13 +93,52 @@ D.buildings = {
   loja:        { n: 'Agropecuária & Materiais', w: 3, h: 2, fixed: true },
   fogueira:    { n: 'Fogueira', w: 1, h: 1, i: '🔥', light: 5, desc: 'Fonte de fogo: cozinhe receitas por perto.' },
   poco:        { n: 'Poço', w: 2, h: 2, i: '🪣', desc: 'Água limpa para beber e reabastecer o regador.' },
-  composteira: { n: 'Composteira', w: 2, h: 1, i: '♻️', desc: 'Transforma esterco e restos em adubo (2 noites).' },
-  cocho:       { n: 'Cocho', w: 2, h: 1, i: '🛶', desc: 'Deposite ração, grãos ou capim. Os animais comem à noite.' },
-  galinheiro:  { n: 'Galinheiro', w: 3, h: 2, i: '🛖', cap: 8, houses: ['galinha'], desc: 'Abriga até 8 galinhas. Ovos e esterco ficam aqui.' },
-  galpao:      { n: 'Galpão', w: 4, h: 3, i: '🏚️', cap: 8, houses: ['porco', 'vaca', 'ovelha'], desc: 'Abriga até 8 animais grandes. Acumula esterco.' },
+  composteira: { n: 'Composteira', w: 2, h: 1, i: '♻️', desc: 'Transforma esterco e restos em adubo.', levels: [
+    { n: 'Composteira', days: 2, per: 4 },
+    { n: 'Composteira dupla', days: 1, per: 4, cost: 800, desc: 'adubo em 1 noite' },
+    { n: 'Minhocário', days: 1, per: 3, cost: 2200, desc: 'adubo em 1 noite e com menos material' }] },
+  cocho:       { n: 'Cocho', w: 2, h: 1, i: '🛶', desc: 'Deposite ração, grãos ou capim. Os animais comem à noite.', levels: [
+    { n: 'Cocho', feedCap: 60 },
+    { n: 'Cocho grande', feedCap: 150, cost: 400, desc: 'capacidade 150' },
+    { n: 'Comedouro automático', feedCap: 300, cost: 1200, desc: 'capacidade 300' }] },
+  galinheiro:  { n: 'Galinheiro', w: 3, h: 2, i: '🛖', houses: ['galinha'], desc: 'Abriga galinhas. Ovos e esterco ficam aqui.', levels: [
+    { n: 'Galinheiro', cap: 6 },
+    { n: 'Galinheiro reformado', cap: 10, cost: 1500, perks: ['feeder'], desc: '+4 vagas e comedouro embutido' },
+    { n: 'Granja avícola', cap: 16, cost: 4500, perks: ['feeder', 'auto', 'comfort'], desc: '+6 vagas, bebedouro automático e aquecimento' }] },
+  viveiro:     { n: 'Viveiro de codornas', w: 2, h: 2, i: '🐦', houses: ['codorna'], desc: 'Gaiolas para codornas: ovos todo dia, ocupam pouco espaço.', levels: [
+    { n: 'Viveiro de codornas', cap: 10 },
+    { n: 'Viveiro ampliado', cap: 20, cost: 1200, perks: ['feeder'], desc: '+10 vagas e comedouro tipo calha' },
+    { n: 'Codornário', cap: 35, cost: 3500, perks: ['feeder', 'auto', 'comfort'], desc: '+15 vagas, bebedouro nipple e luz controlada' }] },
+  curral:      { n: 'Curral', w: 4, h: 3, i: '🐄', houses: ['vaca', 'ovelha', 'cabra'], desc: 'Abriga vacas, ovelhas e cabras. Acumula esterco.', levels: [
+    { n: 'Curral', cap: 4 },
+    { n: 'Curral coberto', cap: 8, cost: 2500, perks: ['feeder'], desc: '+4 vagas e cocho coberto' },
+    { n: 'Estábulo leiteiro', cap: 12, cost: 7000, perks: ['feeder', 'auto', 'comfort'], desc: '+4 vagas, ordenhadeira (coleta automática de leite e lã) e bebedouro' }] },
+  chiqueiro:   { n: 'Chiqueiro', w: 3, h: 2, i: '🐖', houses: ['porco'], desc: 'Abriga porcos e já vem com cocho próprio: deposite ração, grãos ou restos nele.', levels: [
+    { n: 'Chiqueiro', cap: 4, perks: ['feeder'] },
+    { n: 'Pocilga de alvenaria', cap: 8, cost: 2000, perks: ['feeder'], desc: '+4 vagas, piso lavável' },
+    { n: 'Suinocultura com biodigestor', cap: 12, cost: 6000, perks: ['feeder', 'comfort', 'biogas'], desc: '+4 vagas, bebedouro e biodigestor (dobra o esterco)' }] },
+  tanque:      { n: 'Tanque de tilápias', w: 3, h: 3, i: '🐟', houses: ['tilapia'], desc: 'Criação de peixes. Deposite ração no tanque. A água rica em nutrientes aduba a horta (encha o regador aqui).', levels: [
+    { n: 'Tanque de tilápias', cap: 15, perks: ['feeder'] },
+    { n: 'Tanque com aerador', cap: 30, cost: 2500, perks: ['feeder', 'comfort'], desc: '+15 vagas, aerador (peixes mais saudáveis)' },
+    { n: 'Sistema de aquaponia', cap: 50, cost: 6500, perks: ['feeder', 'comfort', 'aquaponia'], desc: '+20 vagas, água do tanque rega e aduba os canteiros próximos sozinha' }] },
+  galpao:      { n: 'Galpão', w: 4, h: 3, i: '🏚️', houses: ['porco', 'vaca', 'ovelha', 'cabra'], desc: 'Galpão multiuso: abriga qualquer animal grande. Acumula esterco.', levels: [
+    { n: 'Galpão', cap: 8 },
+    { n: 'Galpão ampliado', cap: 12, cost: 3000, perks: ['feeder'], desc: '+4 vagas e comedouro embutido' },
+    { n: 'Galpão climatizado', cap: 16, cost: 8000, perks: ['feeder', 'auto', 'comfort'], desc: '+4 vagas, coleta automática e ventilação' }] },
+  silo:        { n: 'Silo', w: 2, h: 2, i: '🛢️', desc: 'Grande depósito de ração: os animais comem dele como de um cocho.', levels: [
+    { n: 'Silo', feedCap: 200 },
+    { n: 'Silo metálico', feedCap: 500, cost: 1500, desc: 'capacidade 500' },
+    { n: 'Silo com rosca', feedCap: 1200, cost: 4000, desc: 'capacidade 1200' }] },
+  aspersor:    { n: 'Aspersor', w: 1, h: 1, i: '💦', desc: 'Rega sozinho os canteiros em volta toda manhã.', levels: [
+    { n: 'Aspersor', range: 1, cross: true, desc: 'rega os 4 vizinhos' },
+    { n: 'Aspersor de qualidade', range: 1, cost: 600, desc: 'rega 3×3 (8 vizinhos)' },
+    { n: 'Aspersor de irídio', range: 2, cost: 1800, desc: 'rega 5×5 (24 vizinhos)' }] },
   moinho:      { n: 'Moinho', w: 2, h: 2, i: '⚙️', desc: 'Mói grãos: farinha, fubá, ração caseira e farinha de osso.' },
   defumador:   { n: 'Defumador', w: 1, h: 1, i: '♨️', light: 2, desc: 'Conserva carnes: charque e linguiça.' },
-  colmeia:     { n: 'Colmeia', w: 1, h: 1, i: '🐝', desc: 'Produz mel e poliniza plantas e pomares próximos.' },
+  colmeia:     { n: 'Colmeia', w: 1, h: 1, i: '🐝', desc: 'Produz mel e poliniza plantas e pomares próximos.', levels: [
+    { n: 'Colmeia', every: 3 },
+    { n: 'Colmeia com melgueira', every: 2, cost: 900, desc: 'mel a cada 2 dias' },
+    { n: 'Apiário', every: 1, cost: 2500, desc: 'mel todo dia e polinização mais forte' }] },
   cerca:       { n: 'Cerca', w: 1, h: 1, i: '🚧', desc: 'Delimita pastos e protege canteiros.' },
 };
 
@@ -121,8 +175,15 @@ D.items = {
   limao:   { n: 'Limão', i: '🍋', sell: 30, cat: 'Fruta', e: { sede: 8 }, organic: 1 },
   // produtos animais
   ovo:     { n: 'Ovo', i: '🥚', sell: 25, cat: 'Animal' },
-  leite:   { n: 'Leite', i: '🥛', sell: 60, cat: 'Animal', e: { fome: 8, sede: 20 } },
+  leite_balde: { n: 'Balde de leite cru', i: '🪣', sell: 40, cat: 'Animal' },
+  leite:   { n: 'Garrafa de leite', i: '🥛', sell: 70, cat: 'Processado', e: { fome: 8, sede: 20 } },
   la:      { n: 'Lã', i: '🧶', sell: 120, cat: 'Animal' },
+  ovo_codorna:  { n: 'Ovo de codorna', i: '🥚', sell: 10, cat: 'Animal', e: { fome: 4 } },
+  leite_cabra:  { n: 'Leite de cabra', i: '🍼', sell: 70, cat: 'Animal', e: { fome: 8, sede: 18 } },
+  carne_cabrito: { n: 'Carne de cabrito', i: '🍖', sell: 80, cat: 'Carne' },
+  carne_codorna: { n: 'Carne de codorna', i: '🍗', sell: 25, cat: 'Carne' },
+  file_tilapia: { n: 'Filé de tilápia', i: '🐟', sell: 45, cat: 'Carne' },
+  residuo_peixe: { n: 'Resíduo de peixe', i: '🦴', sell: 2, cat: 'Orgânico', organic: 3 },
   mel:     { n: 'Mel', i: '🍯', sell: 150, cat: 'Animal', e: { fome: 10, energia: 15 } },
   penas:   { n: 'Penas', i: '🪶', sell: 6, cat: 'Subproduto', organic: 1 },
   couro:   { n: 'Couro', i: '🧥', sell: 90, cat: 'Subproduto' },
@@ -151,6 +212,11 @@ D.items = {
   bolo_milho:    { n: 'Bolo de fubá', i: '🍰', sell: 160, cat: 'Prato', e: { fome: 40, energia: 25 } },
   salada:        { n: 'Salada', i: '🥗', sell: 80, cat: 'Prato', e: { fome: 20, sede: 10, energia: 8 } },
   suco_laranja:  { n: 'Suco de laranja', i: '🧃', sell: 90, cat: 'Prato', e: { sede: 40, energia: 8 } },
+  tilapia_frita: { n: 'Tilápia frita', i: '🍤', sell: 100, cat: 'Prato', e: { fome: 35, energia: 15 } },
+  moqueca:       { n: 'Moqueca', i: '🥘', sell: 240, cat: 'Prato', e: { fome: 60, sede: 10, energia: 30 } },
+  queijo_cabra:  { n: 'Queijo de cabra', i: '🧀', sell: 190, cat: 'Processado', e: { fome: 25, energia: 12 } },
+  conserva_codorna: { n: 'Ovos de codorna em conserva', i: '🫙', sell: 140, cat: 'Processado', e: { fome: 20, energia: 8 } },
+  tilapia_defumada: { n: 'Tilápia defumada', i: '🐠', sell: 160, cat: 'Processado', e: { fome: 30, energia: 12 } },
   limonada:      { n: 'Limonada', i: '🍹', sell: 80, cat: 'Prato', e: { sede: 40, energia: 6 } },
   // compras de mercado
   marmita: { n: 'Marmita', i: '🍱', sell: 20, cat: 'Mercado', e: { fome: 40, energia: 15 } },
@@ -187,8 +253,15 @@ D.recipes = [
   { out: 'galpao', q: 1, in: { madeira: 80, pedra: 40, ferragens: 12 }, st: null, cat: 'Construção' },
   { out: 'moinho', q: 1, in: { madeira: 30, pedra: 40, ferragens: 8 }, st: null, cat: 'Construção' },
   { out: 'defumador', q: 1, in: { pedra: 15, madeira: 10 }, st: null, cat: 'Construção' },
+  { out: 'viveiro', q: 1, in: { madeira: 25, ferragens: 4 }, st: null, cat: 'Construção' },
+  { out: 'curral', q: 1, in: { madeira: 70, pedra: 10, ferragens: 6 }, st: null, cat: 'Construção' },
+  { out: 'chiqueiro', q: 1, in: { madeira: 40, pedra: 20, ferragens: 4 }, st: null, cat: 'Construção' },
+  { out: 'tanque', q: 1, in: { pedra: 50, ferragens: 6 }, st: null, cat: 'Construção' },
+  { out: 'silo', q: 1, in: { pedra: 20, ferragens: 15 }, st: null, cat: 'Construção' },
+  { out: 'aspersor', q: 1, in: { ferragens: 2, pedra: 2 }, st: null, cat: 'Construção' },
   { out: 'colmeia', q: 1, in: { madeira: 15, ferragens: 2 }, st: null, cat: 'Construção' },
   // cozinha (fogueira)
+  { out: 'leite', q: 2, in: { leite_balde: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'omelete', q: 1, in: { ovo: 2, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'frango_assado', q: 1, in: { carne_frango: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'churrasco', q: 1, in: { carne_boi: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
@@ -199,6 +272,12 @@ D.recipes = [
   { out: 'pao', q: 1, in: { farinha: 2, ovo: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'bolo_milho', q: 1, in: { fuba: 2, ovo: 1, leite: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'queijo', q: 1, in: { leite: 3, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'tilapia_frita', q: 1, in: { file_tilapia: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'moqueca', q: 1, in: { file_tilapia: 2, tomate: 1, pimenta: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'queijo_cabra', q: 1, in: { leite_cabra: 3, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'omelete', q: 1, in: { ovo_codorna: 5, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'conserva_codorna', q: 1, in: { ovo_codorna: 8, limao: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'churrasco', q: 1, in: { carne_cabrito: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'sabao', q: 2, in: { banha: 2, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   // preparo simples (qualquer lugar)
   { out: 'salada', q: 1, in: { alface: 1, tomate: 1 }, st: null, cat: 'Preparo' },
@@ -214,6 +293,7 @@ D.recipes = [
   { out: 'charque', q: 1, in: { carne_boi: 2, madeira: 2 }, st: 'defumador', cat: 'Defumador' },
   { out: 'linguica', q: 2, in: { carne_porco: 2, banha: 1, madeira: 1 }, st: 'defumador', cat: 'Defumador' },
   { out: 'linguica', q: 2, in: { carne_frango: 2, madeira: 1 }, st: 'defumador', cat: 'Defumador' },
+  { out: 'tilapia_defumada', q: 1, in: { file_tilapia: 2, madeira: 1 }, st: 'defumador', cat: 'Defumador' },
 ];
 
 // ---------- Loja (Agropecuária & Materiais) ----------
@@ -229,7 +309,7 @@ D.shop = [
   { id: 'agua', price: 15, tab: 'Mercado' },
   { id: 'cafe', price: 25, tab: 'Mercado' },
   ...Object.entries(D.animals).map(([id, a]) => ({ animal: id, price: a.price, tab: 'Animais' })),
-  { upgrade: 'regador', n: 'Regador grande (40 L)', i: '🚿', price: 900, tab: 'Ferramentas', desc: 'Dobra a capacidade do regador.' },
+  { upgrade: 'regador', n: 'Regador grande (40 L)', i: '🚿', price: 900, tab: 'Ferramentas', desc: 'Capacidade de 40 L e rega uma área 3×3 de uma vez.' },
   { upgrade: 'mochila', n: 'Cantil térmico', i: '🧴', price: 600, tab: 'Ferramentas', desc: 'A sede diminui 30% mais devagar.' },
   { upgrade: 'botas', n: 'Botas de trilha', i: '🥾', price: 700, tab: 'Ferramentas', desc: 'Anda 20% mais rápido.' },
   { upgrade: 'ferramentas', n: 'Ferramentas de aço', i: '🛠️', price: 1500, tab: 'Ferramentas', desc: 'Ferramentas gastam 40% menos energia.' },
@@ -282,9 +362,9 @@ D.quests = [
     txt: 'Pegue o esterco no galinheiro e deposite na composteira junto com restos e capim. Em duas noites vira adubo, que acelera o crescimento e melhora a colheita. Nada se perde!' },
   { id: 'terra', t: 'Expandindo as terras', goal: 'Compre um novo lote (tecla T)', stat: 'lots', n: 1, reward: { money: 200 },
     txt: 'Cada lote tem um bioma: pasto, mata, lago, cerrado. Planeje: pasto para os ruminantes, mata para lenha manejada, lago para água.' },
-  { id: 'galpao', t: 'Animais de grande porte', goal: 'Construa um galpão e tenha um porco, vaca ou ovelha', check: g => G.countBuildings('galpao') >= 1 && (G.countAnimals('porco') + G.countAnimals('vaca') + G.countAnimals('ovelha')) >= 1,
+  { id: 'galpao', t: 'Animais de grande porte', goal: 'Construa um curral, chiqueiro ou galpão e tenha um porco, vaca, ovelha ou cabra', check: g => (G.countBuildings('galpao') + G.countBuildings('curral') + G.countBuildings('chiqueiro')) >= 1 && (G.countAnimals('porco') + G.countAnimals('vaca') + G.countAnimals('ovelha') + G.countAnimals('cabra')) >= 1,
     reward: { items: { racao: 15 } },
-    txt: 'Vacas e ovelhas pastam: com bastante pasto livre elas se alimentam sozinhas (menos no inverno). Porcos comem do cocho e aproveitam restos.' },
+    txt: 'Curral para ruminantes, chiqueiro (com cocho próprio) para porcos. Vacas, ovelhas e cabras pastam: com bastante pasto livre elas se alimentam sozinhas (menos no inverno). Porcos comem do cocho e aproveitam restos.' },
   { id: 'abate', t: 'Do campo à mesa', goal: 'Abata um animal adulto com a faca', stat: 'slaughter', n: 1, reward: { money: 150 },
     txt: 'O abate deve ser feito com respeito e sem sofrimento. Aproveite tudo: carne, couro, banha, penas e ossos (que viram farinha de osso, um adubo rico em fósforo).' },
   { id: 'conserva', t: 'Conservação de alimentos', goal: 'Faça charque ou linguiça no defumador', stat: 'smoke', n: 1, reward: { money: 200 },

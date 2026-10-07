@@ -9,6 +9,8 @@ window.UI = (() => {
 
   const icon = (id, big) => {
     const it = D.items[id];
+    const art = window.ITEMICONS && ITEMICONS.html(id);
+    if (art) return art;
     const badge = it.seed ? '<span class="badge">🌱</span>' : it.sapling ? '<span class="badge">🪴</span>' : '';
     return `${it.i}${badge}`;
   };
@@ -35,15 +37,16 @@ window.UI = (() => {
     sun.textContent = G.isNight() ? '🌙' : S.weather === 'chuva' ? '🌦️' : '☀️';
     sun.style.left = (6 + dayP * 138) + 'px'; sun.style.top = (26 - Math.sin(dayP * Math.PI) * 18) + 'px';
     $('#c-money').innerHTML = S.creative ? '💰 <span class="creative-badge">∞ modo teste</span>' : `💰 ${S.money.toLocaleString('pt-BR')}`;
+    document.getElementById('btn-dev').classList.toggle('hidden', !S.creative);
     const q = D.quests[S.quest];
     $('#quest').innerHTML = q ? `<small>📗 Manual · etapa ${S.quest + 1}/${D.quests.length}</small><b>${q.t}</b>${q.goal}<br><small>${G.questProgress(q)}</small>` : '<b>🏆 Fazenda autossuficiente!</b>Continue expandindo seu sistema.';
     document.querySelectorAll('#hotbar .slot').forEach((el, i) => {
       el.classList.toggle('sel', i === S.tool);
       if (D.tools[i].id === 'item') {
         const ic = el.querySelector('.ic'), want = S.held || '_bag';
-        if (ic.dataset.v !== want) { ic.dataset.v = want; ic.innerHTML = S.held ? D.items[S.held].i : ICONS.html('item'); }
+        if (ic.dataset.v !== want) { ic.dataset.v = want; ic.innerHTML = S.held ? icon(S.held) : ICONS.html('item'); }
         el.querySelector('.q').textContent = S.held ? S.inv[S.held] || '' : '';
-        el.querySelector('.badge').textContent = S.held && D.items[S.held].seed ? '🌱' : '';
+        el.querySelector('.badge').textContent = '';
         el.title = S.held ? D.items[S.held].n : 'Item na mão (escolha no inventário)';
       }
       if (D.tools[i].id === 'regador') el.querySelector('.q').textContent = p.water;
@@ -141,7 +144,7 @@ window.UI = (() => {
         if (e.animal) {
           const a = D.animals[e.animal]; ic = a.bi; name = a.baby + ` (${a.n})`;
           const home = G.homeWithSpace(e.animal);
-          sub = `${home ? '✔ há vaga' : `✘ precisa de ${D.buildings[a.home].n} com vaga`} · adulto em ${a.adult} dias · come ${a.eat}/dia${a.grazer ? ' (pasta)' : ''}`;
+          sub = `${home ? '✔ há vaga' : `✘ precisa de ${G.homeNames(e.animal)} com vaga`} · adulto em ${a.adult} dias · come ${a.eat}/dia${a.grazer ? ' (pasta)' : ''}`;
           dis = dis || !home;
         } else if (e.upgrade) {
           ic = e.i; name = e.n; sub = e.desc; if (S.upgrades[e.upgrade]) { dis = true; sub = '✔ já comprado'; }
@@ -152,7 +155,7 @@ window.UI = (() => {
           else if (it.e) sub = `+${it.e.fome || 0}🍖 +${it.e.sede || 0}💧 +${it.e.energia || 0}⚡`;
           else if (it.feed) sub = `alimento animal: ${it.feed} un.`;
         }
-        const multi = !e.animal && !e.upgrade;
+        const multi = !e.upgrade;
         return `<div class="card ${dis ? 'off' : ''}"><div class="ic">${ic}</div><div class="info"><b>${name}</b>💰 ${e.price}<small>${sub}</small></div>
           <div style="display:flex;flex-direction:column;gap:3px"><button data-b="${idx}" data-q="1" ${dis ? 'disabled' : ''}>Comprar</button>${multi ? `<button data-b="${idx}" data-q="5" ${S.money < e.price * 5 ? 'disabled' : ''}>×5</button>` : ''}</div></div>`;
       }).join('')}</div>`;
@@ -169,15 +172,49 @@ window.UI = (() => {
     panel.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { G.sell(b.dataset.s, +b.dataset.q); ui.openShop(); });
   };
 
-  // ---------- animais ----------
-  ui.openAnimals = b => {
-    const def = D.buildings[b.type];
+  // ---------- construções (info, animais e evolução) ----------
+  const stars = n => '★'.repeat(n) + '☆'.repeat(3 - n);
+  ui.openBuilding = b => {
+    const def = D.buildings[b.type], L = G.lvl(b), lv = b.level || 1, nx = G.nextLevel(b);
     const list = S.animals.filter(a => a.home === b.id);
-    const troughs = S.buildings.filter(x => x.type === 'cocho').reduce((s, x) => s + x.data.feed, 0);
-    ui.show('animals', `<h2>${def.i} ${def.n}</h2><p><small>${list.length}/${def.cap} animais · alimento nos cochos: ${troughs} un. · esterco acumulado: ${Math.floor(b.data.manure)}</small></p>
-      <div class="grid">${list.map(a => { const ad = D.animals[a.type], adult = a.age >= ad.adult; return `<div class="card"><div class="ic">${adult ? ad.i : ad.bi}</div><div class="info"><b>${a.name}</b>${adult ? ad.n : ad.baby} · ${a.age} dias
-        <small>❤️ ${Math.round(a.happy)}% ${a.hungry ? '· ⚠️ com fome há ' + a.hungry + ' dia(s)' : '· alimentado'}${a.ready ? ' · produto pronto!' : ''}</small></div></div>`; }).join('') || '<p>Nenhum animal. Compre filhotes na loja.</p>'}</div>
-      <p><small>Dica: animais comem à noite do cocho (${def.houses.map(h => `${D.animals[h].n}: ${D.animals[h].eat}/dia`).join(', ')}). Vacas e ovelhas também pastam em grama livre (cerca de 12 tiles por animal).</small></p>`);
+    const info = [];
+    if (def.houses) info.push(`🏠 ${list.length}/${G.cap(b)} animais`);
+    if (G.feedCap(b)) info.push(`🍽️ alimento: ${b.data.feed || 0}/${G.feedCap(b)} (segure ração, grãos ou capim e interaja)`);
+    if (def.houses && !G.perk(b, 'feeder')) info.push(`🍽️ os animais comem dos cochos e silos (${S.buildings.filter(x => x.type === 'cocho' || x.type === 'silo').reduce((s, x) => s + (x.data.feed || 0), 0)} un.)`);
+    if (b.data.manure != null && def.houses) info.push(`💩 esterco acumulado: ${Math.floor(b.data.manure)}`);
+    if (b.type === 'composteira') info.push(`♻️ carga ${b.data.load}/${L.per} · ${b.data.batches.length} lote(s) compostando · adubo em ${L.days} noite(s)`);
+    if (b.type === 'colmeia') info.push(S.season === 3 ? '❄️ abelhas recolhidas no inverno' : `🍯 mel a cada ${L.every} dia(s) · próximo em ${Math.max(0, L.every - b.data.t)} dia(s)`);
+    if (b.type === 'aspersor') info.push(`💦 ${L.desc}, toda manhã`);
+    const perks = { feeder: '🍽️ comedouro embutido', auto: '🤖 coleta automática', comfort: '💧 bebedouro/conforto (+felicidade, +reprodução)', biogas: '🔥 biodigestor (esterco em dobro)', aquaponia: '🌱 aquaponia (rega e aduba canteiros próximos)' };
+    const pk = (L.perks || []).map(p => perks[p]).filter(Boolean);
+    const animals = def.houses ? `<h3>Animais</h3><div class="grid">${list.map(a => { const ad = D.animals[a.type], adult = a.age >= ad.adult; return `<div class="card"><div class="ic">${adult ? ad.i : ad.bi}</div><div class="info"><b>${a.name}</b>${adult ? ad.n : ad.baby} · ${a.age} dias${adult ? '' : ` (adulto em ${ad.adult - a.age})`}
+        <small>❤️ ${Math.round(a.happy)}% ${a.hungry ? '· ⚠️ com fome há ' + a.hungry + ' dia(s)' : '· alimentado'}${a.ready ? ' · produto pronto!' : ''}</small></div></div>`; }).join('') || `<p>Nenhum animal. Compre ${def.houses.map(h => D.animals[h].baby.toLowerCase() + 's').join(', ')} na loja.</p>`}</div>` : '';
+    const fishBtn = b.type === 'tanque' ? `<button class="btn" id="b-fish">🎣 Despescar adultos (${list.filter(a => a.age >= D.animals[a.type].adult).length})</button>` : '';
+    const up = nx ? `<div class="card" style="margin-top:12px"><div class="ic">🏗️</div><div class="info"><b>Evoluir para: ${nx.n} ${stars(lv + 1)}</b>${nx.desc || ''}<small>💰 ${nx.cost.toLocaleString('pt-BR')}${S.creative ? ' (grátis no modo teste)' : ''}</small></div>
+        <button id="b-up" ${S.creative || S.money >= nx.cost ? '' : 'disabled'}>Evoluir</button></div>` : '<p><small>✅ Nível máximo.</small></p>';
+    ui.show('building', `<h2>${def.i || '🏠'} ${G.bname(b)} <small style="color:#c99320">${stars(lv)}</small></h2>
+      <p><small>${def.desc || ''}</small></p>
+      <p>${info.join('<br>')}${pk.length ? '<br>' + pk.join(' · ') : ''}</p>
+      <div class="row">${fishBtn}</div>${animals}${up}`);
+    const ub = panel.querySelector('#b-up'); if (ub) ub.onclick = () => { if (G.upgrade(b)) ui.openBuilding(b); };
+    const fb = panel.querySelector('#b-fish'); if (fb) fb.onclick = () => { G.harvestFish(b); ui.openBuilding(b); };
+  };
+  ui.openAnimals = ui.openBuilding;
+
+  // ---------- painel dev (modo teste) ----------
+  ui.openDev = () => {
+    if (!S.creative) { ui.toast('Ligue o modo teste no menu ⚙️.'); return; }
+    const B = (id, label) => `<button class="btn alt" data-d="${id}">${label}</button>`;
+    ui.show('dev', `<h2>🧪 Painel de testes</h2><p><small>Ferramentas para testar o jogo. Em cima de cada planta aparecem os dias que faltam e a saúde.</small></p>
+      <h3>⏰ Tempo</h3><div class="row">${B('h1', '+1 hora')}${B('h6', '+6 horas')}${B('day', '⏭️ Pular para o próximo dia')}${B('season', '🍂 Próxima estação')}${B('rain', '🌧️ Liga/desliga chuva')}</div>
+      <h3>🌱 Plantas</h3><div class="row">${B('grow', '+1 dia de crescimento')}${B('grow3', '+3 dias')}${B('ripen', '✨ Amadurecer tudo')}${B('water', '💧 Regar tudo')}${B('heal', '❤️ Curar plantas')}</div>
+      <h3>🐔 Animais</h3><div class="row">${B('age1', '+1 dia de idade')}${B('age5', '+5 dias')}</div>
+      <h3>🎒 Recursos</h3><div class="row">${B('stats', '❤️ Encher status')}${B('mat', '🪵 +Materiais e ração')}${B('seeds', '🌱 +Sementes e mudas')}${B('lots', '🗺️ Liberar todas as terras')}</div>
+      <p><small>Hoje: ${D.SEASONS[S.season]}, dia ${S.day} · ${G.clock()} · ${S.weather === 'chuva' ? 'chuva' : 'sol'} · ${G.countCrops()} cultivos · ${S.animals.length} animais</small></p>`);
+    const act = { h1: () => G.dev.hours(1), h6: () => G.dev.hours(6), day: () => { ui.close(); G.dev.skipDay(); return true; }, season: () => G.dev.season(), rain: () => G.dev.rain(),
+      grow: () => G.dev.grow(1), grow3: () => G.dev.grow(3), ripen: () => G.dev.ripen(), water: () => G.dev.waterAll(), heal: () => G.dev.healAll(),
+      age1: () => G.dev.ageAnimals(1), age5: () => G.dev.ageAnimals(5), stats: () => G.dev.fillStats(), mat: () => G.dev.materials(), seeds: () => G.dev.seeds(), lots: () => G.dev.allLots() };
+    panel.querySelectorAll('[data-d]').forEach(el => el.onclick = () => { play('ui'); if (!act[el.dataset.d]()) { ui.toast('✔ ' + el.textContent); ui.openDev(); } });
   };
 
   // ---------- manual ----------
