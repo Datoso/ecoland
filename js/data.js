@@ -175,6 +175,10 @@ D.buildings = {
     { n: 'Colmeia com melgueira', every: 2, cost: 900, desc: 'mel a cada 2 dias' },
     { n: 'Apiário', every: 1, cost: 2500, desc: 'mel todo dia e polinização mais forte' }] },
   cerca:       { n: 'Cerca', w: 1, h: 1, i: '🚧', desc: 'Delimita pastos e protege canteiros. Segure a cerca e arraste o mouse para cercar uma área.' },
+  banco_sementes: { n: 'Banco de Sementes', w: 2, h: 2, i: '🫙', desc: 'Separe sementes crioulas da própria colheita. A cada geração plantada e guardada elas se adaptam à sua terra.', levels: [
+    { n: 'Banco de Sementes', bonus: 0, genStep: 1 },
+    { n: 'Banco comunitário', bonus: 1, genStep: 1, cost: 1500, desc: '+1 semente em cada separação' },
+    { n: 'Câmara fria de sementes', bonus: 1, genStep: 2, cost: 4000, desc: 'sementes bem conservadas: a geração sobe 2 de cada vez' }] },
   espaldeira:  { n: 'Espaldeira', w: 1, h: 1, i: '🪜', desc: 'Estrutura de madeira e arame para trepadeiras: plante muda de uva ou maracujá nela.' },
   ponte:       { n: 'Ponte de madeira', w: 1, h: 1, i: '🌉', desc: 'Atravessa lagos e córregos. Segure a ponte e arraste o mouse por cima da água.' },
   porteira:    { n: 'Porteira', w: 1, h: 1, i: '🚪', desc: 'Passagem na cerca: você passa, os animais não.' },
@@ -279,7 +283,14 @@ for (const [id, c] of Object.entries(D.crops)) {
     n: (id === 'mandioca' ? 'Ramas de ' : id === 'capim' || id === 'abacaxi' ? 'Mudas de ' : 'Sementes de ') + c.n.toLowerCase(),
     i: c.i, seed: id, sell: Math.floor(c.seedPrice / 2), cat: 'Semente',
   };
+  // sementes crioulas: separadas da própria colheita no Banco de Sementes
+  D.items['cri_' + id] = {
+    n: (id === 'mandioca' ? 'Ramas crioulas de ' : id === 'capim' || id === 'abacaxi' || id === 'morango' ? 'Mudas crioulas de ' : 'Sementes crioulas de ') + c.n.toLowerCase(),
+    i: c.i, seed: id, crioula: true, sell: Math.floor(c.seedPrice * 0.7), cat: 'Semente crioula',
+  };
 }
+// quantas sementes saem de cada produto colhido
+D.seedSave = { alface: 3, cenoura: 3, feijao: 3, milho: 4, tomate: 4, mandioca: 2, abobora: 5, trigo: 3, capim: 2, morango: 2, pimenta: 4, melancia: 4, abacaxi: 1 };
 for (const [id, f] of Object.entries(D.fruits)) {
   D.items['muda_' + id] = { n: 'Muda de ' + f.n.toLowerCase(), i: f.i, sapling: id, sell: Math.floor(f.price / 2), cat: 'Muda' };
 }
@@ -297,6 +308,7 @@ D.recipes = [
   { out: 'cerca', q: 4, in: { madeira: 2 }, st: null, cat: 'Construção' },
   { out: 'porteira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
   { out: 'ponte', q: 2, in: { madeira: 3 }, st: null, cat: 'Construção' },
+  { out: 'banco_sementes', q: 1, in: { madeira: 25, pedra: 15, ferragens: 2 }, st: null, cat: 'Construção' },
   { out: 'espaldeira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
   { out: 'cocho', q: 1, in: { madeira: 10 }, st: null, cat: 'Construção' },
   { out: 'composteira', q: 1, in: { madeira: 15, pedra: 5 }, st: null, cat: 'Construção' },
@@ -432,6 +444,9 @@ D.quests = [
     txt: 'As abelhas produzem mel e polinizam: plantas e frutíferas perto da colmeia crescem e produzem mais.' },
   { id: 'racao', t: 'Ração caseira', goal: 'Produza 6 rações no moinho', stat: 'racao', n: 6, reward: { money: 300 },
     txt: 'Comprar ração é dependência. Moendo milho com feijão (ou mandioca com capim) você fecha o ciclo: a lavoura alimenta a criação.' },
+  { id: 'sementes', t: 'Sementes da terra', goal: 'Guarde sementes crioulas de 3 culturas no Banco de Sementes', check: g => Object.keys(g.seedBank || {}).length >= 3,
+    prog: g => `${Math.min(3, Object.keys(g.seedBank || {}).length)}/3 variedades`, reward: { money: 400 },
+    txt: 'Semente comprada deixa você dependente da loja. Separando sementes da sua colheita, cada geração se adapta melhor ao seu solo e ao seu clima: fica mais resistente à seca e mais produtiva. Guardar e trocar sementes crioulas é uma tradição dos agricultores — e a base da autonomia.' },
   { id: 'integrado', t: 'Sistema Integrado', goal: '10 cultivos, 6 animais, 3 frutíferas, colmeia e composteira ao mesmo tempo',
     check: g => G.countCrops() >= 10 && G.animals.length >= 6 && G.countFruitTrees() >= 3 && G.countBuildings('colmeia') >= 1 && G.countBuildings('composteira') >= 1,
     prog: g => `${Math.min(10, G.countCrops())}/10 cultivos · ${Math.min(6, G.animals.length)}/6 animais · ${Math.min(3, G.countFruitTrees())}/3 frutíferas`,

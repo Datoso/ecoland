@@ -238,7 +238,7 @@ const G = window.G = {
       player: { x: 0, y: 0, dir: 'down', hp: 100, energy: 100, maxEnergy: 100, fome: 85, sede: 85, water: 15, waterMax: 15, sick: 0 },
       inv: { sem_alface: 10, sem_cenoura: 6, marmita: 3, agua: 3 },
       held: 'sem_alface', tool: 0, lots: { sede: true }, tiles: [], buildings: [], animals: [], nextId: 1,
-      stats: {}, quest: 0, upgrades: {}, tools: {}, ended: false,
+      stats: {}, quest: 0, upgrades: {}, tools: {}, seedBank: {}, ended: false,
     };
     this.buildLotGrid();
     this.genWorld();
@@ -292,6 +292,7 @@ const G = window.G = {
       S = JSON.parse(raw);
       S.worldId = S.worldId || id;
       S.tools = S.tools || {};
+      S.seedBank = S.seedBank || {};
       if (S.upgrades.regador && !S.tools.regador) { S.tools.regador = 2; delete S.upgrades.regador; }
       this.buildLotGrid();
       S.animals.forEach(a => { a.tx = null; });
@@ -573,6 +574,11 @@ const G = window.G = {
     let n = rnd(crop.yield[0], crop.yield[1]);
     if (c.fert && chance(0.6)) n++;
     if ((c.hp ?? 100) < 50) n = Math.max(1, n - 1);
+    if (c.cri) {
+      if (chance(0.08 * c.cri)) n++;            // variedade adaptada produz mais
+      const bank = S.seedBank[c.id] || (S.seedBank[c.id] = { gen: 0, saved: 0, fresh: 0 });
+      bank.fresh = Math.max(bank.fresh || 0, c.cri);   // colheu crioula: a próxima separação avança a geração
+    }
     if (this.nearBee(tx, ty) && chance(0.3)) n++;
     this.add(c.id, n, quiet);
     if (!quiet) sfx('harvest');
@@ -675,6 +681,7 @@ const G = window.G = {
         if (b.data.mel > 0) { this.add('mel', b.data.mel); b.data.mel = 0; sfx('harvest'); return; }
         return UI.openBuilding(b);
       case 'cerca': return;
+      case 'banco_sementes': return UI.openSeedBank(b);
     }
     if (held && held.feed && this.feedCap(b)) return this.deposit(b, S.held);
     if (def.houses && this.collectHouse(b)) return;
@@ -738,6 +745,7 @@ const G = window.G = {
       const crop = D.crops[it.seed];
       if (!crop.seasons.includes(S.season)) { toast(`${crop.n} não cresce no(a) ${D.SEASONS[S.season]}. Épocas: ${crop.seasons.map(s => D.SEASONS[s]).join(', ')}.`); sfx('error'); return; }
       this.take(id); t.c = { id: it.seed, g: 0, fert: !!t.fert, dead: false, hp: 100 }; t.fert = false;
+      if (it.crioula) t.c.cri = (S.seedBank[it.seed] && S.seedBank[it.seed].gen) || 1;
       sfx('plant'); this.stat('plant');
       return;
     }
@@ -784,6 +792,24 @@ const G = window.G = {
     if (e.energia) p.energy = Math.min(p.maxEnergy, p.energy + e.energia);
     sfx(e.sede && !e.fome ? 'drink' : 'eat');
     this.popup(p.x, p.y - 1, `${it.i} ${e.fome ? '+' + e.fome + '🍖 ' : ''}${e.sede ? '+' + e.sede + '💧 ' : ''}${e.energia ? '+' + e.energia + '⚡' : ''}`);
+  },
+
+  // ---------------- Banco de sementes ----------------
+  saveSeeds(b, crop, qty) {
+    qty = Math.min(qty, S.inv[crop] || 0);
+    if (!qty) { toast(`Você não tem ${D.crops[crop].n.toLowerCase()} colhido(a) para separar sementes.`); return false; }
+    const L = this.lvl(b);
+    this.take(crop, qty);
+    const out = qty * (D.seedSave[crop] + (L.bonus || 0));
+    const bank = S.seedBank[crop] || (S.seedBank[crop] = { gen: 0, saved: 0, fresh: 0 });
+    const before = bank.gen;
+    bank.gen = bank.fresh ? Math.min(5, Math.max(bank.gen, bank.fresh + (L.genStep || 1))) : Math.max(bank.gen, 1);
+    bank.fresh = 0; bank.saved += out;
+    this.add('cri_' + crop, out);
+    sfx(bank.gen > before && before > 0 ? 'quest' : 'craft');
+    if (bank.gen > before && before > 0) toast(`🌱 ${D.crops[crop].n} crioula chegou à geração ${bank.gen}: mais resistente e produtiva!`, 'good');
+    this.stat('seeds', out);
+    return true;
   },
 
   // ---------------- Criação (crafting) ----------------
@@ -918,7 +944,7 @@ const G = window.G = {
             if (c.fert && chance(0.5)) c.g++;
             if (this.nearBee(x, y) && chance(0.2)) c.g++;
           }
-        } else if (!mature) c.hp -= 25;          // seca
+        } else if (!mature) c.hp -= c.cri ? Math.max(10, 25 - 3 * c.cri) : 25;   // seca (crioulas resistem mais)
         if (mature) c.hp -= 4;                   // passando do ponto
         let weeds = 0;
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const n = this.tile(x + dx, y + dy); if (n && n.o && n.o.t === 'weed') weeds++; }

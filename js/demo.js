@@ -50,7 +50,7 @@ G.newDemoWorld = function () {
     const t = G.tile(x, y), c = D.crops[id];
     if (!t || t.o || t.g === 'water') return;
     t.g = 'tilled'; t.wet = true;
-    t.c = { id, g: grown == null ? rnd(0, c.days) : grown, fert: chance(0.4), dead: false, hp: rnd(80, 100) };
+    t.c = { id, g: grown == null ? rnd(0, c.days) : grown, fert: chance(0.4), dead: false, hp: rnd(80, 100), cri: chance(0.5) ? rnd(1, 5) : undefined };
   };
   const tree = (x, y, k) => {
     const f = D.fruits[k], t = G.tile(x, y);
@@ -66,6 +66,8 @@ G.newDemoWorld = function () {
   build('fogueira', s.x + 8, s.y + 3);
   build('poco', s.x + 9, s.y + 1, 1);
   build('defumador', s.x + 11, s.y + 4);
+  build('banco_sementes', s.x + 11, s.y, 3);
+  for (const id of Object.keys(D.crops)) S.seedBank[id] = { gen: rnd(1, 5), saved: rnd(20, 120), fresh: chance(0.4) ? rnd(1, 4) : 0 };
   const comp = build('composteira', s.x + 1, s.y + 3);
   comp.data.ready = 6; comp.data.batches = [{ d: 1, q: 1 }]; comp.data.load = 2;
   // PAIS: galinheiro no centro, cercado, com canteiros em anel ao redor

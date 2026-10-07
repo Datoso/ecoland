@@ -218,6 +218,27 @@ window.UI = (() => {
   };
   ui.openAnimals = ui.openBuilding;
 
+  // ---------- banco de sementes ----------
+  ui.openSeedBank = b => {
+    const L = G.lvl(b), lv = b.level || 1, nx = G.nextLevel(b);
+    const gens = g => g ? '🌱'.repeat(g) + '<span style="opacity:.25">' + '🌱'.repeat(5 - g) + '</span>' : '<small>nenhuma geração ainda</small>';
+    const cards = Object.keys(D.crops).map(id => {
+      const c = D.crops[id], bank = S.seedBank[id] || {}, have = S.inv[id] || 0, per = D.seedSave[id] + (L.bonus || 0);
+      const next = bank.fresh ? Math.min(5, Math.max(bank.gen || 0, bank.fresh + (L.genStep || 1))) : 0;
+      return `<div class="card ${have ? '' : 'off'}"><div class="ic">${icon('cri_' + id)}</div><div class="info"><b>${c.n}</b>${gens(bank.gen || 0)}
+        <small>1 ${c.n.toLowerCase()} → ${per} semente(s) · você tem ${have} colhido(s) · ${S.inv['cri_' + id] || 0} crioula(s) guardada(s)${next > (bank.gen || 0) ? ` · <b style="color:#2d7a1f">próxima separação: geração ${next}!</b>` : ''}</small></div>
+        <div style="display:flex;flex-direction:column;gap:3px"><button data-s="${id}" data-q="1" ${have ? '' : 'disabled'}>Separar 1</button><button data-s="${id}" data-q="999" ${have > 1 ? '' : 'disabled'}>Tudo</button></div></div>`;
+    }).join('');
+    const up = nx ? `<div class="card" style="margin-top:12px"><div class="ic">🏗️</div><div class="info"><b>Evoluir para: ${nx.n} ${stars(lv + 1)}</b>${nx.desc || ''}<small>💰 ${nx.cost.toLocaleString('pt-BR')}${S.creative ? ' (grátis no modo teste)' : ''}</small></div>
+        <button id="b-up" ${S.creative || S.money >= nx.cost ? '' : 'disabled'}>Evoluir</button></div>` : '';
+    ui.show('seedbank', `<h2>🫙 ${G.bname(b)} <small style="color:#c99320">${stars(lv)}</small></h2>
+      <p><small>Separe sementes da sua colheita. Plantando a semente crioula, colhendo e guardando de novo, a variedade ganha uma <b>geração</b> (até 5):
+      cada geração deixa a planta mais <b>resistente à seca</b> e com mais chance de <b>colheita extra</b>. Sementes da loja não evoluem.</small></p>
+      <div class="grid">${cards}</div>${up}`);
+    panel.querySelectorAll('[data-s]').forEach(el => el.onclick = () => { G.saveSeeds(b, el.dataset.s, +el.dataset.q); ui.openSeedBank(b); });
+    const ub = panel.querySelector('#b-up'); if (ub) ub.onclick = () => { if (G.upgrade(b)) ui.openSeedBank(b); };
+  };
+
   // ---------- painel dev (modo teste) ----------
   ui.openDev = () => {
     if (!S.creative) { ui.toast('Ligue o modo teste no menu ⚙️.'); return; }
