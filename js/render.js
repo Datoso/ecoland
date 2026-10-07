@@ -1525,6 +1525,74 @@ window.R = (() => {
         break;
       }
       case 'espaldeira': paintTrellis(c, w / 2, h - 5, snow); break;
+      case 'banco_sementes': {
+        shadowRect(c, 6, h - 10, w - 4, 14);
+        // paredes caiadas
+        c.fillStyle = '#f3ede0'; c.fillRect(6, 22, w - 12, h - 28);
+        const r = rng(123); for (let i = 0; i < 40; i++) { c.fillStyle = `rgba(150,130,100,${0.05 + r() * 0.08})`; ell(c, 8 + r() * (w - 16), 26 + r() * (h - 34), 2 + r() * 4, 1 + r() * 2, c.fillStyle); }
+        c.fillStyle = '#c99a5a'; c.fillRect(6, h - 14, w - 12, 8); c.fillStyle = '#a87a42'; c.fillRect(6, h - 14, w - 12, 1.5);
+        const sg = c.createLinearGradient(0, 22, 0, 40); sg.addColorStop(0, 'rgba(0,0,0,0.2)'); sg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = sg; c.fillRect(6, 22, w - 12, 18);
+        const jars = (x0, y0, ww, rows) => {
+          c.fillStyle = '#3a2414'; c.fillRect(x0, y0, ww, rows * 10 + 2);
+          const jc = ['#e8c23a', '#c0392b', '#7a4a2a', '#8fbf3a', '#e8822a', '#f2efe0', '#6a3a7a', '#3a2a1a'], rj = rng(x0 * 7 + y0);
+          for (let j = 0; j < rows; j++) {
+            c.fillStyle = '#8a5a30'; c.fillRect(x0, y0 + j * 10 + 9, ww, 2);
+            for (let x = x0 + 1.5; x < x0 + ww - 4; x += 5) {
+              c.fillStyle = 'rgba(220,240,250,0.55)'; c.fillRect(x, y0 + j * 10 + 2, 4, 7);
+              c.fillStyle = jc[Math.floor(rj() * jc.length)]; c.fillRect(x + 0.5, y0 + j * 10 + 4 + rj() * 1.5, 3, 4.5);
+              c.fillStyle = '#b8902a'; c.fillRect(x, y0 + j * 10 + 1.5, 4, 1.2);
+            }
+          }
+        };
+        // porta aberta com prateleiras
+        c.fillStyle = '#6b4423'; c.fillRect(12, h - 50, 28, 44);
+        jars(15, h - 47, 22, 4);
+        c.fillStyle = '#8a5a30'; c.fillRect(38, h - 49, 6, 42); c.fillStyle = '#a8764a'; c.fillRect(38, h - 49, 2, 42);
+        // janela aberta com potes
+        c.fillStyle = '#6b4423'; c.fillRect(52, 40, 26, 22); jars(54, 41, 22, 2);
+        c.fillStyle = '#4f8a6a'; c.fillRect(46, 40, 6, 22); c.fillRect(78, 40, 6, 22);
+        c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(47, 41, 1.2, 20); c.fillRect(79, 41, 1.2, 20);
+        c.fillStyle = '#8a5a34'; c.fillRect(49, 62, 32, 3);
+        // tranças de milho e ervas
+        c.strokeStyle = '#c9b48a'; c.lineWidth = 1; c.beginPath(); c.moveTo(47, 30); c.lineTo(47, 36); c.stroke();
+        for (let i = 0; i < 4; i++) { ell(c, 47 + (i % 2 ? 2 : -2), 39 + i * 5, 2.4, 3.6, i % 3 ? '#f2c23a' : '#e0a028'); c.fillStyle = '#d8c48a'; c.fillRect(46, 36 + i * 5, 2, 2); }
+        for (const [hx, col] of [[58, '#6f9a3a'], [66, '#8a9a4a'], [74, '#5a8a3a']]) {
+          c.strokeStyle = '#c9b48a'; c.beginPath(); c.moveTo(hx, 30); c.lineTo(hx, 33); c.stroke();
+          c.fillStyle = col; c.beginPath(); c.moveTo(hx - 3, 33); c.lineTo(hx + 3, 33); c.lineTo(hx + 1.5, 39); c.lineTo(hx - 1.5, 39); c.fill();
+          c.fillStyle = '#a0303a'; c.fillRect(hx - 2.5, 33, 5, 1.5);
+        }
+        // telhado de telhas
+        roofPoly(c, [[-4, 30], [12, -14], [w - 12, -14], [w + 4, 30]], '#c4603a', snow);
+        c.fillStyle = shade('#c4603a', -0.45); c.fillRect(-5, 27, w + 10, 4);
+        // plaquinha pintada
+        c.fillStyle = '#7a4a28'; rrect(c, 8, 33, 34, 11, 2); c.fill(); c.strokeStyle = '#f2d36a'; c.lineWidth = 0.8; rrect(c, 9.5, 34.5, 31, 8, 1.5); c.stroke();
+        c.fillStyle = '#fff4c8'; c.font = 'bold 5.5px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('SEMENTES', 25, 39, 24); c.textBaseline = 'alphabetic';
+        circ(c, 11.5, 38.5, 1.2, '#8fbf3a'); circ(c, 38.5, 38.5, 1.2, '#e8c23a');
+        if (lv >= 2) {
+          // banco de madeira
+          c.fillStyle = 'rgba(10,25,5,0.25)'; c.fillRect(54, h + 2, 30, 3);
+          c.fillStyle = '#6b4423'; c.fillRect(56, h - 4, 3, 8); c.fillRect(79, h - 4, 3, 8);
+          c.fillStyle = '#a8764a'; c.fillRect(53, h - 6, 32, 4); c.fillStyle = '#c99a5a'; c.fillRect(53, h - 6, 32, 1.2);
+          c.fillStyle = '#8a5a30'; c.fillRect(53, h - 14, 32, 3); c.fillRect(56, h - 14, 2, 8); c.fillRect(80, h - 14, 2, 8);
+          // cavalete com lousa
+          c.strokeStyle = '#7a4a28'; c.lineWidth = 2; c.beginPath(); c.moveTo(-6, h + 4); c.lineTo(0, h - 22); c.lineTo(6, h + 4); c.stroke();
+          c.fillStyle = '#7a4a28'; c.fillRect(-8, h - 20, 16, 16); c.fillStyle = '#2f3a34'; c.fillRect(-6.5, h - 18.5, 13, 13);
+          c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(-4.5, h - 15); c.lineTo(4, h - 15); c.moveTo(-4.5, h - 12); c.lineTo(2, h - 12); c.moveTo(-4.5, h - 9); c.lineTo(3.5, h - 9); c.stroke();
+          circ(c, 3.5, h - 8, 1, '#f2d36a');
+        }
+        if (lv >= 3) {
+          // anexo isolado (câmara fria) e condensador de ar
+          c.fillStyle = 'rgba(10,25,5,0.22)'; c.fillRect(w - 6, h - 4, 22, 5);
+          c.fillStyle = '#e8eef2'; c.fillRect(w - 6, 30, 20, h - 34); c.fillStyle = '#c8d2d8'; for (let y = 34; y < h - 4; y += 7) c.fillRect(w - 6, y, 20, 1);
+          c.fillStyle = '#9aa6ae'; c.fillRect(w - 7, 28, 22, 3);
+          c.fillStyle = '#f7fafc'; rrect(c, w - 3, 44, 15, 13, 2); c.fill(); c.strokeStyle = '#8a969e'; c.lineWidth = 0.8; c.stroke();
+          c.beginPath(); c.arc(w + 4.5, 50.5, 4.5, 0, TAU); c.stroke();
+          c.beginPath(); for (let i = 0; i < 4; i++) { const a = i * 1.57; c.moveTo(w + 4.5, 50.5); c.lineTo(w + 4.5 + Math.cos(a) * 4, 50.5 + Math.sin(a) * 4); } c.stroke();
+          c.fillStyle = '#4fa8d8'; c.fillRect(w - 1, h - 14, 3, 3);
+          if (snow) { c.fillStyle = '#f4f8fb'; c.fillRect(w - 7, 26, 22, 3); }
+        }
+        break;
+      }
       case 'ponte': {
         const hor = variant & 1, endA = variant & 2, endB = variant & 4;
         const r = rng(variant * 7 + 1), pc = ['#a8743f', '#9a6a38', '#b5804a', '#8f6234'];
@@ -1614,7 +1682,7 @@ window.R = (() => {
     if (lv >= 2 && type !== 'ponte') levelExtras(c, type, w, h, lv, season, snow);
   }
   // melhorias visuais por nível (2: jardineiras e acabamento; 3: placa solar e cata-vento)
-  const ROOF_AT = { casa: [0.26, 14], galinheiro: [0.32, 6], galpao: [0.27, 20], curral: [0.2, 2], viveiro: [0.3, 2], chiqueiro: [0.78, 0], loja: [0.22, 18], moinho: [0.5, 30], poco: [0.5, -4], silo: [0.5, 50] };
+  const ROOF_AT = { banco_sementes: [0.68, 2], casa: [0.26, 14], galinheiro: [0.32, 6], galpao: [0.27, 20], curral: [0.2, 2], viveiro: [0.3, 2], chiqueiro: [0.78, 0], loja: [0.22, 18], moinho: [0.5, 30], poco: [0.5, -4], silo: [0.5, 50] };
   function levelExtras(c, type, w, h, lv, season, snow) {
     const small = w <= TS && h <= TS;
     if (small) {
@@ -1625,7 +1693,7 @@ window.R = (() => {
     // acabamento pintado na base
     c.fillStyle = 'rgba(240,230,210,0.85)'; c.fillRect(6, h - 6, w - 12, 2);
     const fl = season === 3 ? null : season === 2 ? ['#e8822a', '#c0392b'] : ['#ff6f91', '#ffd23a', '#ffffff', '#c7a6ff'];
-    for (const bx of [4, w - 24]) {
+    for (const bx of type === 'banco_sementes' ? [] : [4, w - 24]) {
       c.fillStyle = '#7a4a28'; rrect(c, bx, h - 12, 20, 9, 2); c.fill(); c.fillStyle = '#a8764a'; c.fillRect(bx, h - 12, 20, 1.5);
       if (fl) { for (let i = 0; i < 4; i++) circ(c, bx + 3 + i * 4.6, h - 13, 3, i % 2 ? '#3f8a35' : '#55a83f'); for (let i = 0; i < 4; i++) circ(c, bx + 3 + i * 4.6, h - 15, 1.6, fl[i % fl.length]); }
       else { c.fillStyle = '#f4f8fb'; c.fillRect(bx, h - 14, 20, 3); }
