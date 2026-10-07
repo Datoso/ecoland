@@ -279,3 +279,33 @@ body.touch #bag { right: 8px; bottom: auto; top: 50%; transform: translateY(-50%
 #btip.open .sum { display: block; }
 #btip .sum { margin-top: 0; margin-bottom: 6px; padding-top: 0; padding-bottom: 6px; border-top: none; border-bottom: 1px dashed #c99a5e; }
 #btip { transform: translate(-24px, -100%); }   /* ancorado pela esquerda: o ⓘ não se mexe ao abrir o resumo */
+
+/* ---------- habilidades ---------- */
+#xpdrops { position: fixed; right: 290px; top: 120px; width: 120px; pointer-events: none; z-index: 8; }
+.xpdrop { display: flex; align-items: center; gap: 4px; justify-content: flex-end; color: #fff; font-weight: 700; font-size: 16px; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; animation: xpup 1.6s ease-out forwards; }
+.xpdrop .itemic { width: 22px; height: 22px; }
+@keyframes xpup { from { transform: translateY(40px); opacity: 0; } 15% { opacity: 1; } 80% { opacity: 1; } to { transform: translateY(-70px); opacity: 0; } }
+.lvlup { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; background: linear-gradient(#3b2614, #2a1a0c); color: #ffe9a8; border: 3px solid #e8b33c; border-radius: 12px; padding: 12px 18px; z-index: 40; font-size: 16px; box-shadow: 0 0 0 3px #2e1c0e, 0 10px 30px rgba(0,0,0,.5), 0 0 30px rgba(255,215,100,.35); animation: lvin .35s cubic-bezier(.2,1.6,.4,1); max-width: 92vw; }
+.lvlup b { color: #fff; }
+.lvlup small { color: #e7cf9a; }
+.lvlup .lv-icon { font-size: 36px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+.lvlup .lv-icon .itemic { width: 44px; height: 44px; }
+.lvlup.out { transition: opacity .5s, transform .5s; opacity: 0; transform: translateX(-50%) translateY(-20px); }
+@keyframes lvin { from { transform: translateX(-50%) scale(.6); opacity: 0; } }
+.sk-wrap { display: grid; grid-template-columns: minmax(0, 320px) 1fr; gap: 16px; }
+.sk-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.sk { display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; gap: 2px 8px; align-items: center; background: linear-gradient(#4a2f1a, #3b2614); border: 2px solid #2e1c0e; border-radius: 8px; padding: 6px 8px; cursor: pointer; color: #ffe066; }
+.sk.on { box-shadow: 0 0 0 2px #e8b33c; }
+.sk-ic { grid-row: span 2; font-size: 26px; display: flex; justify-content: center; }
+.sk-ic .itemic { width: 34px; height: 34px; }
+.sk-lv { font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+.sk-lv small { color: #c9a66b; font-size: 12px; }
+.sk-bar { height: 6px; background: #1f1308; border-radius: 4px; overflow: hidden; }
+.sk-bar i { display: block; height: 100%; background: linear-gradient(90deg, #4f9a3a, #9dff7a); }
+.sk-detail { min-width: 0; background: #fff8e6; border: 2px solid #e2c993; border-radius: 10px; padding: 10px 14px; }
+.sk-detail h3 { margin-top: 0; display: flex; gap: 8px; align-items: center; }
+.sk-detail h3 .itemic { width: 30px; height: 30px; }
+.perks { padding-left: 0; list-style: none; }
+.perks li { margin: 6px 0; opacity: .6; }
+.perks li.got { opacity: 1; }
+@media (max-width: 640px) { .sk-wrap { grid-template-columns: 1fr; } #xpdrops { right: 12px; top: 90px; } }

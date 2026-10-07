@@ -6,7 +6,7 @@
   R.init(cv);
   const keys = new Set();
   const mouse = { x: innerWidth / 2, y: innerHeight / 2, moved: false };
-  let running = false, last = performance.now(), stepT = 0;
+  let running = false, last = performance.now(), stepT = 0, runAcc = 0;
   G.swing = 0;
 
   const REACH = 1.9;
@@ -54,7 +54,7 @@
     if (!running) return;
     if (name === 'inv') { UI.toggleBag(); return; }   // mochila: painel lateral, não fecha outros painéis
     if (UI.isOpen()) { UI.close(); return; }
-    ({ inv: UI.openInventory, craft: () => UI.openCraft(), manual: () => (UI.openBook || UI.openManual)(), lands: UI.openLands, eco: UI.openEco, pause: UI.pause, dev: UI.openDev })[name]?.();
+    ({ inv: UI.openInventory, craft: () => UI.openCraft(), manual: () => (UI.openBook || UI.openManual)(), lands: UI.openLands, eco: UI.openEco, skills: () => UI.openSkills(), pause: UI.pause, dev: UI.openDev })[name]?.();
   }
 
   function toggleSound() {
@@ -72,6 +72,7 @@
     if (k === 'j') { openPanel('manual'); return; }
     if (k === 't') { openPanel('lands'); return; }
     if (k === 'p') { openPanel('eco'); return; }
+    if (k === 'h') { openPanel('skills'); return; }
     if (k === 'm') { toggleSound(); return; }
     if (k === 'k') { openPanel('dev'); return; }
     if (!UI.isOpen() && (k === '+' || k === '=')) { zoomBy(1.2); return; }
@@ -187,7 +188,8 @@
     if (G.fish) G.cancelFish();
     const running = keys.has('shift');   // Shift = correr
     if (dx && dy) { dx *= 0.7071; dy *= 0.7071; }
-    let sp = 4.2 * (running ? 1.65 : 1) * (S.upgrades.botas ? 1.2 : 1) * (p.energy <= 0 ? 0.55 : 1) * (p.sick > 0 ? 0.8 : 1);
+    const vig = G.skill ? G.skill('vigor') : 1;
+    let sp = 4.2 * (running ? 1.65 * (1 + (vig >= 20 ? 0.08 : 0) + (vig >= 70 ? 0.12 : 0)) : 1) * (S.upgrades.botas ? 1.2 : 1) * (p.energy <= 0 ? 0.55 : 1) * (p.sick > 0 ? 0.8 : 1);
     if (Math.abs(dx) > Math.abs(dy)) p.dir = dx < 0 ? 'left' : 'right'; else p.dir = dy < 0 ? 'up' : 'down';
     mouse.moved = false;
     const r = 0.28;
@@ -196,6 +198,7 @@
     const nx = p.x + dx * sp * dt, ny = p.y + dy * sp * dt;
     if (free(nx, p.y)) p.x = nx;
     if (free(p.x, ny)) p.y = ny;
+    if (running && G.xp) { runAcc += Math.hypot(nx - p.x, ny - p.y) < 0.001 ? sp * dt : sp * dt; if (runAcc > 4) { G.xp('vigor', 3); runAcc = 0; } }
     stepT -= dt;
     if (stepT <= 0) { stepT = running ? 0.2 : 0.32; try { SFX.play('step', { volume: 0.5 }); } catch (e) { /* */ } }
   }

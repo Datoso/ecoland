@@ -178,6 +178,11 @@ G.newDemoWorld = function () {
   S.held = 'racao'; S.tool = 0;
   S.stats = { weeds: 50, till: 200, plant: 200, water: 300, wood: 200, stone: 200, harvest: 150, cook: 40, feed: 500, eggs: 200, compost: 30, lots: 8, slaughter: 10, smoke: 10, trees: 30, racao: 60 };
   S.quest = D.quests.length;   // manual concluído
+  // habilidades da demonstração (XP alto, mas sem chegar ao 99)
+  S.skills = {};
+  for (const [k, lv] of Object.entries({ animais: 62, agricultura: 71, culinaria: 48, lenha: 35, mineracao: 22, pesca: 41, construcao: 66, herbologia: 55, artesanato: 18, vigor: 44 })) S.skills[k] = G.XP_TABLE[lv] + 10;
+  G.applyVigor();
+  build('bancada', s.x + 14, s.y + 3, 1);
   Object.assign(S.eco, { foodOwn: 420, foodBought: 60, feedOwn: 300, feedBought: 40, seedCri: 60, seedShop: 25, kwhGen: 70, kwhUse: 62, waterSup: 520, waterDem: 480, history: [38, 44, 47, 52, 55, 61, 64, 70, 73, 78, 81, 84] });
   S.player.fome = 90; S.player.sede = 90;
   G.toHouse();
