@@ -215,3 +215,16 @@ html, body { color: var(--ink); }
 .creative-badge { color: #7a2fb5; font-weight: 700; }
 .creative { display: flex; align-items: center; gap: 8px; justify-content: center; font-size: 14px; margin: 2px 0 4px; cursor: pointer; }
 .creative input { width: 18px; height: 18px; padding: 0; border: none; accent-color: #7a2fb5; margin: 0; }
+
+/* lista de mundos na tela inicial */
+#btn-demo { background: linear-gradient(#5aa9d6, #2f7fb0) !important; box-shadow: 0 3px 0 #1d5a82 !important; border-color: #1d5a82 !important; }
+#worlds { margin-top: 12px; text-align: left; max-height: 34vh; overflow-y: auto; }
+#worlds h3 { margin: 6px 0; font-size: 16px; }
+.world { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 6px; background: linear-gradient(#fffdf6, #fff0cf); border: 2px solid #e2c993; border-radius: 10px; }
+.world .w-info { flex: 1; min-width: 0; }
+.world .w-info b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world .w-info small { color: #6e5a3c; font-size: 12px; }
+.title-card .world button { width: auto; margin: 0; padding: 6px 12px; font-size: 14px; border-width: 2px; box-shadow: 0 2px 0 var(--wood-d); }
+.title-card .world .w-del { background: #f3e2bb; color: var(--ink); padding: 6px 8px; }
+.title-card .world .w-del.armed { background: #c0392b; color: #fff; }
+.title-card { max-height: 94vh; overflow-y: auto; }

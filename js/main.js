@@ -155,8 +155,31 @@
   }
 
   // ---------- tela inicial ----------
-  const btnNew = document.getElementById('btn-new'), btnCont = document.getElementById('btn-continue');
-  if (G.hasSave()) btnCont.classList.remove('hidden');
+  const btnNew = document.getElementById('btn-new');
+  const fmtDate = ts => new Date(ts).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  function renderWorlds() {
+    const box = document.getElementById('worlds');
+    const list = G.listWorlds();
+    box.innerHTML = list.length ? `<h3>🌍 Seus mundos</h3>` + list.map(w => `<div class="world" data-id="${w.id}">
+        <div class="w-info"><b>${w.name.replace(/</g, '&lt;')}${w.creative ? ' <span class="creative-badge">🧪</span>' : ''}</b>
+        <small>${D.SEASON_ICONS[w.season] || ''} ${D.SEASONS[w.season] || ''}, dia ${w.day} · ano ${w.year} · salvo ${fmtDate(w.updated)}</small></div>
+        <button class="w-play">Jogar</button><button class="w-del" title="Apagar mundo">🗑️</button></div>`).join('') : '';
+    box.querySelectorAll('.world').forEach(el => {
+      const id = el.dataset.id;
+      el.querySelector('.w-play').onclick = () => {
+        audioInit();
+        if (G.load(id)) { start(); UI.toast(`Bem-vindo de volta ao ${S.farmName}!`, 'good'); }
+        else UI.toast('Não foi possível carregar este mundo.', 'bad');
+      };
+      const del = el.querySelector('.w-del');
+      del.onclick = () => {
+        if (del.dataset.armed) { G.deleteWorld(id); renderWorlds(); return; }
+        del.dataset.armed = '1'; del.textContent = 'Apagar?'; del.classList.add('armed');
+        setTimeout(() => { if (del.isConnected) { delete del.dataset.armed; del.textContent = '🗑️'; del.classList.remove('armed'); } }, 3000);
+      };
+    });
+  }
+  renderWorlds();
   // folhas caindo na tela inicial
   (() => {
     const title = document.getElementById('title');
@@ -181,12 +204,14 @@
     audioInit();
     G.newGame(document.getElementById('farm-name').value.trim());
     if (document.getElementById('creative').checked) G.setCreative(true);
+    G.save();
     start(); UI.intro();
   };
-  btnCont.onclick = () => {
+  document.getElementById('btn-demo').onclick = () => {
     audioInit();
-    if (G.load()) { start(); UI.toast(`Bem-vindo de volta ao ${S.farmName}!`, 'good'); }
-    else UI.toast('Não foi possível carregar o jogo salvo.', 'bad');
+    G.newDemoWorld();
+    start();
+    UI.toast('🌎 Fazenda Demonstração: tudo construído, no nível máximo e produzindo! Modo teste ligado (K).', 'good');
   };
   // fundo animado da tela inicial
   G.newGame('preview'); S.time = 600;

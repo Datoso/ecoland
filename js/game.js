@@ -10,7 +10,9 @@ const DAY_START = 360;        // 06:00
 const NIGHT_HOME = 1170;      // 19:30 animais voltam pra casa
 const ANIMALS_IN = 1200;      // 20:00 animais recolhidos
 const PASS_OUT = 1560;        // 02:00 desmaio
-const SAVE_KEY = 'ecoland_save_v1';
+const SAVE_KEY = 'ecoland_save_v1';        // save antigo (um mundo só)
+const WORLDS_KEY = 'ecoland_worlds_v1';
+const WORLD_PREFIX = 'ecoland_world_';
 
 function rnd(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
 function chance(p) { return Math.random() < p; }
@@ -225,10 +227,11 @@ const G = window.G = {
     return true;
   },
 
-  // ---------------- Novo jogo / save ----------------
+  // ---------------- Novo jogo / mundos salvos ----------------
   newGame(farmName) {
     S = {
-      version: 1, farmName: farmName || 'Sítio Esperança',
+      version: 1, worldId: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      farmName: farmName || 'Sítio Esperança',
       day: 1, season: 0, year: 1, time: DAY_START, money: 300, weather: 'sol', tomorrow: 'sol',
       player: { x: 0, y: 0, dir: 'down', hp: 100, energy: 100, maxEnergy: 100, fome: 85, sede: 85, water: 15, waterMax: 15, sick: 0 },
       inv: { sem_alface: 10, sem_cenoura: 6, marmita: 3, agua: 3 },
@@ -246,15 +249,46 @@ const G = window.G = {
     S.player.x = d.x; S.player.y = d.y + 0.2; S.player.dir = 'down';
   },
 
-  save() {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); return true; } catch (e) { toast('Não foi possível salvar.', 'bad'); return false; }
-  },
-  hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } },
-  load() {
+  // índice dos mundos: [{ id, name, day, season, year, creative, updated }]
+  listWorlds() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      let list = JSON.parse(localStorage.getItem(WORLDS_KEY) || '[]');
+      // migra o save antigo (um único mundo) para a lista
+      const old = localStorage.getItem(SAVE_KEY);
+      if (old) {
+        const o = JSON.parse(old);
+        o.worldId = o.worldId || 'antigo';
+        localStorage.setItem(WORLD_PREFIX + o.worldId, old);
+        list = list.filter(w => w.id !== o.worldId);
+        list.push({ id: o.worldId, name: o.farmName, day: o.day, season: o.season, year: o.year, creative: !!o.creative, updated: Date.now() });
+        localStorage.setItem(WORLDS_KEY, JSON.stringify(list));
+        localStorage.removeItem(SAVE_KEY);
+      }
+      return list.sort((a, b) => b.updated - a.updated);
+    } catch (e) { return []; }
+  },
+  save() {
+    try {
+      localStorage.setItem(WORLD_PREFIX + S.worldId, JSON.stringify(S));
+      const list = this.listWorlds().filter(w => w.id !== S.worldId);
+      list.push({ id: S.worldId, name: S.farmName, day: S.day, season: S.season, year: S.year, creative: !!S.creative, updated: Date.now() });
+      localStorage.setItem(WORLDS_KEY, JSON.stringify(list));
+      return true;
+    } catch (e) { toast('Não foi possível salvar.', 'bad'); return false; }
+  },
+  hasSave() { return this.listWorlds().length > 0; },
+  deleteWorld(id) {
+    try {
+      localStorage.removeItem(WORLD_PREFIX + id);
+      localStorage.setItem(WORLDS_KEY, JSON.stringify(this.listWorlds().filter(w => w.id !== id)));
+    } catch (e) { /* sem armazenamento */ }
+  },
+  load(id) {
+    try {
+      const raw = localStorage.getItem(WORLD_PREFIX + id);
       if (!raw) return false;
       S = JSON.parse(raw);
+      S.worldId = S.worldId || id;
       this.buildLotGrid();
       S.animals.forEach(a => { a.tx = null; });
       for (const b of S.buildings) {
