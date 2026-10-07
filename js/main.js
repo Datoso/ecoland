@@ -52,6 +52,7 @@
 
   function openPanel(name) {
     if (!running) return;
+    if (name === 'inv') { UI.toggleBag(); return; }   // mochila: painel lateral, não fecha outros painéis
     if (UI.isOpen()) { UI.close(); return; }
     ({ inv: UI.openInventory, craft: () => UI.openCraft(), manual: () => (UI.openBook || UI.openManual)(), lands: UI.openLands, eco: UI.openEco, pause: UI.pause, dev: UI.openDev })[name]?.();
   }

@@ -197,7 +197,7 @@ window.R = (() => {
     dpr = Math.min(2, devicePixelRatio || 1);
     W = innerWidth; H = innerHeight;
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
-    light.width = W; light.height = H; vigC = null;
+    light.width = Math.max(1, Math.round(W / 2)); light.height = Math.max(1, Math.round(H / 2)); vigC = null;
     if (dpr !== cacheDpr) { cacheDpr = dpr; spr.clear(); emoHi.clear(); chunks.clear(); }
     ambReady = false;
   }
@@ -2708,7 +2708,7 @@ window.R = (() => {
   // Passo único de atmosfera: tons do dia (aurora, hora dourada, chuva,
   // inverno), noite azulada, vinheta e furos de luz — tudo num canvas de
   // meia resolução sobreposto ao quadro; depois brilhos quentes aditivos.
-  let vigC = null, warmC = null;
+  let vigC = null;
   function drawAtmos(dark) {
     const m = S.time, rain = S.weather === 'chuva';
     let warm = 0, dawn = 0;
@@ -2716,31 +2716,32 @@ window.R = (() => {
     if (m < 460) dawn = Math.max(0, (460 - Math.max(360, m)) / 100);
     if (rain) { warm *= 0.3; dawn *= 0.3; }
     const nk = dark > 0.01 ? Math.min(1, dark / 0.67) : 0;
-    const lw = light.width, lh = light.height;
+    const lw = W, lh = H;
     // sem noite (sem furos de luz) desenha as camadas direto na tela: menos cópias de tela cheia
-    const L = nk ? lctx : ctx;
-    if (nk) { lctx.globalCompositeOperation = 'source-over'; lctx.globalAlpha = 1; lctx.clearRect(0, 0, lw, lh); }
-    const layer = (col) => { L.fillStyle = col; L.fillRect(0, 0, lw, lh); };
-    if (S.season === 3 && !rain) layer('rgba(215,232,255,0.1)');
-    if (rain) layer('rgba(50,66,96,0.26)');
-    if (dawn > 0.01) layer(`rgba(255,140,170,${0.16 * dawn})`);
+    // (um canvas de luz separado custava ~6 ms por quadro só na cópia; a luz agora é aditiva)
+    const L = ctx;
+    // camadas uniformes compostas numa única cor (um só preenchimento de tela)
+    let cr = 0, cg = 0, cb = 0, keep = 1;
+    const add = (r, g, b2, a) => { if (a <= 0) return; cr = cr * (1 - a) + r * a; cg = cg * (1 - a) + g * a; cb = cb * (1 - a) + b2 * a; keep *= 1 - a; };
+    if (S.season === 3 && !rain) add(215, 232, 255, 0.1);
+    if (rain) add(50, 66, 96, 0.26);
+    if (dawn > 0.01) add(255, 140, 170, 0.16 * dawn);
+    if (warm > 0.01) add(250, 130, 45, 0.3 * warm);
+    if (nk) add(12, 20, 72, 0.68 * nk);
+    const A = 1 - keep;
     if (!vigC) { // gradientes pré-renderizados (preencher gradiente a cada quadro é caro)
-      vigC = document.createElement('canvas'); vigC.width = lw; vigC.height = lh;
-      let x = vigC.getContext('2d'), g = x.createRadialGradient(lw / 2, lh / 2, Math.min(lw, lh) * 0.38, lw / 2, lh / 2, Math.hypot(lw, lh) * 0.56);
-      g.addColorStop(0, 'rgba(30,20,10,0)'); g.addColorStop(1, 'rgba(30,20,10,0.32)'); x.fillStyle = g; x.fillRect(0, 0, lw, lh);
-      warmC = document.createElement('canvas'); warmC.width = lw; warmC.height = lh;
-      x = warmC.getContext('2d'); g = x.createLinearGradient(0, 0, lw, lh);
-      g.addColorStop(0, 'rgba(255,150,40,0.42)'); g.addColorStop(1, 'rgba(235,90,50,0.3)'); x.fillStyle = g; x.fillRect(0, 0, lw, lh);
+      const vw = W, vh = H;
+      vigC = document.createElement('canvas'); vigC.width = vw; vigC.height = vh;
+      let x = vigC.getContext('2d'), g = x.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.38, vw / 2, vh / 2, Math.hypot(vw, vh) * 0.56);
+      g.addColorStop(0, 'rgba(30,20,10,0)'); g.addColorStop(1, 'rgba(30,20,10,0.32)'); x.fillStyle = g; x.fillRect(0, 0, vw, vh);
     }
-    if (warm > 0.01) { L.globalAlpha = warm; L.drawImage(warmC, 0, 0, lw, lh); L.globalAlpha = 1; }
-    if (nk) layer(`rgba(12,20,72,${0.68 * nk})`);
+    if (A > 0.003) { L.fillStyle = `rgba(${cr / A | 0},${cg / A | 0},${cb / A | 0},${A.toFixed(3)})`; L.fillRect(0, 0, lw, lh); }
     L.drawImage(vigC, 0, 0, lw, lh);
     const p = S.player, plx = p.x * TS - cam.x, ply = p.y * TS - cam.y - 20;
     const warmGlows = [];
     if (nk) {
-      const q = Z;
-      lctx.globalCompositeOperation = 'destination-out';
-      const hole = (x, y, r, a) => glowOn(lctx, '0,0,0', x * q, y * q, r * q, a * nk);
+      const holes = [];
+      const hole = (x, y, r, a) => holes.push([x, y, r, a]);
       hole(plx, ply, TS * 2.8, 0.8);
       for (const b of S.buildings) {
         const def = D.buildings[b.type];
@@ -2757,10 +2758,11 @@ window.R = (() => {
         }
         if (b.type === 'loja') hole(bx, by, TS * 2, 0.5);
       }
-      lctx.globalAlpha = 1;
+      // luz aditiva neutra-quente que "devolve" a cor sob as fontes de luz
+      ctx.globalCompositeOperation = 'lighter';
+      for (const [x, y, r, a] of holes) glowOn(ctx, '165,125,70', x * Z, y * Z, r * Z * 0.75, a * A * 0.5);
+      ctx.globalAlpha = 1;
     }
-    lctx.globalCompositeOperation = 'source-over';
-    if (nk) ctx.drawImage(light, 0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
     if (nk) {
       for (const [x, y, r, al] of warmGlows) glowOn(ctx, '255,140,50', x * Z, y * Z, r * Z * (0.97 + Math.sin(t * 8 + x) * 0.03), al * nk);
@@ -2779,8 +2781,8 @@ window.R = (() => {
     amb.snow = Array.from({ length: 110 }, () => ({ x: R0() * W, y: R0() * H, s: 0.5 + R0() * 1, ph: R0() * TAU }));
     amb.flies = Array.from({ length: 26 }, () => ({ x: R0() * W, y: R0() * H, ph: R0() * TAU, sp: 0.5 + R0() }));
     amb.petals = Array.from({ length: 14 }, () => ({ x: R0() * W, y: R0() * H, s: 0.7 + R0() * 0.6, r: R0() * TAU, vr: (R0() - 0.5) * 3, ph: R0() * TAU }));
-    amb.drops = Array.from({ length: 200 }, () => ({ x: R0(), y: R0(), s: 0.6 + R0() * 0.7 }));
-    amb.splash = Array.from({ length: 36 }, () => ({ x: R0() * W, y: R0() * H, k: R0() }));
+    amb.drops = Array.from({ length: 150 }, () => ({ x: R0(), y: R0(), s: 0.6 + R0() * 0.7 }));
+    amb.splash = Array.from({ length: 24 }, () => ({ x: R0() * W, y: R0() * H, k: R0() }));
     ambReady = true;
   }
   function wrap(p) { if (p.x < -30) p.x += W + 60; else if (p.x > W + 30) p.x -= W + 60; if (p.y < -30) p.y += H + 60; else if (p.y > H + 30) p.y -= H + 60; }
