@@ -359,11 +359,36 @@ const G = window.G = {
   },
 
   // se o jogador ficar preso dentro de algo sólido, empurra para o tile livre mais próximo
+  // o corpo do jogador (mesmos cantos usados no movimento) está livre?
+  bodyFree(x, y) {
+    const r = 0.28;
+    return !this.solid(Math.floor(x - r), Math.floor(y - r * 0.5)) && !this.solid(Math.floor(x + r), Math.floor(y - r * 0.5)) &&
+      !this.solid(Math.floor(x - r), Math.floor(y + 0.1)) && !this.solid(Math.floor(x + r), Math.floor(y + 0.1));
+  },
+  // leva o jogador para a porta de casa (ou o lugar livre mais perto dela)
+  rescue() {
+    if (S.indoors) { S.player.x = D.interior.spawn.x; S.player.y = D.interior.spawn.y; return; }
+    const casa = S.buildings.find(b => b.type === 'casa'), d = this.buildingDoor(casa);
+    const tx = Math.floor(d.x), ty = Math.floor(d.y);
+    for (let r = 0; r < 15; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+      if (this.bodyFree(tx + dx + 0.5, ty + dy + 0.6)) { S.player.x = tx + dx + 0.5; S.player.y = ty + dy + 0.6; toast('🆘 Você foi levado para a porta de casa.', 'good'); return; }
+    }
+  },
   unstuck() {
-    const p = S.player, tx = Math.floor(p.x), ty = Math.floor(p.y);
-    if (!this.solid(tx, ty)) return;
-    for (let r = 1; r < 12; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || this.solid(tx + dx, ty + dy)) continue;
+    const p = S.player;
+    this._stuckT = (this._stuckT || 0) + 1;
+    if (this._stuckT % 30) return;   // confere duas vezes por segundo
+    let tx = Math.floor(p.x), ty = Math.floor(p.y);
+    // cercado num cantinho sem saída (até 3 tiles livres em volta)? vai para casa
+    if (!S.indoors) {
+      const seen = new Set([tx + ',' + ty]), q = [[tx, ty]];
+      while (q.length && seen.size < 6) { const [x, y] = q.shift(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy); if (!seen.has(k) && !this.solid(x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+      if (seen.size < 4 && !this.solid(tx, ty)) { this.rescue(); return; }
+    }
+    if (this.bodyFree(p.x, p.y)) return;
+    for (let r = 0; r < 12; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || !this.bodyFree(tx + dx + 0.5, ty + dy + 0.6)) continue;
       p.x = tx + dx + 0.5; p.y = ty + dy + 0.6;
       toast('Você foi para um lugar livre (estava preso).');
       return;

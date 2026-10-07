@@ -351,10 +351,11 @@ window.UI = (() => {
   ui.pause = () => {
     ui.show('pause', `<h2>⚙️ ${S.farmName}</h2>
       <p>Dinheiro ganho com vendas: 💰 ${(S.stats.earned || 0).toLocaleString('pt-BR')} · Animais: ${S.animals.length} · Cultivos: ${G.countCrops()}</p>
-      <div class="row"><button class="btn" id="p-save">💾 Salvar</button><button class="btn alt" id="p-creative">🧪 Modo teste: ${S.creative ? 'LIGADO' : 'desligado'}</button><button class="btn alt" id="p-help">❓ Controles</button><button class="btn red" id="p-new">🏠 Salvar e voltar à tela inicial</button></div>
+      <div class="row"><button class="btn" id="p-save">💾 Salvar</button><button class="btn alt" id="p-creative">🧪 Modo teste: ${S.creative ? 'LIGADO' : 'desligado'}</button><button class="btn alt" id="p-help">❓ Controles</button><button class="btn alt" id="p-rescue">🆘 Estou preso</button><button class="btn red" id="p-new">🏠 Salvar e voltar à tela inicial</button></div>
       <div id="p-extra"></div>`);
     $('#p-save').onclick = () => { if (G.save()) ui.toast('Jogo salvo.', 'good'); };
     $('#p-creative').onclick = () => { G.setCreative(!S.creative); ui.pause(); };
+    $('#p-rescue').onclick = () => { ui.close(); G.rescue(); };
     $('#p-help').onclick = () => { $('#p-extra').innerHTML = document.querySelector('.controls p').outerHTML + '<p><small>Dormir salva automaticamente. A loja abre das 7h às 20h. Depois das 2h você desmaia.</small></p>'; };
     $('#p-new').onclick = () => { G.save(); location.reload(); };
   };
