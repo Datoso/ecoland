@@ -57,7 +57,7 @@ G.newDemoWorld = function () {
     clear(x, y, 1, 1, false);
     t.o = { t: 'fruit', k, age: f.mature + rnd(5, 60), timer: rnd(0, f.every - 1), ready: chance(0.7), trellis: !!f.climber };
   };
-  const fence = (x0, y0, x1, y1) => G.fenceRect(x0, y0, x1, y1, true);
+  const fence = (x0, y0, x1, y1, side) => G.fenceRect(x0, y0, x1, y1, true, side);
 
   // ---------- Sede: casa, oficina e horta PAIS ----------
   const s = lot('sede');
@@ -85,7 +85,13 @@ G.newDemoWorld = function () {
   }
   // codornas: viveiro com cercadinho ao lado da loja
   const viv = build('viveiro', s.x + 17, s.y + 5, 3);
-  fence(s.x + 16, s.y + 4, s.x + 19, s.y + 9);
+  fence(s.x + 16, s.y + 4, s.x + 19, s.y + 9, 'left');   // porteira virada para a horta, longe do lago
+  { // porteira uma casa abaixo, de frente para a porta do viveiro
+    const at = (x, y) => G.getBuilding(G.tile(x, y).o.id);
+    G.removeBuilding(at(s.x + 16, s.y + 6)); G.addBuilding('cerca', s.x + 16, s.y + 6);
+    G.removeBuilding(at(s.x + 16, s.y + 7)); G.addBuilding('porteira', s.x + 16, s.y + 7);
+  }
+  G.bridgeLine(s.x + 13, s.y + 11, s.x + 19, s.y + 11, true);   // ponte sobre a lagoinha da sede
   herd(viv, 'codorna', 24, 4); viv.data.store = { ovo_codorna: 20 }; viv.data.manure = 5;
 
   // ---------- Pasto Norte: gado de leite ----------
@@ -138,6 +144,8 @@ G.newDemoWorld = function () {
   const v = lot('sul');
   const t1 = build('tanque', v.x + 1, v.y + 1, 3); herd(t1, 'tilapia', 40, 12);
   const t2 = build('tanque', v.x + 1, v.y + 6, 1); herd(t2, 'tilapia', 12, 6);
+  G.bridgeLine(v.x + 10, v.y + 1, v.x + 10, v.y + 15, true);   // ponte atravessando o lago
+  G.bridgeLine(v.x + 2, v.y + 8, v.x + 19, v.y + 8, true);
   clear(v.x + 4, v.y + 1, 4, 5);
   for (let y = v.y + 1; y < v.y + 6; y++) for (let x = v.x + 4; x < v.x + 8; x++) plant(x, y, ['alface', 'tomate', 'morango', 'pimenta'][x % 4]);
 

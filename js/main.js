@@ -87,7 +87,7 @@
 
   // arrastar com a cerca na mão: cerca a área selecionada
   let drag = null;
-  const holdingFence = () => running && !UI.isOpen() && S.tool === 7 && S.held === 'cerca';
+  const holdingFence = () => running && !UI.isOpen() && S.tool === 7 && (S.held === 'cerca' || S.held === 'ponte');
   const tileAt = (sx, sy) => { const w = R.screenToWorld(sx, sy); return { x: Math.floor(w.x), y: Math.floor(w.y) }; };
   cv.addEventListener('mousemove', e => {
     mouse.x = e.clientX; mouse.y = e.clientY; mouse.moved = true;
@@ -96,14 +96,15 @@
   cv.addEventListener('mouseleave', () => { mouse.moved = false; });
   cv.addEventListener('mousedown', e => {
     audioInit(); mouse.x = e.clientX; mouse.y = e.clientY; mouse.moved = true;
-    if (e.button === 0 && holdingFence()) { const t = tileAt(e.clientX, e.clientY); drag = { start: t, end: t }; return; }
+    if (e.button === 0 && holdingFence()) { const t = tileAt(e.clientX, e.clientY); drag = { start: t, end: t, type: S.held }; return; }
     act(e.button === 2);
   });
   addEventListener('mouseup', () => {
     if (!drag) return;
     const d = drag; drag = null;
     if (d.start.x === d.end.x && d.start.y === d.end.y) { act(false); return; }
-    G.fenceRect(d.start.x, d.start.y, d.end.x, d.end.y); UI.hud(true);
+    if (d.type === 'ponte') G.bridgeLine(d.start.x, d.start.y, d.end.x, d.end.y); else G.fenceRect(d.start.x, d.start.y, d.end.x, d.end.y);
+    UI.hud(true);
   });
   function drawDrag() {
     if (!drag) return;
@@ -114,11 +115,12 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = 'rgba(255,230,150,0.12)'; ctx.fillRect(p0.x, p0.y, (bx - ax + 1) * TS, (by - ay + 1) * TS);
     let need = 0;
-    const cell = (x, y) => { const q = R.worldToScreen(x, y), ok = G.canPlace('cerca', x, y); if (ok) need++; ctx.fillStyle = ok ? 'rgba(140,255,120,0.45)' : 'rgba(255,90,90,0.4)'; ctx.fillRect(q.x + 3, q.y + 3, TS - 6, TS - 6); };
-    if (ax === bx || ay === by) { for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) cell(x, y); }
+    const cell = (x, y) => { const q = R.worldToScreen(x, y), ok = G.canPlace(drag.type, x, y); if (ok) need++; ctx.fillStyle = ok ? 'rgba(140,255,120,0.45)' : 'rgba(255,90,90,0.4)'; ctx.fillRect(q.x + 3, q.y + 3, TS - 6, TS - 6); };
+    if (drag.type === 'ponte') G.bridgeCells(drag.start.x, drag.start.y, drag.end.x, drag.end.y).forEach(([x, y]) => cell(x, y));
+    else if (ax === bx || ay === by) { for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) cell(x, y); }
     else { for (let x = ax; x <= bx; x++) { cell(x, ay); cell(x, by); } for (let y = ay + 1; y < by; y++) { cell(ax, y); cell(bx, y); } }
-    const have = S.creative ? '∞' : (S.inv.cerca || 0);
-    const txt = `${bx - ax + 1}×${by - ay + 1} · ${need} cercas (você tem ${have})`;
+    const have = S.creative ? '∞' : (S.inv[drag.type] || 0);
+    const txt = drag.type === 'ponte' ? `${need} trecho(s) de ponte (você tem ${have})` : `${bx - ax + 1}×${by - ay + 1} · ${need} cercas (você tem ${have})`;
     const q = R.worldToScreen(bx + 1, by + 1);
     ctx.font = 'bold 14px Fredoka, sans-serif'; ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(40,28,15,0.85)'; ctx.fillRect(q.x + 4, q.y + 4, ctx.measureText(txt).width + 14, 24);

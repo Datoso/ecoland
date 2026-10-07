@@ -46,8 +46,8 @@ const G = window.G = {
   solid(x, y, animal) {
     if (!this.inBounds(x, y) || !this.owned(x, y)) return true;
     const t = S.tiles[this.idx(x, y)];
+    if (t.o && t.o.gate) return !!animal;   // porteira e ponte: você passa, os animais não
     if (t.g === 'water') return true;
-    if (t.o && t.o.gate) return !!animal;   // porteira: você passa, os animais não
     if (t.o && (t.o.t === 'tree' || t.o.t === 'rock' || t.o.t === 'b' || t.o.t === 'fruit')) return true;
     return false;
   },
@@ -134,7 +134,8 @@ const G = window.G = {
     for (let y = y0; y < y0 + def.h; y++) for (let x = x0; x < x0 + def.w; x++) {
       if (!this.owned(x, y)) return false;
       const t = this.tile(x, y);
-      if (!t || t.g === 'water' || t.o || t.c) return false;
+      if (!t || t.o || t.c) return false;
+      if ((t.g === 'water') !== (type === 'ponte')) return false;   // ponte só na água; o resto só em terra
       if (Math.floor(S.player.x) === x && Math.floor(S.player.y) === y) return false;
     }
     return true;
@@ -148,7 +149,7 @@ const G = window.G = {
     if (type === 'composteira') { b.data.load = 0; b.data.batches = []; b.data.ready = 0; }
     if (type === 'colmeia') { b.data.t = 0; b.data.mel = 0; }
     for (let y = y0; y < y0 + def.h; y++) for (let x = x0; x < x0 + def.w; x++) {
-      const t = this.tile(x, y); t.o = { t: 'b', id: b.id }; if (type === 'porteira') t.o.gate = true; t.g = t.g === 'tilled' ? 'grass' : t.g; t.c = null;
+      const t = this.tile(x, y); t.o = { t: 'b', id: b.id }; if (type === 'porteira' || type === 'ponte') t.o.gate = true; t.g = t.g === 'tilled' ? 'grass' : t.g; t.c = null;
     }
     S.buildings.push(b);
     return b;
@@ -492,7 +493,7 @@ const G = window.G = {
         }
         if (t.o && t.o.t === 'b') {
           const b = this.getBuilding(t.o.id);
-          if (b.type === 'cerca' || b.type === 'porteira') { this.removeBuilding(b); this.add(b.type, 1); sfx('chop'); }
+          if (b.type === 'cerca' || b.type === 'porteira' || b.type === 'ponte') { this.removeBuilding(b); this.add(b.type, 1); sfx('chop'); }
         }
         return;
       case 'picareta': {
@@ -515,16 +516,38 @@ const G = window.G = {
     }
   },
 
-  // cercas em área: contorno do retângulo, com porteira no meio do lado de baixo
-  fenceRect(x0, y0, x1, y1, quiet) {
+  // ponte: linha reta (no eixo dominante do arraste), só sobre a água
+  bridgeCells(x0, y0, x1, y1) {
+    const cells = [];
+    if (Math.abs(x1 - x0) >= Math.abs(y1 - y0)) for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) cells.push([x, y0]);
+    else for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) cells.push([x0, y]);
+    return cells;
+  },
+  bridgeLine(x0, y0, x1, y1, quiet) {
+    let placed = 0, missing = 0;
+    for (const [x, y] of this.bridgeCells(x0, y0, x1, y1)) {
+      if (!this.canPlace('ponte', x, y)) continue;
+      if (!S.creative && !this.take('ponte')) { missing++; continue; }
+      this.addBuilding('ponte', x, y); placed++;
+    }
+    if (quiet) return placed;
+    if (placed) { sfx('place'); toast(`🌉 ${placed} trecho(s) de ponte construídos.${missing ? ` Faltaram ${missing} — crie mais pontes (C).` : ''}`); }
+    else toast(missing ? 'Sem pontes na mochila. Crie no menu de criação (C).' : 'Arraste por cima da água para construir a ponte.');
+    return placed;
+  },
+
+  // cercas em área: contorno do retângulo, com porteira no meio de um lado
+  fenceRect(x0, y0, x1, y1, quiet, gateSide = 'bottom') {
     const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
     const cells = [];
     if (ax === bx || ay === by) { for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) cells.push([x, y, 'cerca']); }
     else {
       for (let x = ax; x <= bx; x++) { cells.push([x, ay, 'cerca']); cells.push([x, by, 'cerca']); }
       for (let y = ay + 1; y < by; y++) { cells.push([ax, y, 'cerca']); cells.push([bx, y, 'cerca']); }
-      const gx = Math.floor((ax + bx) / 2), gate = cells.find(c => c[0] === gx && c[1] === by);
-      if (gate && bx - ax >= 2) gate[2] = 'porteira';
+      const gx = Math.floor((ax + bx) / 2), gy = Math.floor((ay + by) / 2);
+      const [px, py] = { bottom: [gx, by], top: [gx, ay], left: [ax, gy], right: [bx, gy] }[gateSide];
+      const gate = cells.find(c => c[0] === px && c[1] === py);
+      if (gate && Math.min(bx - ax, by - ay) >= 2) gate[2] = 'porteira';
     }
     let placed = 0, missing = 0;
     for (const [x, y, type] of cells) {

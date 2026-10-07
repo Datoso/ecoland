@@ -176,6 +176,7 @@ D.buildings = {
     { n: 'Apiário', every: 1, cost: 2500, desc: 'mel todo dia e polinização mais forte' }] },
   cerca:       { n: 'Cerca', w: 1, h: 1, i: '🚧', desc: 'Delimita pastos e protege canteiros. Segure a cerca e arraste o mouse para cercar uma área.' },
   espaldeira:  { n: 'Espaldeira', w: 1, h: 1, i: '🪜', desc: 'Estrutura de madeira e arame para trepadeiras: plante muda de uva ou maracujá nela.' },
+  ponte:       { n: 'Ponte de madeira', w: 1, h: 1, i: '🌉', desc: 'Atravessa lagos e córregos. Segure a ponte e arraste o mouse por cima da água.' },
   porteira:    { n: 'Porteira', w: 1, h: 1, i: '🚪', desc: 'Passagem na cerca: você passa, os animais não.' },
 };
 
@@ -295,6 +296,7 @@ D.recipes = [
   { out: 'fogueira', q: 1, in: { madeira: 5, pedra: 3 }, st: null, cat: 'Construção' },
   { out: 'cerca', q: 4, in: { madeira: 2 }, st: null, cat: 'Construção' },
   { out: 'porteira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
+  { out: 'ponte', q: 2, in: { madeira: 3 }, st: null, cat: 'Construção' },
   { out: 'espaldeira', q: 1, in: { madeira: 4, ferragens: 1 }, st: null, cat: 'Construção' },
   { out: 'cocho', q: 1, in: { madeira: 10 }, st: null, cat: 'Construção' },
   { out: 'composteira', q: 1, in: { madeira: 15, pedra: 5 }, st: null, cat: 'Construção' },
