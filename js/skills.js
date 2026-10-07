@@ -56,10 +56,10 @@ D.recipes.push(
 );
 
 (() => {
-  // ---------- curva de XP (a do RuneScape, dividida por 10) ----------
+  // ---------- curva de XP (a mesma do RuneScape: nível 2 = 83 XP, 10 = 1.154, 50 = 101 mil, 99 = 13 milhões) ----------
   const XP = [0, 0];
   let pts = 0;
-  for (let l = 1; l < 99; l++) { pts += Math.floor(l + 300 * Math.pow(2, l / 7)); XP[l + 1] = Math.floor(pts / 4 / 10); }
+  for (let l = 1; l < 99; l++) { pts += Math.floor(l + 300 * Math.pow(2, l / 7)); XP[l + 1] = Math.floor(pts / 4); }
   const levelFor = xp => { let l = 1; while (l < 99 && xp >= XP[l + 1]) l++; return l; };
 
   Object.assign(G, {
@@ -133,12 +133,21 @@ D.recipes.push(
 
   // ---------- XP vindo das estatísticas que o jogo já registra ----------
   const STAT_XP = {
-    weeds: ['lenha', 6], wood: ['lenha', 4], stone: ['mineracao', 6],
+    weeds: ['lenha', 5],
     till: ['agricultura', 3], plant: ['agricultura', 4], water: ['agricultura', 1.5], harvest: ['agricultura', 9], fruits: ['agricultura', 10], trees: ['agricultura', 15],
     cook: ['culinaria', 15], smoke: ['culinaria', 25], racao: ['culinaria', 3], slaughter: ['culinaria', 30],
     eggs: ['animais', 3], animalProd: ['animais', 8], feed: ['animais', 0.6],
     fish: ['pesca', 22],
     compost: ['herbologia', 20], greenmanure: ['herbologia', 16], pesticide: ['herbologia', 20], seeds: ['herbologia', 2], cravo: ['herbologia', 6],
+  };
+  // lenha e pedra só dão XP quando você corta/quebra (comprar na loja não conta)
+  const _useTool = G.useTool.bind(G);
+  G.useTool = function (tx, ty, wx, wy) {
+    const w0 = S.stats.wood || 0, s0 = S.stats.stone || 0, tool = D.tools[S.tool].id;
+    const r = _useTool(tx, ty, wx, wy);
+    if (tool === 'machado' && S.stats.wood > w0) G.xp('lenha', (S.stats.wood - w0) * 6);
+    if (tool === 'picareta' && S.stats.stone > s0) G.xp('mineracao', (S.stats.stone - s0) * 8);
+    return r;
   };
   const _stat = G.stat.bind(G);
   G.stat = function (k, n = 1) {
