@@ -1,0 +1,118 @@
+:root {
+  --wood: #6b4423;
+  --wood-d: #4a2f17;
+  --paper: #fbf1d9;
+  --paper-d: #efdcb0;
+  --ink: #3b2a1a;
+  --green: #4f9a3a;
+  --red: #c0392b;
+  --gold: #e8b33c;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1d2a1a; font-family: 'Fredoka', system-ui, sans-serif; color: var(--ink); user-select: none; }
+canvas#game { display: block; position: fixed; inset: 0; }
+.hidden { display: none !important; }
+button { font-family: inherit; cursor: pointer; }
+
+.box {
+  background: var(--paper);
+  border: 3px solid var(--wood);
+  border-radius: 10px;
+  box-shadow: 0 3px 0 var(--wood-d), 0 6px 18px rgba(0,0,0,0.35);
+}
+
+/* ---------- HUD ---------- */
+#stats { position: fixed; left: 12px; top: 12px; padding: 8px 10px; width: 190px; }
+.bar { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.bar span { width: 20px; text-align: center; font-size: 14px; }
+.bar div { flex: 1; height: 12px; background: #d8c49a; border-radius: 6px; overflow: hidden; border: 1px solid #b59b6a; }
+.bar i { display: block; height: 100%; border-radius: 6px; transition: width .2s; }
+.bar[data-k=hp] i { background: #e2463c; }
+.bar[data-k=energy] i { background: #f2c230; }
+.bar[data-k=fome] i { background: #d9822b; }
+.bar[data-k=sede] i { background: #3a9be0; }
+.bar[data-k=water] i { background: #7fd3ff; }
+.bar.low i { animation: blink .6s infinite alternate; }
+@keyframes blink { to { opacity: .35; } }
+
+#clock { position: fixed; right: 12px; top: 12px; padding: 8px 14px; text-align: right; min-width: 170px; }
+#c-date { font-weight: 600; font-size: 14px; }
+#c-time { font-size: 22px; font-weight: 700; }
+#c-money { font-weight: 700; color: #7a5a00; }
+
+#quest { position: fixed; right: 12px; top: 112px; width: 240px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
+#quest b { display: block; color: var(--green); font-size: 14px; }
+#quest small { color: #7a6a50; }
+
+#hotbar { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 4px; padding: 6px; background: var(--wood); border-radius: 12px; box-shadow: 0 4px 0 var(--wood-d), 0 6px 18px rgba(0,0,0,.4); }
+.slot { position: relative; width: 52px; height: 52px; background: var(--paper); border: 3px solid var(--paper-d); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; }
+.slot.sel { border-color: var(--gold); box-shadow: 0 0 0 2px #fff6; transform: translateY(-4px); }
+.slot .k { position: absolute; left: 3px; top: 0; font-size: 10px; color: #8a7350; font-weight: 700; }
+.slot .q { position: absolute; right: 3px; bottom: 0; font-size: 11px; font-weight: 700; }
+.slot .badge { position: absolute; right: -2px; top: -4px; font-size: 13px; }
+
+#hint { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); color: #fff; text-shadow: 0 1px 3px #000; font-size: 14px; pointer-events: none; text-align: center; }
+#menu-btns { position: fixed; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+#menu-btns button { width: 44px; height: 44px; border-radius: 10px; border: 3px solid var(--wood); background: var(--paper); font-size: 20px; box-shadow: 0 3px 0 var(--wood-d); }
+#menu-btns button:hover { transform: translateY(-2px); }
+
+/* ---------- toasts ---------- */
+#toasts { position: fixed; bottom: 112px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column-reverse; gap: 6px; align-items: center; pointer-events: none; z-index: 30; width: min(560px, 90vw); }
+.toast { background: rgba(40,28,15,.92); color: #fff; padding: 8px 14px; border-radius: 10px; font-size: 14px; animation: tin .25s ease-out; text-align: center; }
+.toast.good { background: rgba(46,110,40,.95); }
+.toast.bad { background: rgba(150,40,30,.95); }
+@keyframes tin { from { transform: translateY(-10px); opacity: 0; } }
+
+/* ---------- modal / painéis ---------- */
+#modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 20; }
+#panel { width: min(820px, 94vw); max-height: 86vh; overflow: auto; padding: 16px 20px; position: relative; }
+#panel h2 { margin: 0 0 8px; font-size: 24px; }
+#panel h3 { margin: 12px 0 6px; }
+#panel .close { position: absolute; right: 10px; top: 8px; border: none; background: none; font-size: 22px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.tabs button { border: 2px solid var(--wood); background: var(--paper-d); border-radius: 8px; padding: 4px 10px; font-size: 14px; }
+.tabs button.on { background: var(--wood); color: #fff; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.card { background: #fff8e6; border: 2px solid var(--paper-d); border-radius: 8px; padding: 8px; display: flex; gap: 8px; align-items: center; }
+.card .ic { font-size: 30px; width: 40px; text-align: center; position: relative; }
+.card .ic .badge { position: absolute; right: -2px; bottom: -4px; font-size: 14px; }
+.card .info { flex: 1; font-size: 13px; }
+.card .info b { font-size: 14px; display: block; }
+.card .info small { color: #7a6a50; display: block; }
+.card.off { opacity: .55; }
+.card button, .btn { border: 2px solid var(--wood); background: var(--green); color: #fff; border-radius: 8px; padding: 4px 10px; font-weight: 600; font-size: 13px; }
+.card button:disabled, .btn:disabled { background: #a99a80; cursor: not-allowed; }
+.btn.alt { background: var(--paper-d); color: var(--ink); }
+.btn.red { background: var(--red); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.inv { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.inv .it { position: relative; background: #fff8e6; border: 2px solid var(--paper-d); border-radius: 8px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
+.inv .it.held { border-color: var(--gold); background: #fff0c0; }
+.inv .it .q { position: absolute; right: 4px; bottom: 1px; font-size: 12px; font-weight: 700; }
+.inv .it .badge { position: absolute; left: 3px; top: 1px; font-size: 13px; }
+#inv-info { min-height: 48px; margin-top: 10px; font-size: 14px; background: #fff8e6; padding: 8px; border-radius: 8px; }
+.quest-list li { margin: 8px 0; list-style: none; padding: 8px 10px; border-radius: 8px; background: #fff8e6; border: 2px solid var(--paper-d); }
+.quest-list { padding: 0; }
+.quest-list li.done { opacity: .6; }
+.quest-list li.cur { border-color: var(--green); background: #eefbe0; }
+.quest-list li.lock { opacity: .4; }
+.quest-list p { margin: 4px 0 0; font-size: 13px; }
+.morning li { margin: 4px 0; }
+canvas.minimap { width: 100%; image-rendering: pixelated; border-radius: 8px; border: 2px solid var(--wood); }
+
+/* ---------- tela inicial ---------- */
+#title { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(80,140,60,.5), rgba(10,20,10,.85)); z-index: 40; }
+.title-card { background: var(--paper); border: 4px solid var(--wood); border-radius: 16px; padding: 28px 36px; text-align: center; box-shadow: 0 6px 0 var(--wood-d), 0 20px 50px rgba(0,0,0,.5); width: min(460px, 92vw); }
+.title-card h1 { font-size: 52px; margin: 0; color: var(--green); text-shadow: 2px 3px 0 #2b5a1f33; }
+.title-card .sub { margin-top: 4px; color: #7a6a50; }
+.title-card input { width: 100%; padding: 10px; font-family: inherit; font-size: 16px; border: 2px solid var(--wood); border-radius: 8px; margin: 10px 0; background: #fff; text-align: center; }
+.title-card button { width: 100%; padding: 12px; font-size: 18px; font-weight: 700; margin-top: 6px; border: 3px solid var(--wood); border-radius: 10px; background: var(--green); color: #fff; box-shadow: 0 3px 0 var(--wood-d); }
+#btn-continue { background: var(--gold); color: var(--ink); }
+.controls { margin-top: 14px; text-align: left; font-size: 13px; }
+.controls summary { cursor: pointer; font-weight: 600; }
+
+@media (max-width: 640px) {
+  #stats { width: 150px; }
+  #quest { display: none; }
+  .slot { width: 40px; height: 40px; font-size: 20px; }
+}

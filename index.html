@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EcoLand</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="stats" class="box">
+      <div class="bar" data-k="hp"><span>❤️</span><div><i></i></div></div>
+      <div class="bar" data-k="energy"><span>⚡</span><div><i></i></div></div>
+      <div class="bar" data-k="fome"><span>🍖</span><div><i></i></div></div>
+      <div class="bar" data-k="sede"><span>💧</span><div><i></i></div></div>
+      <div class="bar water" data-k="water"><span>🚿</span><div><i></i></div></div>
+    </div>
+    <div id="clock" class="box">
+      <div id="c-date"></div>
+      <div id="c-time"></div>
+      <div id="c-money"></div>
+    </div>
+    <div id="quest" class="box" title="Manual da Autossuficiência (J)"></div>
+    <div id="hotbar"></div>
+    <div id="hint"></div>
+    <div id="menu-btns">
+      <button data-open="inv" title="Inventário (I)">🎒</button>
+      <button data-open="craft" title="Criação (C)">🔨</button>
+      <button data-open="manual" title="Manual (J)">📗</button>
+      <button data-open="lands" title="Terras (T)">🗺️</button>
+      <button data-open="sound" title="Som (M)" id="btn-sound">🔊</button>
+      <button data-open="pause" title="Menu (Esc)">⚙️</button>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+  <div id="modal" class="hidden"><div id="panel" class="box"></div></div>
+
+  <!-- Tela inicial -->
+  <div id="title">
+    <div class="title-card">
+      <h1>🌱 EcoLand</h1>
+      <p class="sub">Construa, passo a passo, uma fazenda autossuficiente</p>
+      <input id="farm-name" maxlength="24" placeholder="Nome da fazenda" value="Sítio Esperança">
+      <button id="btn-new">Novo jogo</button>
+      <button id="btn-continue" class="hidden">Continuar</button>
+      <details class="controls">
+        <summary>Controles</summary>
+        <p><b>WASD/setas</b> andar · <b>Clique</b> ou <b>Espaço</b> usar ferramenta · <b>E</b>/<b>botão direito</b> interagir<br>
+        <b>1–8</b> ou rodinha: trocar ferramenta · <b>Q</b> trocar item na mão · <b>F</b> comer item na mão<br>
+        <b>I</b> inventário · <b>C</b> criação · <b>J</b> manual · <b>T</b> terras · <b>M</b> som · <b>Esc</b> menu</p>
+      </details>
+    </div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
