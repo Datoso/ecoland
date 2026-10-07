@@ -62,7 +62,7 @@
       tip.innerHTML = `<div class="sum"></div><div class="hd">${def.i ? def.i + ' ' : ''}${G.bname(cur)}${hasLv ? `<span class="lv">${'★'.repeat(lv)}${'☆'.repeat(def.levels.length - lv)}</span>` : ''}<span class="info" title="Resumo">i</span></div>`;
     }
     if (tip.classList.contains('open')) tip.querySelector('.sum').innerHTML = summary(cur);
-    const p = R.worldToScreen(cur.x + def.w / 2, cur.y);
+    const p = R.worldToScreen(cur.x + G.dims(cur).w / 2, cur.y);
     tip.style.left = p.x + 'px';
     tip.style.top = Math.max(60, p.y + 14) + 'px';   // encosta na construção: o mouse chega ao rótulo sem sair dela
     tip.style.display = 'block';

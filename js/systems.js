@@ -50,7 +50,7 @@ Object.assign(G, {
 
   // ---------------- Água ----------------
   nearWater(b, r = 1) {
-    const def = D.buildings[b.type] || b;
+    const def = G.dims(b);
     for (let y = b.y - r; y < b.y + def.h + r; y++) for (let x = b.x - r; x < b.x + def.w + r; x++) {
       const t = this.tile(x, y); if (t && t.g === 'water') return true;
     }
@@ -189,7 +189,9 @@ Object.assign(G, {
     const lot = this.lotAt(tx, ty), big = lot && lot.biome === 'lago';
     const info = this.toolInfo('vara'), night = this.isNight();
     const pool = Object.entries(D.fish).filter(([, f]) => (!f.big || big) && (!f.seasons || f.seasons.includes(S.season)));
-    const weight = ([, f]) => f.w * (f.night && night ? 2 : 1) * (f.big || f.rare ? 1 + info.rare * 20 : 1);
+    // com a habilidade de Pesca e varas melhores, os peixes raros aparecem mais
+    const lvl = G.skill ? G.skill('pesca') : 1;
+    const weight = ([, f]) => f.w * (f.night && night ? 2 : 1) * Math.pow(1 + lvl / 35 + info.rare * 4, (f.tier || 1) - 1);
     let r = Math.random() * pool.reduce((s, p) => s + weight(p), 0);
     for (const p of pool) { r -= weight(p); if (r <= 0) return p[0]; }
     return pool[0][0];
@@ -203,7 +205,8 @@ Object.assign(G, {
     f.phase = 'catch'; f.t = 0; f.fish = id;
     this.add('peixe_' + id, 1);
     this.stat('fish');
-    sfx(fd.rare || fd.big ? 'quest' : 'harvest');
-    toast(`🐟 Você pescou: <b>${fd.n}</b>!${fd.rare ? ' Um peixe raríssimo!' : ''}`, fd.rare || fd.big ? 'good' : '');
+    sfx(fd.tier >= 4 ? 'quest' : 'harvest');
+    if (G.xp) G.xp('pesca', fd.xp || 15);
+    toast(`🐟 Você pescou: <b>${fd.n}</b>! <small>(${D.fishTiers[fd.tier || 1]} · 💰 ${fd.sell} · +${fd.xp} XP)</small>`, fd.tier >= 3 ? 'good' : '');
   },
 });

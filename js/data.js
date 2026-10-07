@@ -58,14 +58,26 @@ D.toolLevels = {
 // ---------- Peixes nativos (pesca no lago) ----------
 // w = peso na sorteio; big = só em lagos grandes (lotes de lago); night = mais ativo à noite
 D.fish = {
-  lambari:   { n: 'Lambari', w: 30, sell: 15, organic: 1 },
-  tilapia_l: { n: 'Tilápia', w: 18, sell: 35, organic: 1 },
-  traira:    { n: 'Traíra', w: 14, sell: 55, organic: 1, night: true },
-  pacu:      { n: 'Pacu', w: 12, sell: 70, organic: 2, seasons: [1, 2] },
-  bagre:     { n: 'Bagre', w: 10, sell: 60, organic: 2, night: true },
-  tambaqui:  { n: 'Tambaqui', w: 6, sell: 140, organic: 2, big: true },
-  pirarucu:  { n: 'Pirarucu', w: 1, sell: 600, organic: 3, big: true, rare: true },
+  // tier 1 = comum ... tier 5 = lendário. Quanto mais raro, mais vale e mais XP dá.
+  lambari:   { n: 'Lambari', tier: 1, w: 30, sell: 15, xp: 12, organic: 1, color: '#c9d1d7' },
+  piau:      { n: 'Piau', tier: 1, w: 24, sell: 22, xp: 15, organic: 1, color: '#d9c27a' },
+  tilapia_l: { n: 'Tilápia', tier: 1, w: 20, sell: 35, xp: 18, organic: 1, color: '#8fa58a' },
+  traira:    { n: 'Traíra', tier: 2, w: 12, sell: 55, xp: 35, organic: 1, night: true, color: '#6b6a3a' },
+  bagre:     { n: 'Bagre', tier: 2, w: 11, sell: 60, xp: 38, organic: 2, night: true, color: '#8a7a6a' },
+  curimbata: { n: 'Curimbatá', tier: 2, w: 10, sell: 65, xp: 40, organic: 2, seasons: [0, 1, 2], color: '#a9b0b5' },
+  piranha:   { n: 'Piranha', tier: 2, w: 9, sell: 70, xp: 45, organic: 1, seasons: [1, 2], color: '#d9534f' },
+  pacu:      { n: 'Pacu', tier: 3, w: 6, sell: 110, xp: 80, organic: 2, seasons: [1, 2], color: '#b8b8b0' },
+  matrinxa:  { n: 'Matrinxã', tier: 3, w: 5, sell: 130, xp: 90, organic: 2, color: '#c9cdd2' },
+  tucunare:  { n: 'Tucunaré', tier: 3, w: 4, sell: 160, xp: 110, organic: 2, big: true, color: '#d9b43a' },
+  tambaqui:  { n: 'Tambaqui', tier: 4, w: 2.4, sell: 240, xp: 180, organic: 2, big: true, color: '#3b4a3a' },
+  dourado:   { n: 'Dourado', tier: 4, w: 2, sell: 300, xp: 210, organic: 2, big: true, seasons: [0, 1], color: '#f2b231' },
+  pintado:   { n: 'Pintado', tier: 4, w: 1.8, sell: 320, xp: 230, organic: 3, big: true, night: true, color: '#9aa0a6' },
+  aruana:    { n: 'Aruanã', tier: 4, w: 1.4, sell: 360, xp: 260, organic: 2, big: true, color: '#c0c8b0' },
+  jau:       { n: 'Jaú', tier: 5, w: 0.5, sell: 750, xp: 520, organic: 3, big: true, rare: true, night: true, color: '#5a4a3a' },
+  pirarucu:  { n: 'Pirarucu', tier: 5, w: 0.4, sell: 900, xp: 600, organic: 3, big: true, rare: true, color: '#b8452f' },
 };
+D.fishTiers = ['', 'Comum', 'Incomum', 'Raro', 'Muito raro', 'Lendário'];
+
 
 // ---------- Culturas ----------
 // days = dias regados para amadurecer; regrow = dias para rebrotar após colheita
@@ -114,7 +126,7 @@ D.fruits = {
 
 // ---------- Animais ----------
 D.animals = {
-  galinha: { roam: 5,
+  galinha: { roam: 5, forage: true,
     n: 'Galinha', baby: 'Pintinho', i: '🐔', bi: '🐤', price: 80, homes: ['galinheiro'], adult: 4, eat: 1,
     produce: { item: 'ovo', every: 1, where: 'home' }, manure: 0.5, grazer: false, sfx: 'chicken',
     slaughter: { carne_frango: 2, penas: 3 }, speed: 1.4,
@@ -126,17 +138,17 @@ D.animals = {
   },
   vaca: { roam: 11,
     n: 'Vaca', baby: 'Bezerro', i: '🐄', bi: '🐄', price: 700, homes: ['curral', 'galpao'], adult: 10, eat: 3,
-    produce: { item: 'leite_balde', every: 1, where: 'hand' }, manure: 2, grazer: true, sfx: 'cow',
+    produce: { item: 'leite_balde', every: 1, where: 'hand' }, manure: 2, grazer: false, sfx: 'cow',
     slaughter: { carne_boi: 10, couro: 2, ossos: 3 }, speed: 0.7,
   },
   ovelha: { roam: 8,
     n: 'Ovelha', baby: 'Cordeiro', i: '🐑', bi: '🐑', price: 400, homes: ['curral', 'galpao'], adult: 6, eat: 2,
-    produce: { item: 'la', every: 3, where: 'hand' }, manure: 1, grazer: true, sfx: 'sheep',
+    produce: { item: 'la', every: 3, where: 'hand' }, manure: 1, grazer: false, sfx: 'sheep',
     slaughter: { carne_cordeiro: 5, la: 1, couro: 1, ossos: 1 }, speed: 0.9,
   },
   cabra: { roam: 8,
     n: 'Cabra', baby: 'Cabrito', i: '🐐', bi: '🐐', price: 450, homes: ['curral', 'galpao'], adult: 6, eat: 2,
-    produce: { item: 'leite_cabra', every: 1, where: 'hand' }, manure: 1, grazer: true, sfx: 'sheep',
+    produce: { item: 'leite_cabra', every: 1, where: 'hand' }, manure: 1, grazer: false, sfx: 'sheep',
     slaughter: { carne_cabrito: 4, couro: 1, ossos: 1 }, speed: 1.0,
   },
   codorna: { roam: 2,
@@ -156,9 +168,9 @@ D.buildings = {
   casa:        { n: 'Casa', w: 5, h: 4, fixed: true, roofPanels: 6, desc: 'Sua casa. Interaja para dormir. Segure um painel solar e clique nela para instalar no telhado (até 6).' },
   loja:        { n: 'Agropecuária & Materiais', w: 3, h: 2, fixed: true },
   cozinha_externa: { n: 'Cozinha externa', w: 3, h: 2, i: '🧱', desc: 'Onde se cozinha na roça: começa com dois tijolinhos e uma grelha de ferro e vira uma cozinha caipira completa.', levels: [
-    { n: 'Fogareiro de tijolinhos', save: 0, desc: 'dois tijolinhos e uma grelha de ferro' },
-    { n: 'Fogão a lenha de tijolo', save: 0.5, cost: 1500, desc: 'fogão a lenha com chapa: metade das receitas não gasta lenha' },
-    { n: 'Cozinha caipira completa', save: 0.75, cost: 4500, desc: 'fogão a lenha, forno de barro e churrasqueira: libera receitas de forno e brasa' }] },
+    { n: 'Fogareiro de tijolinhos', save: 0.3, desc: 'dois tijolinhos e uma grelha de ferro: já gasta menos lenha que a fogueira' },
+    { n: 'Fogão a lenha de tijolo', save: 0.6, cost: 1500, desc: 'fogão a lenha com chapa: metade das receitas não gasta lenha' },
+    { n: 'Cozinha caipira completa', save: 0.8, cost: 4500, desc: 'fogão a lenha, forno de barro e churrasqueira: libera receitas de forno e brasa' }] },
   forno:       { n: 'Forno e churrasqueira (cozinha caipira ★★★)', w: 1, h: 1, fixed: true, virtual: true },
   fogueira:    { n: 'Fogueira', w: 1, h: 1, i: '🔥', light: 5, desc: 'Fonte de fogo: cozinhe receitas por perto.' },
   poco:        { n: 'Poço', w: 2, h: 2, i: '🪣', desc: 'Água limpa para beber e reabastecer o regador.' },
@@ -327,6 +339,10 @@ D.items = {
   costela_fogo_chao: { n: 'Costela no fogo de chão', i: '🍖', sell: 520, cat: 'Prato', e: { fome: 80, energia: 40 } },
   leitao_pururuca:   { n: 'Leitão à pururuca', i: '🐷', sell: 560, cat: 'Prato', e: { fome: 80, energia: 40 } },
   frango_caipira_forno: { n: 'Frango caipira no forno', i: '🍗', sell: 240, cat: 'Prato', e: { fome: 55, energia: 25 } },
+  caldo_piranha: { n: 'Caldo de piranha', i: '🥣', sell: 200, cat: 'Prato', e: { fome: 40, sede: 20, energia: 30 } },
+  peixe_brasa:   { n: 'Peixe na brasa', i: '🐟', sell: 120, cat: 'Prato', e: { fome: 35, energia: 15 } },
+  tucunare_assado: { n: 'Tucunaré assado', i: '🐟', sell: 320, cat: 'Prato', e: { fome: 55, energia: 25 } },
+  dourado_brasa: { n: 'Dourado na brasa', i: '🐟', sell: 480, cat: 'Prato', e: { fome: 65, energia: 30 } },
   limonada:      { n: 'Limonada', i: '🍹', sell: 80, cat: 'Prato', e: { sede: 40, energia: 6 } },
   suco_acerola:  { n: 'Suco de acerola', i: '🧃', sell: 90, cat: 'Prato', e: { sede: 40, energia: 12 } },
   suco_maracuja: { n: 'Suco de maracujá', i: '🧃', sell: 100, cat: 'Prato', e: { sede: 40, energia: 5 } },
@@ -422,6 +438,15 @@ D.recipes = [
   { out: 'traira_frita', q: 1, in: { peixe_traira: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'pacu_assado', q: 1, in: { peixe_pacu: 1, limao: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'caldo_peixe', q: 1, in: { peixe_bagre: 1, mandioca: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'caldo_piranha', q: 1, in: { peixe_piranha: 2, mandioca: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'peixe_brasa', q: 1, in: { peixe_piau: 2, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'peixe_brasa', q: 1, in: { peixe_curimbata: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'peixe_brasa', q: 2, in: { peixe_matrinxa: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'tucunare_assado', q: 1, in: { peixe_tucunare: 1, limao: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'dourado_brasa', q: 1, in: { peixe_dourado: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'dourado_brasa', q: 1, in: { peixe_pintado: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'moqueca', q: 2, in: { peixe_aruana: 1, tomate: 1, pimenta: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
+  { out: 'pirarucu_casaca', q: 1, in: { peixe_jau: 1, banana: 2, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'costela_tambaqui', q: 1, in: { peixe_tambaqui: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'pirarucu_casaca', q: 1, in: { peixe_pirarucu: 1, banana: 2, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },
   { out: 'moqueca', q: 1, in: { file_tilapia: 2, tomate: 1, pimenta: 1, madeira: 1 }, st: 'fogueira', cat: 'Cozinha' },

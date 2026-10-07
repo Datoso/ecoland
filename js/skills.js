@@ -137,7 +137,6 @@ D.recipes.push(
     till: ['agricultura', 3], plant: ['agricultura', 4], water: ['agricultura', 1.5], harvest: ['agricultura', 9], fruits: ['agricultura', 10], trees: ['agricultura', 15],
     cook: ['culinaria', 15], smoke: ['culinaria', 25], racao: ['culinaria', 3], slaughter: ['culinaria', 30],
     eggs: ['animais', 3], animalProd: ['animais', 8], feed: ['animais', 0.6],
-    fish: ['pesca', 22],
     compost: ['herbologia', 20], greenmanure: ['herbologia', 16], pesticide: ['herbologia', 20], seeds: ['herbologia', 2], cravo: ['herbologia', 6],
   };
   // lenha e pedra só dão XP quando você corta/quebra (comprar na loja não conta)

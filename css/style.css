@@ -323,3 +323,19 @@ body.touch #bag { right: 8px; bottom: auto; top: 50%; transform: translateY(-50%
 .stag.season { background: #e8b33c; color: #3b2a1a; }
 .stag.poor { background: #c0392b; color: #fff; }
 .wd .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 2px solid rgba(0,0,0,.35); margin-right: 6px; vertical-align: -2px; }
+
+/* ---------- personagens ---------- */
+.npc-box { display: grid; grid-template-columns: 170px 1fr; gap: 16px; align-items: start; }
+.npc-portrait { background: radial-gradient(circle at 50% 40%, #fff8e6, #efdcb0); border: 4px solid var(--wood); border-radius: 14px; box-shadow: inset 0 0 0 2px #c99a5e; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.npc-portrait .itemic { width: 96%; height: 96%; }
+.npc-talk { min-width: 0; }
+.npc-talk h2 small { font-size: 14px; color: #7a6a50; font-weight: 500; margin-left: 6px; }
+.npc-hearts { font-size: 15px; letter-spacing: 1px; }
+.npc-hearts.sm { font-size: 11px; display: block; }
+.npc-line { font-size: 17px; background: #fffdf6; border: 2px solid #e2c993; border-radius: 12px; padding: 10px 14px; position: relative; }
+.npc-strip { display: flex; gap: 12px; align-items: center; background: #fff8e6; border: 2px solid #e2c993; border-radius: 12px; padding: 6px 10px; margin-bottom: 10px; }
+.npc-strip > div:nth-child(2) { flex: 1; min-width: 0; }
+.npc-mini { width: 56px; height: 56px; border-radius: 10px; overflow: hidden; border: 2px solid var(--wood); background: #f3e2bb; display: flex; align-items: center; justify-content: center; flex: none; }
+.npc-mini .itemic { width: 100%; height: 100%; }
+.npc-card { cursor: pointer; }
+@media (max-width: 640px) { .npc-box { grid-template-columns: 1fr; } .npc-portrait { width: 140px; } }

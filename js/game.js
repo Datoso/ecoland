@@ -122,8 +122,8 @@ const G = window.G = {
     this.spend(nx.cost); b.level = (b.level || 1) + 1;
     if (this.feedCap(b) && b.data.feed == null) b.data.feed = 0;
     sfx('unlock'); toast(`🏗️ Evoluído para ${nx.n}!`, 'good');
-    const def = D.buildings[b.type];
-    this.burst(b.x + def.w / 2, b.y + def.h / 2, '#ffe066', 20);
+    const dm = this.dims(b);
+    this.burst(b.x + dm.w / 2, b.y + dm.h / 2, '#ffe066', 20);
     return true;
   },
   countBuildings(type) { return S.buildings.filter(b => b.type === type).length; },
@@ -131,12 +131,18 @@ const G = window.G = {
   countCrops() { let n = 0; for (const t of S.tiles) if (t.c && !t.c.dead) n++; return n; },
   countFruitTrees() { let n = 0; for (const t of S.tiles) if (t.o && t.o.t === 'fruit') n++; return n; },
 
-  canPlace(type, x0, y0) {
-    const def = D.buildings[type];
+  // tamanho no chão conforme a rotação: 0 = porta para baixo, 1 = direita, 2 = cima, 3 = esquerda
+  dims(b, rot) {
+    const def = D.buildings[typeof b === 'string' ? b : b.type];
+    const r = (rot != null ? rot : (typeof b === 'string' ? 0 : b.rot || 0)) % 4;
+    return r % 2 ? { w: def.h, h: def.w, rot: r } : { w: def.w, h: def.h, rot: r };
+  },
+  canPlace(type, x0, y0, rot = 0, ignore) {
+    const def = this.dims(type, rot);
     for (let y = y0; y < y0 + def.h; y++) for (let x = x0; x < x0 + def.w; x++) {
       if (!this.owned(x, y)) return false;
       const t = this.tile(x, y);
-      if (!t || t.o || t.c) return false;
+      if (!t || (t.o && !(ignore && t.o.t === 'b' && t.o.id === ignore)) || t.c) return false;
       if ((t.g === 'water') !== (type === 'ponte')) return false;   // ponte só na água; o resto só em terra
       // nunca construir em cima do jogador (corpo inteiro, não só o tile do pé)
       const p = S.player;
@@ -145,14 +151,15 @@ const G = window.G = {
     return true;
   },
 
-  addBuilding(type, x0, y0, fixed) {
-    const def = D.buildings[type];
+  addBuilding(type, x0, y0, fixed, rot = 0) {
+    const def = D.buildings[type], dm = this.dims(type, rot);
     const b = { id: S.nextId++, type, x: x0, y: y0, level: 1, data: {} };
+    if (rot) b.rot = rot;
     if (this.feedCap(b)) b.data.feed = 0;
     if (def.houses) { b.data.manure = 0; b.data.store = {}; }
     if (type === 'composteira') { b.data.load = 0; b.data.batches = []; b.data.ready = 0; }
     if (type === 'colmeia') { b.data.t = 0; b.data.mel = 0; }
-    for (let y = y0; y < y0 + def.h; y++) for (let x = x0; x < x0 + def.w; x++) {
+    for (let y = y0; y < y0 + dm.h; y++) for (let x = x0; x < x0 + dm.w; x++) {
       const t = this.tile(x, y); t.o = { t: 'b', id: b.id }; if (type === 'porteira' || type === 'ponte') t.o.gate = true; t.g = t.g === 'tilled' ? 'grass' : t.g; t.c = null;
     }
     S.buildings.push(b);
@@ -160,14 +167,32 @@ const G = window.G = {
   },
 
   removeBuilding(b) {
-    const def = D.buildings[b.type];
+    const def = this.dims(b);
     for (let y = b.y; y < b.y + def.h; y++) for (let x = b.x; x < b.x + def.w; x++) this.tile(x, y).o = null;
     S.buildings = S.buildings.filter(o => o !== b);
   },
 
   buildingDoor(b) {
+    const d = this.dims(b);
+    switch (d.rot) {
+      case 1: return { x: b.x + d.w + 0.5, y: b.y + Math.floor(d.h / 2) + 0.5 };   // porta à direita
+      case 2: return { x: b.x + Math.floor(d.w / 2) + 0.5, y: b.y - 0.5 };          // porta para cima
+      case 3: return { x: b.x - 0.5, y: b.y + Math.floor(d.h / 2) + 0.5 };          // porta à esquerda
+      default: return { x: b.x + Math.floor(d.w / 2) + 0.5, y: b.y + d.h + 0.5 };
+    }
+  },
+  // gira uma construção já construída, se couber
+  rotateBuilding(b) {
     const def = D.buildings[b.type];
-    return { x: b.x + Math.floor(def.w / 2) + 0.5, y: b.y + def.h + 0.5 };
+    if (def.fixed) { toast('Essa construção não gira.'); return false; }
+    const nr = ((b.rot || 0) + 1) % 4;
+    if (!this.canPlace(b.type, b.x, b.y, nr, b.id)) { toast('Não há espaço para girar aqui.'); sfx('error'); return false; }
+    const old = this.dims(b);
+    for (let y = b.y; y < b.y + old.h; y++) for (let x = b.x; x < b.x + old.w; x++) this.tile(x, y).o = null;
+    b.rot = nr;
+    const dm = this.dims(b);
+    for (let y = b.y; y < b.y + dm.h; y++) for (let x = b.x; x < b.x + dm.w; x++) { const t = this.tile(x, y); t.o = { t: 'b', id: b.id }; if (b.type === 'porteira' || b.type === 'ponte') t.o.gate = true; }
+    sfx('place'); return true;
   },
 
   nearStation(type, range = 3) {
@@ -177,7 +202,7 @@ const G = window.G = {
     const px = S.player.x, py = S.player.y;
     return S.buildings.some(b => {
       if (b.type !== type) return false;
-      const def = D.buildings[b.type];
+      const def = this.dims(b);
       const dx = Math.max(b.x - px, 0, px - (b.x + def.w));
       const dy = Math.max(b.y - py, 0, py - (b.y + def.h));
       return Math.hypot(dx, dy) <= range;
@@ -865,9 +890,10 @@ const G = window.G = {
       return;
     }
     if (it.place) {
-      if (!this.canPlace(it.place, tx, ty)) { toast('Não cabe aqui. Precisa de espaço livre na sua terra.'); sfx('error'); return; }
+      const rot = this.placeRot || 0;   // tecla R gira antes de construir
+      if (!this.canPlace(it.place, tx, ty, rot)) { toast('Não cabe aqui. Precisa de espaço livre na sua terra.'); sfx('error'); return; }
       if (it.place === 'roda_dagua' && !this.nearWater({ type: 'roda_dagua', x: tx, y: ty }, 1)) { toast("A roda d'água precisa ficar encostada na água de um lago."); sfx('error'); return; }
-      this.take(id); this.addBuilding(it.place, tx, ty);
+      this.take(id); this.addBuilding(it.place, tx, ty, false, rot);
       sfx('place'); this.burst(tx + 0.5, ty + 0.5, '#d9c08c', 12);
       this.checkQuests();
       return;
@@ -1155,6 +1181,19 @@ const G = window.G = {
     if (n) R.push(`💦 Irrigação automática regou ${n} canteiro(s).`);
   },
 
+  // galinhas ciscam: cada 3 tiles de terra livre (grama, mato) a até 6 tiles do galinheiro alimentam 1 galinha
+  forageLeft(home, cache) {
+    if (cache[home.id] == null) {
+      let n = 0;
+      const d = this.dims(home);
+      for (let y = home.y - 6; y < home.y + d.h + 6; y++) for (let x = home.x - 6; x < home.x + d.w + 6; x++) {
+        const t = this.tile(x, y);
+        if (t && this.owned(x, y) && t.g === 'grass' && (!t.o || t.o.t === 'weed') && !t.c) n++;
+      }
+      cache[home.id] = Math.floor(n / 3);
+    }
+    return cache[home.id];
+  },
   feedAnimals(R) {
     if (!S.animals.length) return;
     const troughs = S.buildings.filter(b => b.type === 'cocho' || b.type === 'silo');
@@ -1168,13 +1207,15 @@ const G = window.G = {
       if (t.g === 'grass' && (!t.o || t.o.t === 'weed') && !t.c && this.lotGrid[i] >= 0 && S.lots[D.lots[this.lotGrid[i]].id]) pasture++;
     }
     let grazeCap = Math.floor(pasture / 12 * (S.season === 3 ? 0.3 : 1));
+    const forage = {};   // vagas de ciscar por galinheiro, calculadas na hora
     const order = S.animals.slice().sort(() => Math.random() - 0.5);
     let hungry = 0, dead = [], produced = {}, grown = 0;
     for (const a of order) {
       const def = D.animals[a.type];
       const home = this.getBuilding(a.home);
       let fed = false;
-      if (def.grazer && grazeCap > 0) { grazeCap--; fed = true; S.eco.feedOwn += def.eat; }
+      if (def.forage && home && this.forageLeft(home, forage) > 0) { forage[home.id]--; fed = true; S.eco.feedOwn += def.eat; }   // galinha cisca na terra
+      else if (def.grazer && grazeCap > 0) { grazeCap--; fed = true; S.eco.feedOwn += def.eat; }
       else if (home && this.perk(home, 'feeder') && home.data.feed >= def.eat) { home.data.feed -= def.eat; fed = true; this.troughEaten(def.eat); }
       else if (!def.aquatic && pool >= def.eat) { pool -= def.eat; takeFeed(def.eat); fed = true; this.troughEaten(def.eat); }
       const comfort = home && this.perk(home, 'comfort');

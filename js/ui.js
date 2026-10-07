@@ -158,7 +158,7 @@ window.UI = (() => {
         if (e.animal) {
           const a = D.animals[e.animal]; ic = a.bi; name = a.baby + ` (${a.n})`;
           const home = G.homeWithSpace(e.animal);
-          sub = `${home ? '✔ há vaga' : `✘ precisa de ${G.homeNames(e.animal)} com vaga`} · adulto em ${a.adult} dias · come ${a.eat}/dia${a.grazer ? ' (pasta)' : ''}`;
+          sub = `${home ? '✔ há vaga' : `✘ precisa de ${G.homeNames(e.animal)} com vaga`} · adulto em ${a.adult} dias · ${a.forage ? 'cisca na terra, não precisa de ração' : `come ${a.eat}/dia de ração`}`;
           dis = dis || !home; if (!home) state = 'locked';
         } else if (e.tool) {
           ic = ICONS.html(D.toolLevels[e.tool][e.level - 1].icon || e.tool); name = e.n;
@@ -223,8 +223,9 @@ window.UI = (() => {
     ui.show('building', `<h2>${def.i || '🏠'} ${G.bname(b)} <small style="color:#c99320">${stars(lv)}</small></h2>
       <p><small>${def.desc || ''}</small></p>
       <p>${info.join('<br>')}${pk.length ? '<br>' + pk.join(' · ') : ''}</p>
-      <div class="row">${fishBtn}</div>${animals}${up}`);
+      <div class="row">${fishBtn}${def.fixed ? '' : `<button class="btn alt" id="b-rot">🔄 Girar (${['porta para baixo', 'porta à direita', 'porta para cima', 'porta à esquerda'][b.rot || 0]})</button>`}</div>${animals}${up}`);
     const ub = panel.querySelector('#b-up'); if (ub) ub.onclick = () => { if (G.upgrade(b)) ui.openBuilding(b); };
+    const rb = panel.querySelector('#b-rot'); if (rb) rb.onclick = () => { if (G.rotateBuilding(b)) ui.openBuilding(b); };
     const fb = panel.querySelector('#b-fish'); if (fb) fb.onclick = () => { G.harvestFish(b); ui.openBuilding(b); };
   };
   ui.openAnimals = ui.openBuilding;
