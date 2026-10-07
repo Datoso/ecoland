@@ -304,7 +304,7 @@ window.R = (() => {
       if (tl.drip) drawDrip(c, x, y, px, py, tl);
       else if (tl.g === 'grass' && !(tl.o && tl.o.t === 'b')) grassDecor(c, x, y, px, py, season);
       else if (tl.g === 'water') waterDecor(c, x, y, px, py, season);
-      else if (tl.o && tl.o.t === 'b' && tl.g === 'grass') { // terra batida sob construções pequenas
+      else if (tl.o && tl.o.t === 'b' && tl.g === 'grass' && (() => { const b = G.getBuilding(tl.o.id), d = b && D.buildings[b.type]; return d && d.w === 1 && d.h === 1; })()) { // terra batida sob construções pequenas
         ell(c, px + TS / 2, py + TS / 2 + 6, 19, 13, 'rgba(110,80,40,0.16)');
       }
     }
@@ -1623,7 +1623,7 @@ window.R = (() => {
         break;
       }
       case 'biodigestor': {
-        const g = variant / 4, cx = w / 2 + 8, base = h - 16;
+        const g = variant / 4, cx = w / 2 + 6, base = h - 14;
         shadowRect(c, 4, h - 10, w - 2, 12);
         if (lv >= 2) { // gasômetro
           const gx = 6, gy = 8;
@@ -1633,11 +1633,11 @@ window.R = (() => {
           c.strokeStyle = '#e8c23a'; c.lineWidth = 2; c.beginPath(); c.moveTo(gx + 28, gy + 26); c.lineTo(cx - 8, base - 18); c.stroke();
         }
         // anel de concreto
-        ell(c, cx, base + 2, 32, 9, '#8a8378'); ell(c, cx, base, 31, 8, '#b5ada0');
+        ell(c, cx, base + 2, 35, 10, '#8a8378'); ell(c, cx, base, 34, 9, '#b5ada0');
         // cúpula inflável
-        const ry = 8 + g * 16;
-        c.fillStyle = '#2f3a2c'; c.beginPath(); c.ellipse(cx, base, 29, ry, 0, Math.PI, 0); c.fill();
-        c.save(); c.beginPath(); c.ellipse(cx, base, 29, ry, 0, Math.PI, 0); c.clip();
+        const ry = 12 + g * 24;
+        c.fillStyle = '#2f3a2c'; c.beginPath(); c.ellipse(cx, base, 32, ry, 0, Math.PI, 0); c.fill();
+        c.save(); c.beginPath(); c.ellipse(cx, base, 32, ry, 0, Math.PI, 0); c.clip();
         c.strokeStyle = 'rgba(255,255,255,0.18)'; c.lineWidth = 1; c.beginPath(); for (let k = -2; k <= 2; k++) { c.moveTo(cx + k * 10, base); c.quadraticCurveTo(cx + k * 6, base - ry * 1.2, cx + k * 3, base - ry); } c.stroke();
         ell(c, cx - 10, base - ry * 0.65, 8, Math.max(2, ry * 0.25), 'rgba(255,255,255,0.22)');
         c.restore();

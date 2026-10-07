@@ -141,7 +141,7 @@ D.animals = {
 
 // ---------- Construções ----------
 D.buildings = {
-  casa:        { n: 'Casa', w: 4, h: 3, fixed: true },
+  casa:        { n: 'Casa', w: 5, h: 4, fixed: true, roofPanels: 6, desc: 'Sua casa. Interaja para dormir. Segure um painel solar e clique nela para instalar no telhado (até 6).' },
   loja:        { n: 'Agropecuária & Materiais', w: 3, h: 2, fixed: true },
   fogueira:    { n: 'Fogueira', w: 1, h: 1, i: '🔥', light: 5, desc: 'Fonte de fogo: cozinhe receitas por perto.' },
   poco:        { n: 'Poço', w: 2, h: 2, i: '🪣', desc: 'Água limpa para beber e reabastecer o regador.' },

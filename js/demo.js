@@ -147,15 +147,16 @@ G.newDemoWorld = function () {
   const t1 = build('tanque', v.x + 1, v.y + 1, 3); herd(t1, 'tilapia', 40, 12);
   const t2 = build('tanque', v.x + 1, v.y + 6, 1); herd(t2, 'tilapia', 12, 6);
   G.bridgeLine(v.x + 10, v.y + 1, v.x + 10, v.y + 15, true);   // ponte atravessando o lago
-  G.bridgeLine(v.x + 2, v.y + 8, v.x + 19, v.y + 8, true);
+  G.bridgeLine(v.x + 5, v.y + 11, v.x + 19, v.y + 11, true);   // mais ao sul, longe do tanque de baixo
   clear(v.x + 4, v.y + 1, 4, 5);
   for (let y = v.y + 1; y < v.y + 6; y++) for (let x = v.x + 4; x < v.x + 8; x++) plant(x, y, ['alface', 'tomate', 'morango', 'pimenta'][x % 4]);
 
   // ---------- Água e energia ----------
   build('cisterna', s.x, s.y, 3).data.water = 1800;
-  for (let x = s.x + 2; x < s.x + 8; x++) build('painel_solar', x, s.y, 3);
+  S.buildings.find(b => b.type === 'casa').data.panels = 6;   // telhado solar
+  for (let x = s.x + 3; x < s.x + 7; x++) build('painel_solar', x, s.y, 3);
   build('catavento', s.x + 19, s.y + 13, 1);   // bombeia da lagoinha
-  build('fogao_biogas', s.x + 7, s.y + 3, 1);
+  build('fogao_biogas', s.x + 12, s.y + 3, 1);
   const bio = build('biodigestor', l.x + 8, l.y + 2, 3); bio.data.gas = 120; bio.data.load = 30; bio.data.bio = 2; bio.data.ready = 2;
   { // roda d'água na margem do lago da várzea
     let done = false;

@@ -302,6 +302,12 @@ const G = window.G = {
       S.animals.forEach(a => { a.tx = null; });
       for (const b of S.buildings) {
         b.level = b.level || 1;
+        if (b.type === 'casa') {   // casa ficou maior (5×4): ocupa o novo espaço
+          const d = D.buildings.casa;
+          for (let y = b.y; y < b.y + d.h; y++) for (let x = b.x; x < b.x + d.w; x++) {
+            const t = this.tile(x, y); if (t && !(t.o && t.o.t === 'b' && t.o.id !== b.id)) { t.o = { t: 'b', id: b.id }; t.c = null; if (t.g === 'tilled') t.g = 'grass'; }
+          }
+        }
         if (D.buildings[b.type].houses && !b.data.store) b.data.store = {};
         if (b.data.eggs) { b.data.store.ovo = (b.data.store.ovo || 0) + b.data.eggs; b.data.eggs = 0; }
         if (this.feedCap(b) && b.data.feed == null) b.data.feed = 0;
@@ -790,6 +796,14 @@ const G = window.G = {
     if (it.drip) {
       if (t.g !== 'tilled' || t.drip) { toast(t.drip ? 'Já tem gotejamento aqui.' : 'Instale o gotejamento em canteiros arados (arraste para cobrir vários).'); return; }
       this.take(id); t.drip = true; sfx('place');
+      return;
+    }
+    if (it.place === 'painel_solar' && b && b.type === 'casa') {
+      const n = b.data.panels || 0, max = D.buildings.casa.roofPanels;
+      if (n >= max) { toast(`O telhado já está cheio (${max} painéis). Coloque os próximos no chão.`); return; }
+      this.take(id); b.data.panels = n + 1;
+      sfx('place'); this.burst(b.x + 2.5, b.y + 0.5, '#7fc4ff', 14);
+      toast(`☀️ Painel instalado no telhado (${n + 1}/${max}). Cada um gera ~6 kWh por dia de sol.`);
       return;
     }
     if (it.place) {

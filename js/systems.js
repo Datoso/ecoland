@@ -125,6 +125,7 @@ Object.assign(G, {
     let gen = 0;
     for (const b of S.buildings) {
       if (b.type === 'painel_solar') gen += this.lvl(b).kwh * (rain ? 0.25 : 1);
+      if (b.type === 'casa') gen += (b.data.panels || 0) * 6 * (rain ? 0.25 : 1);   // painéis no telhado
       if (b.type === 'roda_dagua' && this.nearWater(b, 1)) gen += D.buildings.roda_dagua.kwh;
       if (b.type === 'biodigestor') { const k = this.lvl(b).kwh || 0; if (k && (b.data.gas || 0) >= k / 2) { b.data.gas -= k / 2; gen += k; } }
     }

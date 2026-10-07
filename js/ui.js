@@ -207,6 +207,7 @@ window.UI = (() => {
     if (b.type === 'cisterna') info.push(`🛢️ ${Math.round(b.data.water || 0)} / ${L.store} L · enche com chuva e com bombas · interaja para beber e encher o regador`);
     if (b.type === 'roda_dagua' || b.type === 'catavento') { const on = G.pumps().includes(b); info.push(on ? `💧 bombeando: rega ${D.buildings[b.type].pump} canteiros com gotejamento e manda ${D.buildings[b.type].fill} L/dia para as cisternas${D.buildings[b.type].kwh ? ` · ⚡ ${D.buildings[b.type].kwh} kWh/dia` : ''}` : (b.type === 'roda_dagua' ? '⚠️ precisa ficar encostada na água' : '⚠️ precisa de um poço ou lago a até 5 tiles')); }
     if (b.type === 'biodigestor') info.push(`🫧 biogás ${Math.round(b.data.gas || 0)} / ${L.gasCap} m³ · esterco na fila: ${Math.round(b.data.load || 0)} · processa ${L.rate}/dia${L.kwh ? ` · ⚡ gera ${L.kwh} kWh/dia` : ''} · segure esterco e interaja para abastecer`);
+    if (b.type === 'casa') info.push(`☀️ ${b.data.panels || 0}/${D.buildings.casa.roofPanels} painéis solares no telhado`);
     if (b.type === 'painel_solar') info.push(`☀️ ${L.kwh} kWh por dia de sol (¼ na chuva)`);
     if (b.type === 'fogao_biogas') info.push(G.gasAvailable() ? '🔥 com biogás: as receitas da fogueira não gastam lenha' : '⚠️ sem biogás no biodigestor');
     const perks = { feeder: '🍽️ comedouro embutido', auto: '🤖 coleta automática', comfort: '💧 bebedouro/conforto (+felicidade, +reprodução)', biogas: '🔥 biodigestor (esterco em dobro)', aquaponia: '🌱 aquaponia (rega e aduba canteiros próximos)' };
