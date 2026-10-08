@@ -98,6 +98,7 @@ const G = window.G = {
     }
     this.addBuilding('casa', s.x + 1, s.y + 2, true);
     this.addBuilding('loja', s.x + 13, s.y + 2, true);
+    this.placeQuarry();
     this.addBuilding('cozinha_externa', s.x + 6, s.y + 3);   // à direita da casa: dois tijolinhos e uma grelha de ferro
     for (let y = s.y + 10; y < s.y + 14; y++) for (let x = s.x + 14; x < s.x + 19; x++) {
       const d = ((x + 0.5 - (s.x + 16.5)) / 2.6) ** 2 + ((y + 0.5 - (s.y + 12)) / 1.9) ** 2;
@@ -268,7 +269,7 @@ const G = window.G = {
       player: { x: 0, y: 0, dir: 'down', hp: 100, energy: 100, maxEnergy: 100, fome: 85, sede: 85, water: 15, waterMax: 15, sick: 0 },
       inv: { sem_alface: 10, sem_cenoura: 6, marmita: 3, agua: 3 },
       held: 'sem_alface', tool: 0, lots: { sede: true }, tiles: [], buildings: [], animals: [], nextId: 1,
-      stats: {}, quest: 0, upgrades: {}, tools: {}, seedBank: {}, ended: false,
+      stats: {}, quest: 0, qv: 2, upgrades: {}, tools: {}, seedBank: {}, ended: false,
     };
     this.buildLotGrid();
     this.genWorld();
@@ -329,6 +330,11 @@ const G = window.G = {
       if (S.upgrades.regador && !S.tools.regador) { S.tools.regador = 2; delete S.upgrades.regador; }
       this.buildLotGrid();
       S.animals.forEach(a => { a.tx = null; });
+      if (!S.qv) {   // Manual reordenado: a etapa do lote novo veio para antes do poço
+        if (S.quest >= 8 && S.quest <= 12) S.quest++; else if (S.quest === 13) S.quest = 8;
+        S.qv = 2;
+      }
+      this.placeQuarry();   // mundos antigos ganham a pedreira
       for (const b of S.buildings) {
         b.level = b.level || 1;
         if (b.type === 'casa') {   // casa ficou maior (5×4): ocupa o novo espaço
@@ -579,7 +585,7 @@ const G = window.G = {
         }
         return;
       case 'picareta': {
-        if (t.o && t.o.t === 'b') return this.dismantle(this.getBuilding(t.o.id));
+        if (t.o && t.o.t === 'b') { const pb = this.getBuilding(t.o.id); return pb && pb.type === 'pedreira' ? this.mineQuarry(pb, tx, ty) : this.dismantle(pb); }
         const n = this.areaAction(tx, ty, info.area, 3,
           tt => tt.o && tt.o.t === 'rock',
           (tt, x, y) => {
@@ -738,6 +744,24 @@ const G = window.G = {
     });
   },
 
+  // pedreira: pedra sem fim, um pouco por golpe (melhor picareta = mais pedra)
+  mineQuarry(b, tx, ty) {
+    if (!this.useEnergy(3)) return;
+    const lv = this.toolLvl('picareta'), n = rnd(1, 2) + (lv >= 3 ? 1 : 0) + (lv >= 4 && chance(0.5) ? 1 : 0);
+    this.add('pedra', n);
+    if (chance(0.04)) { this.add('ferragens', 1); this.popup(tx + 0.5, ty, '+1 🔩'); }
+    this.popup(tx + 0.5, ty + 0.2, `+${n} 🪨`, '#d8d4cc');
+    this.burst(tx + 0.5, ty + 0.5, '#a9a49b', 8); this.shake = 0.1; sfx('pick');
+  },
+  placeQuarry() {
+    const l = D.lots.find(l => l.id === 'so');
+    if (!l || S.buildings.some(b => b.type === 'pedreira')) return;
+    const x0 = l.x + 2, y0 = l.y + l.h - 5;
+    for (let y = y0 - 1; y < y0 + 4; y++) for (let x = x0 - 1; x < x0 + 5; x++) { const t = this.tile(x, y); if (!t || (t.o && t.o.t === 'b')) return; }
+    for (let y = y0 - 1; y < y0 + 4; y++) for (let x = x0 - 1; x < x0 + 5; x++) { const t = this.tile(x, y); t.o = null; t.c = null; t.g = 'grass'; }
+    this.addBuilding('pedreira', x0, y0, true);
+    for (const [dx, dy] of [[-1, 3], [4, 2], [5, 0], [-2, 1], [2, -2], [6, 3]]) { const t = this.tile(x0 + dx, y0 + dy); if (t && !t.o && t.g !== 'water') t.o = { t: 'rock', hp: 3, v: rnd(0, 3) }; }
+  },
   dismantle(b) {
     const def = D.buildings[b.type];
     if (def.fixed) { toast('Isso não pode ser desmontado.'); return; }
@@ -758,6 +782,8 @@ const G = window.G = {
         if (!S.creative && (h < 7 || h >= 20)) { toast('A loja está fechada. Funciona das 7h às 20h.'); sfx('error'); return; }
         return UI.openShop();
       }
+      case 'pedreira':
+        toast('⛰️ Pegue a picareta (tecla 6) e bata na rocha: a pedra aqui nunca acaba.'); return;
       case 'fogueira': return UI.openCraft('Cozinha');
       case 'moinho': return UI.openCraft('Moinho');
       case 'defumador': return UI.openCraft('Defumador');

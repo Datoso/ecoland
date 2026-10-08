@@ -402,3 +402,12 @@ body.touch #bag { right: 8px; bottom: auto; top: 50%; transform: translateY(-50%
 .shop-grid .need { display: block; font-size: 13px; }
 .shop-grid .need .itemic { width: 18px; height: 18px; }
 @media (max-width: 640px) { .craft-only { border-bottom: none; border-right: 2px dashed #c9a66b; padding: 0 6px 0 0; flex: none; } }
+/* textos longos não vazam: quebram linha e as descrições ficam em até 3 linhas (passe o mouse para ver tudo) */
+.shop-grid { grid-auto-rows: max-content; }
+.shop-grid > .card { min-width: 0; }
+.shop-grid .card .info { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.shop-grid .card .info b { overflow-wrap: anywhere; }
+.shop-grid .card .info small { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.shop-grid .card:hover .info small { -webkit-line-clamp: unset; line-clamp: unset; display: block; }
+.shop-grid .need { display: flex; flex-wrap: wrap; gap: 2px 6px; }
+.shop-grid .buy-col button { white-space: nowrap; }

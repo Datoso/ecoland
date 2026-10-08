@@ -37,9 +37,10 @@
   const CHAPTERS = [
     { title: 'Primeiros passos', sub: 'terreno, solo, plantio e água', ids: ['mato', 'arar', 'plantar', 'regar'], doodle: 'sprout' },
     { title: 'Fogo e comida', sub: 'lenha, fogueira, colheita e panela', ids: ['lenha', 'fogo', 'colher', 'cozinhar'], doodle: 'sun' },
+    { title: 'Terra nova', sub: 'o primeiro lote vizinho', ids: ['terra'], doodle: 'house' },
     { title: 'Água limpa e criação de aves', sub: 'poço, galinheiro, cocho e ovos', ids: ['poco', 'galinheiro', 'cocho', 'ovos'], doodle: 'egg' },
     { title: 'O ciclo dos nutrientes', sub: 'esterco que vira adubo', ids: ['adubo'], doodle: 'cycle' },
-    { title: 'Expandindo', sub: 'terras novas e animais grandes', ids: ['terra', 'galpao'], doodle: 'house' },
+    { title: 'Animais de grande porte', sub: 'curral, chiqueiro e galpão', ids: ['galpao'], doodle: 'house' },
     { title: 'Do campo à mesa', sub: 'abate respeitoso e conservação', ids: ['abate', 'conserva'], doodle: 'pot' },
     { title: 'Pomar, abelhas e ração própria', sub: 'árvores, mel e moinho', ids: ['pomar', 'colmeia', 'racao'], doodle: 'bee' },
     { title: 'Solo vivo e pragas sem veneno', sub: 'adubação verde e controle natural', ids: ['solo', 'pragas'], doodle: 'flower' },

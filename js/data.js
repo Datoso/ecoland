@@ -167,6 +167,7 @@ D.animals = {
 D.buildings = {
   casa:        { n: 'Casa', w: 5, h: 4, fixed: true, roofPanels: 6, desc: 'Sua casa. Interaja para dormir. Segure um painel solar e clique nela para instalar no telhado (até 6).' },
   loja:        { n: 'Agropecuária & Materiais', w: 3, h: 2, fixed: true },
+  pedreira:    { n: 'Pedreira', w: 4, h: 3, fixed: true, i: '⛰️', desc: 'Afloramento de rocha na Chapada Sudoeste. Bata com a picareta para tirar pedra quantas vezes quiser: ela nunca acaba (só cansa você).' },
   cozinha_externa: { n: 'Cozinha externa', w: 3, h: 2, i: '🧱', desc: 'Onde se cozinha na roça: começa com dois tijolinhos e uma grelha de ferro e vira uma cozinha caipira completa.', levels: [
     { n: 'Fogareiro de tijolinhos', save: 0.3, desc: 'dois tijolinhos e uma grelha de ferro: já gasta menos lenha que a fogueira' },
     { n: 'Fogão a lenha de tijolo', save: 0.6, cost: 1500, desc: 'fogão a lenha com chapa: metade das receitas não gasta lenha' },
@@ -503,7 +504,7 @@ D.shop = [
 // ---------- Lotes de terra ----------
 D.lots = [
   { id: 'sede',  n: 'Sede da Fazenda', x: 22, y: 16, w: 20, h: 16, cost: 0,    biome: 'sede' },
-  { id: 'norte', n: 'Pasto Norte',     x: 22, y: 0,  w: 20, h: 16, cost: 1500, biome: 'pasto' },
+  { id: 'norte', n: 'Pasto Norte',     x: 22, y: 0,  w: 20, h: 16, cost: 1000, biome: 'pasto' },
   { id: 'sul',   n: 'Várzea do Lago',  x: 22, y: 32, w: 20, h: 16, cost: 2000, biome: 'lago' },
   { id: 'leste', n: 'Mata Leste',      x: 42, y: 16, w: 22, h: 16, cost: 2500, biome: 'mata' },
   { id: 'oeste', n: 'Cerrado Oeste',   x: 0,  y: 16, w: 22, h: 16, cost: 2500, biome: 'cerrado' },
@@ -534,6 +535,8 @@ D.quests = [
     txt: 'Quando a planta mostrar o fruto, use a foice (ou a mão). Parte da colheita se vende, parte se come — e o que sobra alimenta animais e a composteira.' },
   { id: 'cozinhar', t: 'Cozinhar é sobreviver', goal: 'Prepare 1 receita', stat: 'cook', n: 1, reward: { items: { sem_milho: 5, sem_tomate: 3 } },
     txt: 'Comida preparada sacia muito mais que comida crua. Fome e sede zeradas tiram sua vida — mantenha a despensa cheia!' },
+  { id: 'terra', t: 'Expandindo as terras', goal: 'Compre um novo lote (tecla T)', stat: 'lots', n: 1, reward: { money: 200 },
+    txt: 'Cada lote tem um bioma: pasto, mata, lago, cerrado. Planeje: pasto para os ruminantes, mata para lenha manejada, lago para água, e a Chapada Sudoeste tem uma pedreira que nunca acaba. Para juntar o dinheiro: venda peixes, sobras da colheita, lenha e pedra (veja as tarefas paralelas).' },
   { id: 'poco', t: 'Fonte de água limpa', goal: 'Construa um poço', check: g => G.countBuildings('poco') >= 1, reward: { money: 150 },
     txt: 'Água do lago pode causar dor de barriga. O poço dá água limpa para beber e regar perto dos canteiros. Ferragens você encontra na loja de materiais.' },
   { id: 'galinheiro', t: 'O galinheiro', goal: 'Construa um galinheiro e tenha 2 galinhas', check: g => G.countBuildings('galinheiro') >= 1 && G.countAnimals('galinha') >= 2,
@@ -545,8 +548,6 @@ D.quests = [
     txt: 'Os ovos ficam no galinheiro: interaja com ele para coletar. Ovo é proteína barata e vira omelete, pão e bolo.' },
   { id: 'adubo', t: 'Ciclo dos nutrientes', goal: 'Produza 1 adubo na composteira', stat: 'compost', n: 1, reward: { items: { adubo: 3 } },
     txt: 'Pegue o esterco no galinheiro e deposite na composteira junto com restos e capim. Em duas noites vira adubo, que acelera o crescimento e melhora a colheita. Nada se perde!' },
-  { id: 'terra', t: 'Expandindo as terras', goal: 'Compre um novo lote (tecla T)', stat: 'lots', n: 1, reward: { money: 200 },
-    txt: 'Cada lote tem um bioma: pasto, mata, lago, cerrado. Planeje: pasto para os ruminantes, mata para lenha manejada, lago para água.' },
   { id: 'galpao', t: 'Animais de grande porte', goal: 'Construa um curral, chiqueiro ou galpão e tenha um porco, vaca, ovelha ou cabra', check: g => (G.countBuildings('galpao') + G.countBuildings('curral') + G.countBuildings('chiqueiro')) >= 1 && (G.countAnimals('porco') + G.countAnimals('vaca') + G.countAnimals('ovelha') + G.countAnimals('cabra')) >= 1,
     reward: { items: { racao: 15 } },
     txt: 'Curral para ruminantes, chiqueiro (com cocho próprio) para porcos. Vacas, ovelhas e cabras pastam: com bastante pasto livre elas se alimentam sozinhas (menos no inverno). Porcos comem do cocho e aproveitam restos.' },

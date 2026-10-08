@@ -216,7 +216,7 @@ window.UI = (() => {
     const label = state === 'owned' ? '✔ Comprado' : state === 'locked' ? '🔒 Bloqueado' : 'Comprar';
     const tag = { owned: '<span class="stag owned">JÁ É SEU</span>', locked: '<span class="stag locked">BLOQUEADO</span>', season: '<span class="stag season">FORA DE ÉPOCA</span>', poor: '<span class="stag poor">SEM DINHEIRO</span>' }[state] || '';
     return `<div class="card shop-${state || 'ok'}"><div class="ic">${ic}</div><div class="info">${tag}<b>${name}</b><span class="price">💰 ${e.price}</span><small>${sub}</small></div>
-      <div class="buy-col"><button data-b="${idx}" data-q="1" ${dis ? 'disabled' : ''}>${label}</button>${multi ? `<button data-b="${idx}" data-q="5" ${!S.creative && S.money < e.price * 5 ? 'disabled' : ''}>×5</button>` : ''}</div></div>`;
+      <div class="buy-col"><button data-b="${idx}" data-q="1" ${dis ? 'disabled' : ''}>${label}</button>${multi ? `<button data-b="${idx}" data-q="5" ${dis || (!S.creative && S.money < e.price * 5) ? 'disabled' : ''}>×5</button>` : ''}</div></div>`;
   };
   ui.openShop = (tab, mode) => {
     if (tab) { if ((mode || shopMode) === 'sell') sellTab = tab; else shopTab = tab; }

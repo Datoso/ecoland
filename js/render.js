@@ -1370,6 +1370,54 @@ window.R = (() => {
   }
   function paintBuilding(c, type, w, h, b, night, snow, season, variant, lv) {
     switch (type) {
+      case 'pedreira': { // afloramento de rocha com frente de corte, blocos e cascalho
+        const r = rng(77), snowC = snow ? '#f3f7fa' : null;
+        shadowRect(c, 4, h - 16, w - 8, 20);
+        // massa de rocha em camadas (fundo → frente)
+        const slab = (pts, col) => {
+          c.fillStyle = col; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (const [x, y] of pts.slice(1)) c.lineTo(x, y); c.closePath(); c.fill();
+          c.strokeStyle = shade(col, -0.45); c.lineWidth = 1.6; c.stroke();
+        };
+        slab([[4, h - 24], [8, 40], [20, 18], [30, 22], [40, -8], [56, -14], [66, -34], [84, -26], [96, -38], [112, -20], [128, -24], [142, 2], [156, 6], [164, 34], [174, 52], [172, h - 24]], '#8d877d');
+        slab([[14, h - 24], [18, 46], [30, 34], [44, 8], [60, 4], [74, -14], [92, -6], [108, -16], [124, 0], [140, 14], [152, 30], [162, 58], [164, h - 24]], '#a39d92');
+        // pedras grandes encostadas nas laterais
+        for (const [x, y, rx, ry, col] of [[14, h - 34, 16, 13, '#958f84'], [166, h - 40, 14, 18, '#8f897e'], [30, 30, 12, 9, '#b0aa9f'], [150, 22, 11, 8, '#b0aa9f']]) {
+          ell(c, x, y, rx, ry, col); ell(c, x - rx * 0.3, y - ry * 0.35, rx * 0.45, ry * 0.3, 'rgba(255,255,255,0.22)');
+          c.strokeStyle = shade(col, -0.45); c.lineWidth = 1.4; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, TAU); c.stroke();
+        }
+        // estratos
+        c.strokeStyle = 'rgba(70,62,52,0.35)'; c.lineWidth = 1.4;
+        for (const yy of [12, 30, 48]) { c.beginPath(); c.moveTo(26, yy + 8); c.quadraticCurveTo(w / 2, yy - 6, 154, yy + 10); c.stroke(); }
+        // frente de corte (paredão liso com marcas de cunha)
+        c.fillStyle = '#c7c1b5'; c.beginPath(); c.moveTo(56, 22); c.lineTo(120, 18); c.lineTo(126, h - 30); c.lineTo(50, h - 30); c.closePath(); c.fill();
+        c.strokeStyle = '#6f685c'; c.lineWidth = 1.6; c.stroke();
+        c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(58, 24, 60, 6);
+        c.strokeStyle = 'rgba(80,72,60,0.55)'; c.lineWidth = 1;
+        for (let i = 0; i < 9; i++) { const x = 60 + i * 7; c.beginPath(); c.moveTo(x, 34); c.lineTo(x, 40); c.stroke(); }
+        c.beginPath(); c.moveTo(52, 62); c.lineTo(124, 60); c.moveTo(54, 84); c.lineTo(125, 83); c.stroke();
+        // musgo e capim nas bordas
+        for (let i = 0; i < 9; i++) { const x = 20 + r() * 136, y = 6 + r() * 30 - (x > 60 && x < 120 ? 26 : 0); ell(c, x, y, 5 + r() * 4, 2.4, season === 2 ? '#9a8a3a' : '#5f8f3a'); }
+        if (snowC) { ell(c, 78, -26, 30, 6, snowC); ell(c, 40, -12, 18, 5, snowC); ell(c, 132, -6, 20, 5, snowC); }
+        // blocos cortados empilhados à esquerda
+        const block = (x, y, bw, bh) => {
+          c.fillStyle = '#d2ccc0'; c.fillRect(x, y, bw, bh); c.fillStyle = '#b3ada1'; c.fillRect(x, y + bh - 4, bw, 4);
+          c.fillStyle = '#e6e1d7'; c.fillRect(x, y, bw, 3); c.strokeStyle = '#5f594f'; c.lineWidth = 1.4; c.strokeRect(x, y, bw, bh);
+        };
+        block(6, h - 44, 26, 16); block(32, h - 44, 22, 16); block(14, h - 60, 26, 16);
+        // cascalho e pedras soltas à frente
+        for (let i = 0; i < 26; i++) { const x = 40 + r() * 120, y = h - 30 + r() * 14, rr = 2 + r() * 4; ell(c, x, y, rr, rr * 0.7, ['#9d978c', '#b8b2a6', '#8a8479'][i % 3]); }
+        for (const [x, y, rr] of [[140, h - 34, 9], [124, h - 26, 7], [150, h - 22, 6]]) { ell(c, x, y, rr, rr * 0.75, '#a8a297'); ell(c, x - rr * 0.3, y - rr * 0.3, rr * 0.4, rr * 0.25, 'rgba(255,255,255,0.35)'); c.strokeStyle = '#5f594f'; c.lineWidth = 1.2; c.beginPath(); c.ellipse(x, y, rr, rr * 0.75, 0, 0, TAU); c.stroke(); }
+        // carrinho de mão com pedras
+        c.fillStyle = '#6b4423'; c.fillRect(96, h - 24, 22, 3); c.strokeStyle = '#4a2e14'; c.lineWidth = 2; c.beginPath(); c.moveTo(118, h - 22); c.lineTo(132, h - 14); c.stroke();
+        c.fillStyle = '#3f6a8a'; c.beginPath(); c.moveTo(88, h - 34); c.lineTo(120, h - 34); c.lineTo(114, h - 22); c.lineTo(94, h - 22); c.closePath(); c.fill(); c.strokeStyle = '#22384a'; c.lineWidth = 1.4; c.stroke();
+        for (let i = 0; i < 5; i++) ell(c, 94 + i * 5.5, h - 36, 3.4, 2.6, i % 2 ? '#b8b2a6' : '#9d978c');
+        circ(c, 92, h - 19, 4.5, '#2b2b2b'); circ(c, 92, h - 19, 1.6, '#888');
+        // plaquinha
+        c.fillStyle = '#6b4423'; c.fillRect(150, h - 46, 3, 24);
+        c.fillStyle = '#c99a5a'; rrect(c, 132, h - 58, 40, 14, 2); c.fill(); c.strokeStyle = '#6b4423'; c.lineWidth = 1.2; c.stroke();
+        c.fillStyle = '#3a2410'; c.font = 'bold 8px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('PEDREIRA', 152, h - 51);
+        break;
+      }
       case 'casa': {
         const L = casaLayout(w, h), panels = variant;
         shadowRect(c, 12, h - 12, w - 6, 18);
