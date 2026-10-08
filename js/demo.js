@@ -64,7 +64,7 @@ G.newDemoWorld = function () {
   const s = lot('sede');
   clear(s.x, s.y + 3, s.w, s.h - 3);
   clear(s.x, s.y, s.w, 2);   // caminho ao norte da casa (porteira do pasto)
-  build('fogueira', s.x + 8, s.y + 3);
+  build('fogueira', s.x + 9, s.y + 4);
   build('poco', s.x + 9, s.y + 1, 1);
   build('defumador', s.x + 11, s.y + 4);
   build('banco_sementes', s.x + 11, s.y, 3);

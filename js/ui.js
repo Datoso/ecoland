@@ -92,7 +92,7 @@ window.UI = (() => {
   ui.isOpen = () => !modal.classList.contains('hidden');
   ui.show = (name, html) => {
     current = name;
-    panel.classList.toggle('shop-open', name === 'shop');
+    panel.classList.toggle('shop-open', name === 'shop' || name === 'craft');
     panel.innerHTML = `<button class="close" title="Fechar (Esc)">✖</button>` + html;
     panel.querySelector('.close').onclick = ui.close;
     if (modal.classList.contains('hidden')) play('open');
@@ -137,21 +137,41 @@ window.UI = (() => {
 
   // ---------- criação ----------
   let craftTab = 'Construção';
+  const CRAFT_TABS = {
+    'Construção': ['🏗️', 'Construções e estruturas: crie e coloque no chão (R gira).'],
+    Preparo: ['🥣', 'Preparos simples feitos em qualquer lugar.'],
+    Cozinha: ['🍲', 'Receitas no fogo: fogueira, cozinha externa ou fogão de casa.'],
+    'Forno e brasa': ['🔥', 'Forno e churrasqueira da cozinha caipira (nível 3).'],
+    Moinho: ['🌽', 'Fubá, farinha e ração caseira no moinho.'],
+    Defumador: ['🥓', 'Charque, linguiça e defumados que duram muito.'],
+    Artesanato: ['🧵', 'Couro, lã e penas viram roupas e utensílios na bancada.'],
+  };
+  let craftOnly = false;
   ui.openCraft = tab => {
     if (tab) craftTab = tab;
     const tabs = [...new Set(D.recipes.map(r => r.cat))];
-    const list = D.recipes.filter(r => r.cat === craftTab);
-    ui.show('craft', `<h2>🔨 Criação</h2><div class="tabs">${tabs.map(t => `<button data-t="${t}" class="${t === craftTab ? 'on' : ''}">${t}</button>`).join('')}</div>
-      <div class="grid">${list.map((r, i) => {
-        const it = D.items[r.out], ok = G.canCraft(r), near = G.nearStation(r.st);
-        return `<div class="card ${ok ? '' : 'off'}"><div class="ic">${icon(r.out)}</div><div class="info"><b>${it.n}${r.q > 1 ? ' ×' + r.q : ''}</b>${fmtIn(r)}
-          <small>${r.st ? (near ? `✔ perto do(a) ${D.buildings[r.st].n}` : `✘ precisa estar perto de: ${D.buildings[r.st].n}`) : (it.place ? D.buildings[it.place].desc : it.e ? `+${it.e.fome || 0}🍖 +${it.e.sede || 0}💧 +${it.e.energia || 0}⚡` : '')}</small></div>
-          <button data-r="${D.recipes.indexOf(r)}" ${ok ? '' : 'disabled'}>Criar</button></div>`;
-      }).join('')}</div>`);
-    panel.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { play('ui'); ui.openCraft(b.dataset.t); });
+    if (!tabs.includes(craftTab)) craftTab = tabs[0];
+    const all = D.recipes.filter(r => r.cat === craftTab), list = craftOnly ? all.filter(r => G.canCraft(r)) : all;
+    const T = t => CRAFT_TABS[t] || ['🔨', ''];
+    const side = tabs.map(t => { const rs = D.recipes.filter(r => r.cat === t), n = rs.filter(r => G.canCraft(r)).length;
+      return `<button data-t="${t}" class="${t === craftTab ? 'on' : ''}"><i>${T(t)[0]}</i>${t}<em class="${n ? 'ok' : ''}" title="dá para fazer agora">${n}/${rs.length}</em></button>`; }).join('');
+    const grid = list.map(r => {
+      const it = D.items[r.out], ok = G.canCraft(r), near = G.nearStation(r.st);
+      return `<div class="card ${ok ? 'craft-ok' : 'off'}"><div class="ic">${icon(r.out)}</div><div class="info"><b>${it.n}${r.q > 1 ? ' ×' + r.q : ''}</b><span class="need">${fmtIn(r)}</span>
+        <small>${r.st ? (near ? `✔ perto do(a) ${D.buildings[r.st].n}` : `✘ precisa estar perto de: ${D.buildings[r.st].n}`) : (it.place ? D.buildings[it.place].desc : it.e ? `+${it.e.fome || 0}🍖 +${it.e.sede || 0}💧 +${it.e.energia || 0}⚡` : '')}</small></div>
+        <div class="buy-col"><button data-r="${D.recipes.indexOf(r)}" ${ok ? '' : 'disabled'}>Criar</button></div></div>`;
+    }).join('') || `<p class="shop-empty">${craftOnly ? 'Nada aqui dá para fazer agora: falta material ou estar perto da estação certa.' : 'Nenhuma receita.'}</p>`;
+    ui.show('craft', `<h2>🔨 Criação</h2>
+      <div class="shop-wrap"><nav class="shop-side"><label class="craft-only"><input type="checkbox" id="craft-only" ${craftOnly ? 'checked' : ''}> Só o que dá pra fazer</label>${side}</nav>
+      <div class="shop-main"><div class="shop-head"><b>${T(craftTab)[0]} ${craftTab}</b><small>${T(craftTab)[1]}</small></div><div class="grid shop-grid">${grid}</div></div></div>`);
+    panel.querySelectorAll('.shop-side [data-t]').forEach(b => b.onclick = () => { play('ui'); ui.openCraft(b.dataset.t); });
+    panel.querySelector('#craft-only').onchange = e => { craftOnly = e.target.checked; play('ui'); ui.openCraft(); };
     panel.querySelectorAll('.card button').forEach(b => b.onclick = () => {
       const r = D.recipes[+b.dataset.r];
-      if (G.craft(r)) { if (D.items[r.out].place) { S.held = r.out; S.tool = 7; ui.close(); ui.toast(`${D.items[r.out].n} na mão! Clique no chão para posicionar.`); } else ui.openCraft(); }
+      if (G.craft(r)) {
+        if (D.items[r.out].place) { S.held = r.out; S.tool = 7; ui.close(); ui.toast(`${D.items[r.out].n} na mão! Clique no chão para posicionar.`); }
+        else { const g = panel.querySelector('.shop-grid'), y = g ? g.scrollTop : 0; ui.openCraft(); const g2 = panel.querySelector('.shop-grid'); if (g2) g2.scrollTop = y; }
+      }
     });
   };
 

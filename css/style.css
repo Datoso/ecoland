@@ -394,3 +394,11 @@ body.touch #bag { right: 8px; bottom: auto; top: 50%; transform: translateY(-50%
 .side-list li.lock { opacity: .6; }
 .side-list li p { margin: 4px 0; font-size: 13px; }
 .side-list .sq-ic { font-size: 26px; }
+/* criação no mesmo visual da loja */
+.shop-side > button em.ok { background: #6aa84f; color: #fff; }
+.craft-only { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 4px 4px 8px; margin-bottom: 4px; border-bottom: 2px dashed #c9a66b; cursor: pointer; }
+.shop-grid .card.off { opacity: .72; }
+.shop-grid .card.craft-ok { border-color: #8cc56e; }
+.shop-grid .need { display: block; font-size: 13px; }
+.shop-grid .need .itemic { width: 18px; height: 18px; }
+@media (max-width: 640px) { .craft-only { border-bottom: none; border-right: 2px dashed #c9a66b; padding: 0 6px 0 0; flex: none; } }

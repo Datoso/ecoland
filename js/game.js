@@ -88,7 +88,7 @@ const G = window.G = {
     // sede: casa, loja e lagoinha
     const s = D.lots[0];
     const clear = (x0, y0, w, h) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { const t = this.tile(x, y); if (t) { t.o = null; t.g = 'grass'; } } };
-    clear(s.x + 2, s.y + 1, 7, 6);    // em volta da casa
+    clear(s.x, s.y + 1, 10, 6);       // em volta da casa e da cozinha
     clear(s.x + 12, s.y + 1, 5, 5);   // em volta da loja
     clear(s.x + 3, s.y + 6, 9, 4);    // área inicial de plantio
     // bosque no canto sudoeste da sede: lenha garantida para as primeiras missões
@@ -96,10 +96,9 @@ const G = window.G = {
       const t = this.tile(x, y);
       if (Math.random() < 0.55) t.o = { t: 'tree', hp: 3, v: rnd(0, 3) };
     }
-    this.addBuilding('casa', s.x + 3, s.y + 2, true);
+    this.addBuilding('casa', s.x + 1, s.y + 2, true);
     this.addBuilding('loja', s.x + 13, s.y + 2, true);
-    clear(s.x, s.y + 3, 3, 3);
-    this.addBuilding('cozinha_externa', s.x, s.y + 3);   // dois tijolinhos e uma grelha de ferro
+    this.addBuilding('cozinha_externa', s.x + 6, s.y + 3);   // à direita da casa: dois tijolinhos e uma grelha de ferro
     for (let y = s.y + 10; y < s.y + 14; y++) for (let x = s.x + 14; x < s.x + 19; x++) {
       const d = ((x + 0.5 - (s.x + 16.5)) / 2.6) ** 2 + ((y + 0.5 - (s.y + 12)) / 1.9) ** 2;
       const t = this.tile(x, y);
