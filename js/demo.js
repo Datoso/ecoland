@@ -179,6 +179,7 @@ G.newDemoWorld = function () {
   S.held = 'racao'; S.tool = 0;
   S.stats = { weeds: 50, till: 200, plant: 200, water: 300, wood: 200, stone: 200, harvest: 150, cook: 40, feed: 500, eggs: 200, compost: 30, lots: 8, slaughter: 10, smoke: 10, trees: 30, racao: 60 };
   S.quest = D.quests.length;   // manual concluído
+  S.side = {}; S.sideSeen = {}; for (const q of D.sideQuests || []) S.side[q.id] = S.sideSeen[q.id] = true;
   // habilidades da demonstração
   S.skills = {};
   for (const k of Object.keys(D.skills)) S.skills[k] = 0;   // habilidades começam no nível 1, até na demonstração

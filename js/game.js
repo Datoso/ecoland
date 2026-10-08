@@ -516,7 +516,7 @@ const G = window.G = {
           (tt, x, y) => {
             if (tt.c && tt.c.dead) tt.c = null;
             else if (tt.c) this.greenManure(x, y);
-            else { tt.g = 'tilled'; this.stat('till'); if (chance(0.12)) { this.add('minhoca', 1); this.popup(x + 0.5, y, '🪱'); } }
+            else { tt.g = 'tilled'; this.stat('till'); if (chance(0.12)) { this.add('minhoca', 1); this.popup(x + 0.5, y, '🪱'); this.stat('worms'); } }
             this.burst(x + 0.5, y + 0.5, '#7a5230', 5);
           });
         if (n > 0) sfx('hoe');

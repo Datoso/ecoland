@@ -7,6 +7,16 @@ window.UI = (() => {
   let current = null, frame = 0;
   const ui = {};
 
+  // construções usam o mesmo desenho do mapa (ponte de madeira parece ponte de madeira)
+  if (window.ITEMICONS && !ITEMICONS._thumbs) {
+    const _html = ITEMICONS.html;
+    ITEMICONS.html = id => {
+      const it = D.items[id];
+      if (it && it.place && window.R && R.buildingThumb) { const u = R.buildingThumb(it.place); if (u) return `<span class="itemic bthumb"><img src="${u}" alt="" draggable="false"></span>`; }
+      return _html(id);
+    };
+    ITEMICONS._thumbs = true;
+  }
   const icon = (id, big) => {
     const it = D.items[id];
     const art = window.ITEMICONS && ITEMICONS.html(id);
@@ -82,6 +92,7 @@ window.UI = (() => {
   ui.isOpen = () => !modal.classList.contains('hidden');
   ui.show = (name, html) => {
     current = name;
+    panel.classList.toggle('shop-open', name === 'shop');
     panel.innerHTML = `<button class="close" title="Fechar (Esc)">✖</button>` + html;
     panel.querySelector('.close').onclick = ui.close;
     if (modal.classList.contains('hidden')) play('open');
@@ -145,53 +156,78 @@ window.UI = (() => {
   };
 
   // ---------- loja ----------
-  let shopTab = 'Sementes', shopMode = 'buy';
+  // painel de tamanho fixo: seções em coluna à esquerda, itens à direita
+  const SHOP_TABS = {
+    Sementes: ['🌱', 'Sementes de hortaliças, grãos e adubação verde.'],
+    Mudas: ['🪴', 'Frutíferas e trepadeiras: produzem por anos.'],
+    Materiais: ['🧱', 'Madeira, pedra, ferragens e painéis para construir.'],
+    Insumos: ['🧪', 'Ração, adubo, gotejamento, iscas e defensivos naturais.'],
+    Mercado: ['🧺', 'Comida e bebida prontas para os primeiros dias.'],
+    Animais: ['🐣', 'Filhotes para criar. Precisa de abrigo com vaga.'],
+    Ferramentas: ['🛠️', 'Ferramentas melhores e equipamentos.'],
+  };
+  const SELL_ICONS = { Semente: '🌱', 'Semente crioula': '🌾', Muda: '🪴', Mercado: '🧺', Insumo: '🧪', Orgânico: '🍂', Forragem: '🌿', Moinho: '🌽', Preparo: '🥣', Defumador: '🥓', 'Forno e brasa': '🔥', Colheita: '🥕', Fruta: '🍊', Peixe: '🐟', Carne: '🥩', Animal: '🥚', Processado: '🧀', Prato: '🍲', Cozinha: '🍲', Material: '🪵', Subproduto: '🦴' };
+  let shopTab = 'Sementes', shopMode = 'buy', sellTab = 'Tudo';
+  const shopCard = e => {
+    const idx = D.shop.indexOf(e);
+    let ic, name, sub = '', dis = !S.creative && S.money < e.price, state = '';
+    if (e.animal) {
+      const a = D.animals[e.animal]; ic = (window.ITEMICONS && ITEMICONS.html(e.animal)) || a.bi; name = a.baby + ` (${a.n})`;
+      const home = G.homeWithSpace(e.animal);
+      sub = `${home ? '✔ há vaga' : `✘ precisa de ${G.homeNames(e.animal)} com vaga`} · adulto em ${a.adult} dias · ${a.forage ? 'cisca na terra, não precisa de ração' : `come ${a.eat}/dia de ração`}`;
+      dis = dis || !home; if (!home) state = 'locked';
+    } else if (e.tool) {
+      ic = ICONS.html(D.toolLevels[e.tool][e.level - 1].icon || e.tool); name = e.n;
+      const cur = G.toolLvl(e.tool);
+      sub = e.desc + (cur >= e.level ? ' · <b>✔ você já tem</b>' : cur < e.level - 1 ? ` · precisa antes: ${D.toolLevels[e.tool][e.level - 2].n}` : '');
+      dis = dis || cur !== e.level - 1; state = cur >= e.level ? 'owned' : cur < e.level - 1 ? 'locked' : state;
+    } else if (e.upgrade) {
+      ic = e.i; name = e.n; sub = e.desc; if (S.upgrades[e.upgrade]) { dis = true; sub = '✔ já comprado'; state = 'owned'; }
+    } else {
+      const it = D.items[e.id]; ic = icon(e.id); name = it.n;
+      if (it.seed) { const c = D.crops[it.seed]; const inS = c.seasons.includes(S.season); if (!inS) state = 'season'; sub = `${D.families[c.fam] || ''} · ${c.days} dias · ${c.seasons.map(s => D.SEASONS[s]).join(', ')}${c.regrow ? ' · rebrota' : ''}${c.desc ? '<br>' + c.desc : ''}`; }
+      else if (it.sapling) { const f = D.fruits[it.sapling]; sub = `produz em ${f.mature} dias · ${f.seasons.map(s => D.SEASONS[s]).join(', ')}`; }
+      else if (it.e) sub = `+${it.e.fome || 0}🍖 +${it.e.sede || 0}💧 +${it.e.energia || 0}⚡`;
+      else if (it.feed) sub = `alimento animal: ${it.feed} un.`;
+      else if (it.place) sub = 'construção: coloque no chão';
+    }
+    const multi = !e.upgrade && !e.tool;
+    if (!state && dis) state = 'poor';
+    const label = state === 'owned' ? '✔ Comprado' : state === 'locked' ? '🔒 Bloqueado' : 'Comprar';
+    const tag = { owned: '<span class="stag owned">JÁ É SEU</span>', locked: '<span class="stag locked">BLOQUEADO</span>', season: '<span class="stag season">FORA DE ÉPOCA</span>', poor: '<span class="stag poor">SEM DINHEIRO</span>' }[state] || '';
+    return `<div class="card shop-${state || 'ok'}"><div class="ic">${ic}</div><div class="info">${tag}<b>${name}</b><span class="price">💰 ${e.price}</span><small>${sub}</small></div>
+      <div class="buy-col"><button data-b="${idx}" data-q="1" ${dis ? 'disabled' : ''}>${label}</button>${multi ? `<button data-b="${idx}" data-q="5" ${!S.creative && S.money < e.price * 5 ? 'disabled' : ''}>×5</button>` : ''}</div></div>`;
+  };
   ui.openShop = (tab, mode) => {
-    if (tab) shopTab = tab; if (mode) shopMode = mode;
-    let body;
+    if (tab) { if ((mode || shopMode) === 'sell') sellTab = tab; else shopTab = tab; }
+    if (mode) shopMode = mode;
+    let side, head, grid;
     if (shopMode === 'buy') {
       const tabs = [...new Set(D.shop.map(e => e.tab))];
-      const list = D.shop.filter(e => e.tab === shopTab);
-      body = `<div class="tabs">${tabs.map(t => `<button data-t="${t}" class="${t === shopTab ? 'on' : ''}">${t}</button>`).join('')}</div><div class="grid">${list.map(e => {
-        const idx = D.shop.indexOf(e);
-        let ic, name, sub = '', dis = !S.creative && S.money < e.price, state = '';
-        if (e.animal) {
-          const a = D.animals[e.animal]; ic = a.bi; name = a.baby + ` (${a.n})`;
-          const home = G.homeWithSpace(e.animal);
-          sub = `${home ? '✔ há vaga' : `✘ precisa de ${G.homeNames(e.animal)} com vaga`} · adulto em ${a.adult} dias · ${a.forage ? 'cisca na terra, não precisa de ração' : `come ${a.eat}/dia de ração`}`;
-          dis = dis || !home; if (!home) state = 'locked';
-        } else if (e.tool) {
-          ic = ICONS.html(D.toolLevels[e.tool][e.level - 1].icon || e.tool); name = e.n;
-          const cur = G.toolLvl(e.tool);
-          sub = e.desc + (cur >= e.level ? ' · <b>✔ você já tem</b>' : cur < e.level - 1 ? ` · precisa antes: ${D.toolLevels[e.tool][e.level - 2].n}` : '');
-          dis = dis || cur !== e.level - 1; state = cur >= e.level ? 'owned' : cur < e.level - 1 ? 'locked' : state;
-        } else if (e.upgrade) {
-          ic = e.i; name = e.n; sub = e.desc; if (S.upgrades[e.upgrade]) { dis = true; sub = '✔ já comprado'; state = 'owned'; }
-        } else {
-          const it = D.items[e.id]; ic = icon(e.id); name = it.n;
-          if (it.seed) { const c = D.crops[it.seed]; const inS = c.seasons.includes(S.season); if (!inS) state = 'season'; sub = `${D.families[c.fam] || ''} · ${c.days} dias · ${c.seasons.map(s => D.SEASONS[s]).join(', ')}${inS ? '' : ' · <b style="color:#c0392b">fora de época</b>'}${c.regrow ? ' · rebrota' : ''}${c.desc ? '<br>' + c.desc : ''}`; }
-          else if (it.sapling) { const f = D.fruits[it.sapling]; sub = `produz em ${f.mature} dias · ${f.seasons.map(s => D.SEASONS[s]).join(', ')}`; }
-          else if (it.e) sub = `+${it.e.fome || 0}🍖 +${it.e.sede || 0}💧 +${it.e.energia || 0}⚡`;
-          else if (it.feed) sub = `alimento animal: ${it.feed} un.`;
-        }
-        const multi = !e.upgrade && !e.tool;
-        if (!state && dis) state = 'poor';
-        const label = state === 'owned' ? '✔ Comprado' : state === 'locked' ? '🔒 Bloqueado' : 'Comprar';
-        const tag = { owned: '<span class="stag owned">JÁ É SEU</span>', locked: '<span class="stag locked">BLOQUEADO</span>', season: '<span class="stag season">FORA DE ÉPOCA</span>', poor: '<span class="stag poor">SEM DINHEIRO</span>' }[state] || '';
-        return `<div class="card shop-${state || 'ok'}"><div class="ic">${ic}</div><div class="info">${tag}<b>${name}</b>💰 ${e.price}<small>${sub}</small></div>
-          <div style="display:flex;flex-direction:column;gap:3px"><button data-b="${idx}" data-q="1" ${dis ? 'disabled' : ''}>${label}</button>${multi ? `<button data-b="${idx}" data-q="5" ${S.money < e.price * 5 ? 'disabled' : ''}>×5</button>` : ''}</div></div>`;
-      }).join('')}</div>`;
+      if (!tabs.includes(shopTab)) shopTab = tabs[0];
+      side = tabs.map(t => `<button data-t="${t}" class="${t === shopTab ? 'on' : ''}"><i>${(SHOP_TABS[t] || ['🛒'])[0]}</i>${t}<em>${D.shop.filter(e => e.tab === t).length}</em></button>`).join('');
+      head = `<b>${(SHOP_TABS[shopTab] || ['🛒'])[0]} ${shopTab}</b><small>${(SHOP_TABS[shopTab] || ['', ''])[1]}</small>`;
+      grid = D.shop.filter(e => e.tab === shopTab).map(shopCard).join('');
     } else {
-      const ids = Object.keys(S.inv).filter(k => S.inv[k] > 0 && D.items[k].sell > 0);
-      body = `<div class="grid">${ids.map(k => { const it = D.items[k]; return `<div class="card"><div class="ic">${icon(k)}</div><div class="info"><b>${it.n}</b>Você tem ${S.inv[k]} · 💰 ${it.sell} cada</div>
-        <div style="display:flex;flex-direction:column;gap:3px"><button data-s="${k}" data-q="1">Vender 1</button><button data-s="${k}" data-q="999">Tudo</button></div></div>`; }).join('') || '<p>Nada para vender.</p>'}</div>`;
+      const ids = Object.keys(S.inv).filter(k => S.inv[k] > 0 && D.items[k] && D.items[k].sell > 0);
+      const catOf = k => D.items[k].cat || 'Outros';
+      const cats = ['Tudo', ...new Set(ids.map(catOf))];
+      if (!cats.includes(sellTab)) sellTab = 'Tudo';
+      const list = sellTab === 'Tudo' ? ids : ids.filter(k => catOf(k) === sellTab);
+      const total = list.reduce((s, k) => s + D.items[k].sell * S.inv[k], 0);
+      side = cats.map(c => `<button data-t="${c}" class="${c === sellTab ? 'on' : ''}"><i>${c === 'Tudo' ? '📦' : SELL_ICONS[c] || '🏷️'}</i>${c}<em>${c === 'Tudo' ? ids.length : ids.filter(k => catOf(k) === c).length}</em></button>`).join('');
+      head = `<b>💰 Vender · ${sellTab}</b><small>Tudo isso vale <b>💰 ${total.toLocaleString('pt-BR')}</b>. Guarde o que for usar: semente, ração e comida fazem falta!</small>`;
+      grid = list.map(k => { const it = D.items[k]; return `<div class="card"><div class="ic">${icon(k)}</div><div class="info"><b>${it.n}</b><span class="price">💰 ${it.sell} cada</span><small>Você tem ${S.inv[k]} · total 💰 ${it.sell * S.inv[k]}</small></div>
+        <div class="buy-col"><button data-s="${k}" data-q="1">Vender 1</button><button data-s="${k}" data-q="999">Tudo</button></div></div>`; }).join('') || '<p class="shop-empty">Nada para vender aqui. Colha, pesque, crie e volte!</p>';
     }
-    ui.show('shop', `<h2>🏪 Agropecuária & Materiais</h2><p><small>Ferramentas modernas, sementes, materiais de construção e animais. Você tem <b>💰 ${S.money.toLocaleString('pt-BR')}</b>.</small></p>
-      <div class="tabs"><button data-m="buy" class="${shopMode === 'buy' ? 'on' : ''}">🛒 Comprar</button><button data-m="sell" class="${shopMode === 'sell' ? 'on' : ''}">💰 Vender</button></div>${body}`);
+    ui.show('shop', `<h2>🏪 Agropecuária & Materiais <span class="shop-money">💰 ${S.creative ? '∞' : S.money.toLocaleString('pt-BR')}</span></h2>
+      <div class="shop-wrap"><nav class="shop-side"><div class="shop-mode"><button data-m="buy" class="${shopMode === 'buy' ? 'on' : ''}">🛒 Comprar</button><button data-m="sell" class="${shopMode === 'sell' ? 'on' : ''}">💰 Vender</button></div>${side}</nav>
+      <div class="shop-main"><div class="shop-head">${head}</div><div class="grid shop-grid">${grid}</div></div></div>`);
     panel.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { play('ui'); ui.openShop(null, b.dataset.m); });
     panel.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { play('ui'); ui.openShop(b.dataset.t); });
-    panel.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { if (G.buy(D.shop[+b.dataset.b], +b.dataset.q)) ui.openShop(); });
-    panel.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { G.sell(b.dataset.s, +b.dataset.q); ui.openShop(); });
+    const keep = fn => { const g = panel.querySelector('.shop-grid'), y = g ? g.scrollTop : 0; fn(); const g2 = panel.querySelector('.shop-grid'); if (g2) g2.scrollTop = y; };
+    panel.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { if (G.buy(D.shop[+b.dataset.b], +b.dataset.q)) keep(() => ui.openShop()); });
+    panel.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { G.sell(b.dataset.s, +b.dataset.q); keep(() => ui.openShop()); });
   };
 
   // ---------- construções (info, animais e evolução) ----------

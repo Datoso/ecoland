@@ -3737,5 +3737,31 @@ window.R = (() => {
     c.fillStyle = '#ff3'; c.beginPath(); c.arc(S.player.x * s, S.player.y * s, 3, 0, 7); c.fill();
   }
 
-  return { TS, init, frame, screenToWorld, worldToScreen, tileSize, setZoom: z => setZoom(z), getZoom, zoomBy, minimap, emo };
+  // miniatura de uma construção (o mesmo desenho do mapa) para loja, criação e mochila
+  const thumbs = new Map();
+  function buildingThumb(type, size = 96) {
+    if (!D.buildings[type] || !window.S) return null;
+    const key = type + '|' + (S.season | 0) + '|' + size;
+    if (thumbs.has(key)) return thumbs.get(key);
+    let url = null;
+    try {
+      const b = { id: -1, type, x: -60, y: -60, level: 1, rot: 0, data: {} };
+      const s = buildingSprite(b, false), src = s.cv;
+      // recorta a área desenhada (ignora a margem transparente do sprite)
+      const g = src.getContext('2d'), W = src.width, H = src.height, px = g.getImageData(0, 0, W, H).data;
+      let x0 = W, y0 = H, x1 = 0, y1 = 0;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (px[(y * W + x) * 4 + 3] > 40) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 > x0 && y1 > y0) {
+        const c = document.createElement('canvas'); c.width = c.height = size;
+        const x = c.getContext('2d'), bw = x1 - x0 + 1, bh = y1 - y0 + 1, k = Math.min((size - 6) / bw, (size - 6) / bh);
+        x.imageSmoothingQuality = 'high';
+        x.drawImage(src, x0, y0, bw, bh, (size - bw * k) / 2, (size - bh * k) / 2, bw * k, bh * k);
+        url = c.toDataURL();
+      }
+    } catch (e) { url = null; }
+    thumbs.set(key, url);
+    return url;
+  }
+
+  return { TS, init, frame, screenToWorld, worldToScreen, tileSize, setZoom: z => setZoom(z), getZoom, zoomBy, minimap, emo, buildingThumb };
 })();

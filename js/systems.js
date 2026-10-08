@@ -205,6 +205,7 @@ Object.assign(G, {
     f.phase = 'catch'; f.t = 0; f.fish = id;
     this.add('peixe_' + id, 1);
     this.stat('fish');
+    if ((fd.tier || 1) >= 2) this.stat('fishrare');
     sfx(fd.tier >= 4 ? 'quest' : 'harvest');
     if (G.xp) G.xp('pesca', fd.xp || 15);
     toast(`🐟 Você pescou: <b>${fd.n}</b>! <small>(${D.fishTiers[fd.tier || 1]} · 💰 ${fd.sell} · +${fd.xp} XP)</small>`, fd.tier >= 3 ? 'good' : '');
