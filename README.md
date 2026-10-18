@@ -2,9 +2,11 @@
 
 Jogo de fazenda e sobrevivência no navegador, inspirado em Stardew Valley. O objetivo é transformar, aos poucos, um terreno abandonado num **sistema agropecuário autossuficiente e integrado**, no espírito do PAIS (Produção Agroecológica Integrada e Sustentável) e da ILPF (Integração Lavoura-Pecuária-Floresta) da Embrapa.
 
+### 🎮 [Jogar agora: datoso.github.io/ecoland](https://datoso.github.io/ecoland/)
+
 ## Como jogar
 
-Abra `index.html` no navegador. Não precisa instalar nada.
+Jogue direto no navegador pelo link acima, ou baixe o repositório e abra `index.html`. Não precisa instalar nada.
 
 | Tecla | Ação |
 |---|---|
